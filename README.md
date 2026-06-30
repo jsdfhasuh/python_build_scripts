@@ -65,6 +65,10 @@ workflow 只做打包，不做 GPU runtime 验证。
 - `emo-vision-train-windows-v1.2.3.zip`
 - `manifest.json`
 
+本地脚本会优先使用 `7z` 生成 ZIP/LZMA 压缩包，避免 GPU 依赖包超过
+GitHub Release 单个 asset 2GB 限制；如果没有 `7z`，会回退到 PowerShell
+`Compress-Archive`，并在超过限制时提前失败。
+
 updater 可以使用固定 manifest 地址：
 `https://github.com/jsdfhasuh/emo-vision-train-release/releases/latest/download/manifest.json`
 

@@ -12,6 +12,68 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+$MaxGithubReleaseAssetBytes = 2147483647
+
+function Get-AssetSha256 {
+  param([Parameter(Mandatory = $true)][string]$Path)
+
+  $getFileHash = Get-Command Get-FileHash -ErrorAction SilentlyContinue
+  if ($getFileHash) {
+    return (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant()
+  }
+
+  $stream = [System.IO.File]::OpenRead($Path)
+  try {
+    $sha256 = [System.Security.Cryptography.SHA256]::Create()
+    try {
+      $hashBytes = $sha256.ComputeHash($stream)
+      return -join ($hashBytes | ForEach-Object { $_.ToString('x2') })
+    }
+    finally {
+      $sha256.Dispose()
+    }
+  }
+  finally {
+    $stream.Dispose()
+  }
+}
+
+function Compress-ReleaseArchive {
+  param(
+    [Parameter(Mandatory = $true)][string]$DistDir,
+    [Parameter(Mandatory = $true)][string]$AssetPath
+  )
+
+  $sevenZip = Get-Command 7z -ErrorAction SilentlyContinue
+  if ($sevenZip) {
+    $distParent = Split-Path -Parent $DistDir
+    $distName = Split-Path -Leaf $DistDir
+    Push-Location -LiteralPath $distParent
+    try {
+      & $sevenZip.Source a -tzip -mm=LZMA -mx=9 -mmt=on $AssetPath $distName
+      if ($LASTEXITCODE -ne 0) {
+        throw "7z failed with exit code $LASTEXITCODE"
+      }
+    }
+    finally {
+      Pop-Location
+    }
+    return
+  }
+
+  Write-Warning '7z was not found; falling back to Compress-Archive. Large GPU builds may exceed the GitHub Release asset size limit.'
+  Compress-Archive -LiteralPath $DistDir -DestinationPath $AssetPath -Force
+}
+
+function Assert-ReleaseAssetSize {
+  param([Parameter(Mandatory = $true)][string]$Path)
+
+  $asset = Get-Item -LiteralPath $Path
+  if ($asset.Length -gt $MaxGithubReleaseAssetBytes) {
+    $sizeMb = [math]::Round($asset.Length / 1MB, 1)
+    throw "Release asset is $sizeMb MB, but GitHub requires assets smaller than 2048 MB: $Path"
+  }
+}
 
 if ($Target -notmatch '^[A-Za-z0-9_.-]+$') {
   throw "Invalid target name: $Target"
@@ -75,8 +137,9 @@ try {
     Remove-Item -LiteralPath $assetPath -Force
   }
 
-  Compress-Archive -LiteralPath $distDir -DestinationPath $assetPath -Force
-  $assetSha256 = (Get-FileHash -LiteralPath $assetPath -Algorithm SHA256).Hash.ToLowerInvariant()
+  Compress-ReleaseArchive -DistDir $distDir -AssetPath $assetPath
+  Assert-ReleaseAssetSize -Path $assetPath
+  $assetSha256 = Get-AssetSha256 -Path $assetPath
 
   if (-not $resolvedReleaseRepo) {
     $resolvedReleaseRepo = gh repo view --json nameWithOwner --jq '.nameWithOwner'

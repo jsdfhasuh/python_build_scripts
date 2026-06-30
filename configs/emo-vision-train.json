@@ -43,7 +43,7 @@
     "qimage2ndarray",
     "natsort",
     "termcolor",
-    "lapx",
+    "lap",
     "scipy",
     "shapely",
     "psutil",
