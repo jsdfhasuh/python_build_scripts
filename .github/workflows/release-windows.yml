@@ -1,0 +1,219 @@
+name: Release Windows Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Build target config name
+        required: true
+        default: training_platform
+      source_ref:
+        description: Source branch, tag, or commit
+        required: true
+        default: codex/yolo-pose-custom-ai-labeling
+      release_tag:
+        description: Release tag to create or update, for example v1.2.3
+        required: true
+      release_repo:
+        description: GitHub repo to publish releases to, for example owner/repo
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ inputs.target }} for Windows
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout packager
+        uses: actions/checkout@v7
+        with:
+          path: packager
+
+      - name: Load target config
+        id: config
+        shell: pwsh
+        working-directory: packager
+        env:
+          TARGET: ${{ inputs.target }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          RELEASE_REPO_INPUT: ${{ inputs.release_repo }}
+        run: |
+          if ($env:TARGET -notmatch '^[A-Za-z0-9_.-]+$') {
+            throw "Invalid target name: $env:TARGET"
+          }
+          if ($env:RELEASE_TAG -notmatch '^v[0-9]+(\.[0-9]+){1,3}([-.][A-Za-z0-9._-]+)?$') {
+            throw "release_tag must look like v1.2.3, got: $env:RELEASE_TAG"
+          }
+
+          $configPath = Join-Path 'configs' "$env:TARGET.json"
+          if (-not (Test-Path -LiteralPath $configPath)) {
+            throw "Target config not found: $configPath"
+          }
+
+          $config = Get-Content -LiteralPath $configPath -Raw | ConvertFrom-Json
+          foreach ($field in @('source_repo', 'python_version', 'release_asset_name', 'name')) {
+            if (-not $config.$field) {
+              throw "Missing required config field: $field"
+            }
+          }
+
+          $assetName = $config.release_asset_name
+          $assetName = $assetName.Replace('${RELEASE_TAG}', $env:RELEASE_TAG)
+          $assetName = $assetName.Replace('${TARGET}', $env:TARGET)
+
+          $releaseRepo = $env:RELEASE_REPO_INPUT.Trim()
+          if (-not $releaseRepo -and $config.PSObject.Properties.Name -contains 'release_repo') {
+            $releaseRepo = [string]$config.release_repo
+            $releaseRepo = $releaseRepo.Trim()
+          }
+          if (-not $releaseRepo) {
+            $releaseRepo = $env:GITHUB_REPOSITORY
+          }
+          if ($releaseRepo -notmatch '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$') {
+            throw "release_repo must look like owner/repo, got: $releaseRepo"
+          }
+
+          $ciExtraPackages = @()
+          if ($config.PSObject.Properties.Name -contains 'ci_extra_packages') {
+            if ($null -ne $config.ci_extra_packages -and $config.ci_extra_packages -isnot [array]) {
+              throw "ci_extra_packages must be a list"
+            }
+            $ciExtraPackages = @($config.ci_extra_packages)
+          }
+
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "source_repo=$($config.source_repo)"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "python_version=$($config.python_version)"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "asset_name=$assetName"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "app_name=$($config.name)"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "release_repo=$releaseRepo"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "ci_extra_packages=$($ciExtraPackages -join ' ')"
+
+      - name: Checkout source
+        uses: actions/checkout@v7
+        with:
+          repository: ${{ steps.config.outputs.source_repo }}
+          ref: ${{ inputs.source_ref }}
+          path: source
+          token: ${{ secrets.SOURCE_REPO_TOKEN }}
+          submodules: recursive
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ steps.config.outputs.python_version }}
+          cache: pip
+          cache-dependency-path: source/requirements.txt
+
+      - name: Install source dependencies
+        shell: pwsh
+        working-directory: source
+        env:
+          CI_EXTRA_PACKAGES: ${{ steps.config.outputs.ci_extra_packages }}
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          if ($env:CI_EXTRA_PACKAGES.Trim()) {
+            $packages = $env:CI_EXTRA_PACKAGES -split ' '
+            python -m pip install @packages
+          }
+
+      - name: Build with PyInstaller
+        shell: pwsh
+        working-directory: packager
+        env:
+          SOURCE_ROOT: ${{ github.workspace }}\source
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          python build.py --config "configs\${{ inputs.target }}.json" --clean
+
+      - name: Create release archive
+        id: archive
+        shell: pwsh
+        env:
+          TARGET: ${{ inputs.target }}
+          APP_NAME: ${{ steps.config.outputs.app_name }}
+          ASSET_NAME: ${{ steps.config.outputs.asset_name }}
+        run: |
+          $distDir = Join-Path $env:GITHUB_WORKSPACE "packager\dist\$env:APP_NAME"
+          if (-not (Test-Path -LiteralPath $distDir)) {
+            throw "Dist directory not found: $distDir"
+          }
+
+          $assetPath = Join-Path $env:RUNNER_TEMP $env:ASSET_NAME
+          if (Test-Path -LiteralPath $assetPath) {
+            Remove-Item -LiteralPath $assetPath -Force
+          }
+
+          Compress-Archive -LiteralPath $distDir -DestinationPath $assetPath -Force
+          $assetSha256 = (Get-FileHash -LiteralPath $assetPath -Algorithm SHA256).Hash.ToLowerInvariant()
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "asset_path=$assetPath"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "asset_sha256=$assetSha256"
+
+      - name: Create release manifest
+        id: manifest
+        shell: pwsh
+        env:
+          RELEASE_REPO: ${{ steps.config.outputs.release_repo }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          ASSET_NAME: ${{ steps.config.outputs.asset_name }}
+          ASSET_SHA256: ${{ steps.archive.outputs.asset_sha256 }}
+        run: |
+          $version = $env:RELEASE_TAG.TrimStart('v')
+          $encodedAssetName = [System.Uri]::EscapeDataString($env:ASSET_NAME)
+          $downloadUrl = "https://github.com/$env:RELEASE_REPO/releases/download/$env:RELEASE_TAG/$encodedAssetName"
+          $manifest = [ordered]@{
+            mandatory = $false
+            notes = $version
+            sha256 = $env:ASSET_SHA256
+            url = $downloadUrl
+            version = $version
+          }
+
+          $manifestPath = Join-Path $env:RUNNER_TEMP 'manifest.json'
+          $manifest | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "manifest_path=$manifestPath"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "package_url=$downloadUrl"
+
+      - name: Create or update Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_REPO_TOKEN || github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          RELEASE_REPO: ${{ steps.config.outputs.release_repo }}
+          TARGET: ${{ inputs.target }}
+          SOURCE_REPO: ${{ steps.config.outputs.source_repo }}
+          SOURCE_REF: ${{ inputs.source_ref }}
+          ASSET_PATH: ${{ steps.archive.outputs.asset_path }}
+          MANIFEST_PATH: ${{ steps.manifest.outputs.manifest_path }}
+          ASSET_NAME: ${{ steps.config.outputs.asset_name }}
+        run: |
+          $notes = "Windows build for $env:TARGET from $env:SOURCE_REPO@$env:SOURCE_REF."
+
+          gh release view $env:RELEASE_TAG --repo $env:RELEASE_REPO *> $null
+          $releaseExists = $LASTEXITCODE -eq 0
+
+          if ($releaseExists) {
+            gh release upload $env:RELEASE_TAG $env:ASSET_PATH --repo $env:RELEASE_REPO --clobber
+            if ($LASTEXITCODE -ne 0) {
+              throw "Failed to upload $env:ASSET_NAME to $env:RELEASE_REPO release $env:RELEASE_TAG"
+            }
+            gh release upload $env:RELEASE_TAG $env:MANIFEST_PATH --repo $env:RELEASE_REPO --clobber
+            if ($LASTEXITCODE -ne 0) {
+              throw "Failed to upload manifest.json to $env:RELEASE_REPO release $env:RELEASE_TAG"
+            }
+          } else {
+            gh release create $env:RELEASE_TAG $env:ASSET_PATH $env:MANIFEST_PATH `
+              --repo $env:RELEASE_REPO `
+              --title $env:RELEASE_TAG `
+              --notes $notes
+            if ($LASTEXITCODE -ne 0) {
+              throw "Failed to create $env:RELEASE_REPO release $env:RELEASE_TAG"
+            }
+          }
+
+          Write-Host "Uploaded $env:ASSET_NAME to $env:RELEASE_REPO release $env:RELEASE_TAG"
+          Write-Host "Uploaded manifest.json to $env:RELEASE_REPO release $env:RELEASE_TAG"
