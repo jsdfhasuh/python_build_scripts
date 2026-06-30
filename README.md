@@ -42,13 +42,16 @@ python build.py --specpath <dir>
 在 GitHub Actions 中手动运行 `Release Windows Build` workflow：
 - `target`: 默认 `emo-vision-train`
 - `source_ref`: 源码仓分支、tag 或 commit，默认 `codex/yolo-pose-custom-ai-labeling`
+- `previous_source_ref`: 可选，Release Notes 的源码对比起点，例如 `v1.0`
 - `release_tag`: Release tag，例如 `v1.2.3`
 - `release_repo`: 发布仓，格式 `owner/repo`；留空时使用目标配置里的 `release_repo`，再留空则使用当前 workflow 仓库
+- `release_body_path`: 可选，打包仓里的 Markdown 文件路径；填写后完全覆盖自动生成的 Release Notes
 
 私有源码仓 checkout 需要在当前仓库配置 `SOURCE_REPO_TOKEN` secret。
 如果 `release_repo` 指向另一个仓库，需要配置 `RELEASE_REPO_TOKEN` secret，
 并确保它有目标发布仓的 `contents: write` 权限。
-workflow 只做打包，不做 GPU runtime 验证。
+workflow 会 checkout 完整源码历史和 tags，用同一支本地发布脚本生成 Release Notes、
+manifest、zip asset 并发布；只做打包，不做 GPU runtime 验证。
 
 ### 本地打包并上传 Release
 如果 GitHub Actions 临时卡在依赖下载或构建环境，可以在本机打包后上传到指定发布仓 Release：
@@ -58,6 +61,7 @@ workflow 只做打包，不做 GPU runtime 验证。
   -Target emo-vision-train `
   -ReleaseTag v1.2.3 `
   -SourceRoot D:\training_platform `
+  -PreviousSourceRef v1.0 `
   -Notes "1.2.3"
 ```
 
@@ -69,6 +73,36 @@ workflow 只做打包，不做 GPU runtime 验证。
 GitHub Release 单个 asset 2GB 限制；如果没有 `7z`，会回退到 PowerShell
 `Compress-Archive`，并在超过限制时提前失败。
 
+Release 页面正文会从源码仓 git history 自动生成英文 Release Notes。生成逻辑是固定规则，
+不调用 AI/API；`-Notes` 仍然只写入 updater manifest 的短说明字段。
+
+Release Notes 的 changelog range 按以下顺序决定：
+1. `-PreviousSourceRef..HEAD`
+2. 上一个 Release manifest 里的 `source_commit..HEAD`
+3. 源码仓最新 tag，例如 `v1.0..HEAD`
+4. 找不到起点时回退到最近 30 个 commits
+
+可以用 Markdown 文件完全覆盖 Release 页面正文：
+
+```powershell
+.\scripts\publish-local-release.ps1 `
+  -Target emo-vision-train `
+  -ReleaseTag v1.2.3 `
+  -SourceRoot D:\training_platform `
+  -ReleaseBodyPath .\release-notes\v1.2.3.md
+```
+
+只更新 Release 页面正文、不重新构建、不重新上传 zip/manifest：
+
+```powershell
+.\scripts\publish-local-release.ps1 `
+  -Target emo-vision-train `
+  -ReleaseTag v1.0.7 `
+  -SourceRoot D:\training_platform `
+  -PreviousSourceRef v1.0 `
+  -NotesOnly
+```
+
 updater 可以使用固定 manifest 地址：
 `https://github.com/jsdfhasuh/emo-vision-train-release/releases/latest/download/manifest.json`
 
@@ -78,6 +112,12 @@ updater 可以使用固定 manifest 地址：
 - `sha256`: zip 文件的 SHA256
 - `notes`: `-Notes` 参数，默认等于版本号
 - `mandatory`: 是否强制更新，来自 `-Mandatory`
+- `source_repo`: 源码仓库，格式 `owner/repo`
+- `source_ref`: 本次打包使用的源码 ref
+- `source_commit`: 本次打包使用的源码 commit
+- `source_base_ref`: Release Notes 对比起点
+- `source_compare_url`: GitHub compare URL
+- `archive_compression`: zip 压缩方式，例如 `zip/lzma` 或 `zip/deflate`
 
 ### 配置说明（`configs/*.json`）
 - `source_repo`: 外部源码仓库，格式 `owner/repo`
