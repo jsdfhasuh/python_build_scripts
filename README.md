@@ -5,7 +5,8 @@
 通过读取 `configs/*.json` 生成并执行 PyInstaller 命令。
 
 仓库只维护构建逻辑、打包配置和 GitHub Actions workflow，不包含被打包应用本身的源码。
-v1 默认目标为 `training_platform`，源码仓库为 `jsdfhasuh/emo-vision-train`。
+v1 默认目标为 `emo-vision-train`，源码仓库为 `jsdfhasuh/emo-vision-train`，
+发布仓库为 `jsdfhasuh/emo-vision-train-release`。
 
 ## 使用说明
 
@@ -19,7 +20,7 @@ python build.py
 ```powershell
 $env:SOURCE_ROOT = "D:\training_platform"
 $env:RELEASE_TAG = "v0.0.0-local"
-python build.py --config configs\training_platform.json --dry-run
+python build.py --config configs\emo-vision-train.json --dry-run
 ```
 
 ### 仅打印命令（不执行）
@@ -39,7 +40,7 @@ python build.py --specpath <dir>
 
 ### GitHub Actions 发布
 在 GitHub Actions 中手动运行 `Release Windows Build` workflow：
-- `target`: 默认 `training_platform`
+- `target`: 默认 `emo-vision-train`
 - `source_ref`: 源码仓分支、tag 或 commit，默认 `codex/yolo-pose-custom-ai-labeling`
 - `release_tag`: Release tag，例如 `v1.2.3`
 - `release_repo`: 发布仓，格式 `owner/repo`；留空时使用目标配置里的 `release_repo`，再留空则使用当前 workflow 仓库
@@ -54,19 +55,18 @@ workflow 只做打包，不做 GPU runtime 验证。
 
 ```powershell
 .\scripts\publish-local-release.ps1 `
-  -Target training_platform `
+  -Target emo-vision-train `
   -ReleaseTag v1.2.3 `
-  -ReleaseRepo owner/repo `
   -SourceRoot D:\training_platform `
   -Notes "1.2.3"
 ```
 
 脚本会上传两个 Release assets：
-- `training_platform-windows-v1.2.3.zip`
+- `emo-vision-train-windows-v1.2.3.zip`
 - `manifest.json`
 
 updater 可以使用固定 manifest 地址：
-`https://github.com/<owner>/<repo>/releases/latest/download/manifest.json`
+`https://github.com/jsdfhasuh/emo-vision-train-release/releases/latest/download/manifest.json`
 
 `manifest.json` 字段：
 - `version`: 从 `ReleaseTag` 去掉开头 `v` 得到，例如 `v1.2.3` -> `1.2.3`

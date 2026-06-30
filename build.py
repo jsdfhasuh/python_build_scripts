@@ -517,7 +517,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description='JSON-driven PyInstaller builder')
     parser.add_argument(
         '--config',
-        default='configs/training_platform.json',
+        default='configs/emo-vision-train.json',
         help='Path to JSON config',
     )
     parser.add_argument(

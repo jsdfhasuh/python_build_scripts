@@ -1,5 +1,5 @@
 param(
-  [string]$Target = 'training_platform',
+  [string]$Target = 'emo-vision-train',
   [Parameter(Mandatory = $true)]
   [string]$ReleaseTag,
   [string]$ReleaseRepo = '',

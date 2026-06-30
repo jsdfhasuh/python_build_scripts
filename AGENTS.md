@@ -13,16 +13,16 @@ There is no lint or test framework in this repository.
 - Dry run (print PyInstaller command only): `python build.py --dry-run`
 - Clean build artifacts: `python build.py --clean`
 - Write spec to custom directory: `python build.py --specpath <dir>`
-- Local Release fallback: `.\scripts\publish-local-release.ps1 -Target training_platform -ReleaseTag v1.2.3 -ReleaseRepo owner/repo -SourceRoot D:\training_platform`
+- Local Release fallback: `.\scripts\publish-local-release.ps1 -Target emo-vision-train -ReleaseTag v1.2.3 -SourceRoot D:\training_platform`
 
 For local validation of external source targets, set `SOURCE_ROOT` first. Example:
-`$env:SOURCE_ROOT='D:\training_platform'; $env:RELEASE_TAG='v0.0.0-local'; python build.py --config configs\training_platform.json --dry-run`
+`$env:SOURCE_ROOT='D:\training_platform'; $env:RELEASE_TAG='v0.0.0-local'; python build.py --config configs\emo-vision-train.json --dry-run`
 
 ### Single Test
 - No automated tests are defined.
 - Minimal validation:
   - `python -m py_compile build.py`
-  - `python build.py --config configs\training_platform.json --dry-run` with `SOURCE_ROOT` set
+  - `python build.py --config configs\emo-vision-train.json --dry-run` with `SOURCE_ROOT` set
   - `python build.py`
 
 ## Configuration

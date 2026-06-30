@@ -6,7 +6,7 @@ on:
       target:
         description: Build target config name
         required: true
-        default: training_platform
+        default: emo-vision-train
       source_ref:
         description: Source branch, tag, or commit
         required: true

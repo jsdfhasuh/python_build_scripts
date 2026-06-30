@@ -1,14 +1,15 @@
 {
   "source_repo": "jsdfhasuh/emo-vision-train",
+  "release_repo": "jsdfhasuh/emo-vision-train-release",
   "python_version": "3.11",
-  "release_asset_name": "training_platform-windows-${RELEASE_TAG}.zip",
+  "release_asset_name": "emo-vision-train-windows-${RELEASE_TAG}.zip",
   "ci_extra_packages": [
     "torchvision==0.20.1",
     "onnxruntime-gpu==1.23.2",
     "kagglesdk==0.1.31"
   ],
   "entry": "${SOURCE_ROOT}/main.py",
-  "name": "training_platform",
+  "name": "emo-vision-train",
   "onefile": false,
   "console": true,
   "icon": null,
