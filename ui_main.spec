@@ -17,14 +17,14 @@ hiddenimports += collect_submodules('ultralytics')
 
 
 a = Analysis(
-    ['C:\\Users\\jsdfhasuh\\my_files\\my_work\\.worktrees\\yolo-ultralytics\\ui_main.py'],
+    ['C:\\Users\\jsdfhasuh\\my_files\\my_work\\ui_main.py'],
     pathex=[],
     binaries=binaries,
     datas=datas,
     hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},
-    runtime_hooks=['c:\\Users\\jsdfhasuh\\my_scripts\\python_build_script\\pyi_rth_torch_dll.py'],
+    runtime_hooks=['C:\\Users\\jsdfhasuh\\my_scripts\\python_build_script\\pyi_rth_torch_dll.py'],
     excludes=[],
     noarchive=False,
     optimize=0,
