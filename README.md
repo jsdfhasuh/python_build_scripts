@@ -56,6 +56,14 @@ manifest、zip asset 并发布；只做打包，不做 GPU runtime 验证。
 ### 本地打包并上传 Release
 如果 GitHub Actions 临时卡在依赖下载或构建环境，可以在本机打包后上传到指定发布仓 Release：
 
+完整发布步骤见 [本地发布操作手册](docs/release-runbook.md)。
+
+推荐日常使用交互式发布向导：
+
+```powershell
+python scripts\release_wizard.py
+```
+
 ```powershell
 .\scripts\publish-local-release.ps1 `
   -Target emo-vision-train `

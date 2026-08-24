@@ -344,12 +344,13 @@ function New-ReleaseNotesMarkdown {
     [Parameter(Mandatory = $true)][string]$ResolvedSourceRef,
     [Parameter(Mandatory = $true)][string]$SourceCommit,
     [Parameter(Mandatory = $true)][object]$RangeInfo,
-    [Parameter(Mandatory = $true)][object[]]$Commits,
+    [object[]]$Commits = @(),
     [string]$CompareUrl = '',
     [string]$ArchiveCompression = '',
     [switch]$NotesOnly
   )
 
+  $Commits = @($Commits)
   $bucketLabels = @{
     pose = 'Pose workflow updates'
     labeling = 'Labeling workflow updates'
@@ -432,13 +433,14 @@ function New-ReleaseNotesFile {
     [Parameter(Mandatory = $true)][string]$ResolvedSourceRef,
     [Parameter(Mandatory = $true)][string]$SourceCommit,
     [Parameter(Mandatory = $true)][object]$RangeInfo,
-    [Parameter(Mandatory = $true)][object[]]$Commits,
+    [object[]]$Commits = @(),
     [string]$CompareUrl = '',
     [string]$ArchiveCompression = '',
     [string]$OverrideBodyPath = '',
     [switch]$NotesOnly
   )
 
+  $Commits = @($Commits)
   $trimmedOverrideBodyPath = $OverrideBodyPath.Trim()
   if ($trimmedOverrideBodyPath) {
     if (-not (Test-Path -LiteralPath $trimmedOverrideBodyPath)) {
