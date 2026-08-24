@@ -77,6 +77,8 @@
     "kaggle",
     "--collect-all",
     "kagglesdk",
+    "--collect-all",
+    "kornia",
     "--copy-metadata",
     "kaggle",
     "--copy-metadata",
