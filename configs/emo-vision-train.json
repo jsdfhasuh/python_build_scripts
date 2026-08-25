@@ -15,6 +15,7 @@
   "icon": null,
   "add_data": [
     "${SOURCE_ROOT}/ui:ui",
+    "${SOURCE_ROOT}/anomaly_func:anomaly_func",
     "${SOURCE_ROOT}/my_ultralytics_func:my_ultralytics_func",
     "${SOURCE_ROOT}/ultralytics/ultralytics:ultralytics",
     "${SOURCE_ROOT}/training_platform.ui:.",
