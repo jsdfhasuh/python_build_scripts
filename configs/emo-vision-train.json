@@ -80,6 +80,8 @@
     "kagglesdk",
     "--collect-all",
     "kornia",
+    "--collect-data",
+    "lightning_fabric",
     "--copy-metadata",
     "kaggle",
     "--copy-metadata",

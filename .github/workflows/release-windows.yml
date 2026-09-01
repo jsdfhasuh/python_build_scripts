@@ -7,25 +7,72 @@ on:
         description: Build target config name
         required: true
         default: emo-vision-train
+        type: string
       source_ref:
         description: Source branch, tag, or commit
         required: true
         default: codex/yolo-pose-custom-ai-labeling
+        type: string
       previous_source_ref:
-        description: Optional source base ref for release notes, for example v1.0
+        description: Optional source base ref for release notes
         required: false
         default: ''
+        type: string
       release_tag:
         description: Release tag to create or update, for example v1.2.3
         required: true
+        type: string
       release_repo:
         description: GitHub repo to publish releases to, for example owner/repo
         required: false
         default: ''
+        type: string
       release_body_path:
-        description: Optional Markdown file in the packager repo to override generated notes
+        description: Optional Markdown file in the packager repo
         required: false
         default: ''
+        type: string
+      publish_release:
+        description: Publish the built assets to the selected GitHub Release
+        required: true
+        default: true
+        type: boolean
+  workflow_call:
+    inputs:
+      target:
+        required: true
+        type: string
+      source_ref:
+        required: true
+        type: string
+      previous_source_ref:
+        required: false
+        default: ''
+        type: string
+      release_tag:
+        required: true
+        type: string
+      release_repo:
+        required: false
+        default: ''
+        type: string
+      release_body_path:
+        required: false
+        default: ''
+        type: string
+      publish_release:
+        required: false
+        default: false
+        type: boolean
+    secrets:
+      SOURCE_REPO_TOKEN:
+        required: false
+      RELEASE_REPO_TOKEN:
+        required: false
+    outputs:
+      artifact_name:
+        description: Name of the uploaded Windows release artifact
+        value: ${{ jobs.build.outputs.artifact_name }}
 
 permissions:
   contents: write
@@ -34,11 +81,15 @@ jobs:
   build:
     name: Build ${{ inputs.target }} for Windows
     runs-on: windows-latest
+    outputs:
+      artifact_name: ${{ steps.artifact.outputs.name }}
 
     steps:
       - name: Checkout packager
         uses: actions/checkout@v7
         with:
+          repository: jsdfhasuh/python_build_scripts
+          ref: master
           path: packager
 
       - name: Load target config
@@ -84,15 +135,26 @@ jobs:
           $ciExtraPackages = @()
           if ($config.PSObject.Properties.Name -contains 'ci_extra_packages') {
             if ($null -ne $config.ci_extra_packages -and $config.ci_extra_packages -isnot [array]) {
-              throw "ci_extra_packages must be a list"
+              throw 'ci_extra_packages must be a list'
             }
             $ciExtraPackages = @($config.ci_extra_packages)
+          }
+
+          $installerEnabled = $false
+          $innoVersion = ''
+          if ($config.PSObject.Properties.Name -contains 'installer' -and $config.installer) {
+            $installerEnabled = [bool]$config.installer.enabled
+            if ($installerEnabled) {
+              $innoVersion = [string]$config.installer.compiler_version
+            }
           }
 
           Add-Content -Path $env:GITHUB_OUTPUT -Value "source_repo=$($config.source_repo)"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "python_version=$($config.python_version)"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "release_repo=$releaseRepo"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "ci_extra_packages=$($ciExtraPackages -join ' ')"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "installer_enabled=$($installerEnabled.ToString().ToLowerInvariant())"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "inno_version=$innoVersion"
 
       - name: Checkout source
         uses: actions/checkout@v7
@@ -100,7 +162,7 @@ jobs:
           repository: ${{ steps.config.outputs.source_repo }}
           ref: ${{ inputs.source_ref }}
           path: source
-          token: ${{ secrets.SOURCE_REPO_TOKEN }}
+          token: ${{ secrets.SOURCE_REPO_TOKEN || github.token }}
           submodules: recursive
           fetch-depth: 0
 
@@ -124,7 +186,37 @@ jobs:
             python -m pip install @packages
           }
 
-      - name: Build and publish Release
+      - name: Install pinned Inno Setup
+        if: steps.config.outputs.installer_enabled == 'true'
+        shell: pwsh
+        env:
+          INNO_VERSION: ${{ steps.config.outputs.inno_version }}
+        run: |
+          $versionSlug = $env:INNO_VERSION.Replace('.', '_')
+          $downloadUrl = "https://github.com/jrsoftware/issrc/releases/download/is-$versionSlug/innosetup-$env:INNO_VERSION.exe"
+          $installerPath = Join-Path $env:RUNNER_TEMP "innosetup-$env:INNO_VERSION.exe"
+          $installDir = Join-Path $env:RUNNER_TEMP "Inno Setup $env:INNO_VERSION"
+          Invoke-WebRequest -Uri $downloadUrl -OutFile $installerPath
+          $signature = Get-AuthenticodeSignature -LiteralPath $installerPath
+          if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch 'Pyrsys B\.V\.') {
+            throw "Invalid Inno Setup Authenticode signature: $($signature.Status) $($signature.SignerCertificate.Subject)"
+          }
+          $process = Start-Process `
+            -FilePath $installerPath `
+            -ArgumentList @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/SP-', "/DIR=$installDir") `
+            -WindowStyle Hidden `
+            -Wait `
+            -PassThru
+          if ($process.ExitCode -ne 0) {
+            throw "Inno Setup installation failed with exit code $($process.ExitCode)"
+          }
+          $isccPath = Join-Path $installDir 'ISCC.exe'
+          if (-not (Test-Path -LiteralPath $isccPath -PathType Leaf)) {
+            throw "ISCC.exe was not installed: $isccPath"
+          }
+          Add-Content -Path $env:GITHUB_ENV -Value "ISCC_PATH=$isccPath"
+
+      - name: Build Windows artifacts
         shell: pwsh
         working-directory: packager
         env:
@@ -135,21 +227,26 @@ jobs:
           SOURCE_REF_INPUT: ${{ inputs.source_ref }}
           PREVIOUS_SOURCE_REF_INPUT: ${{ inputs.previous_source_ref }}
           RELEASE_BODY_PATH_INPUT: ${{ inputs.release_body_path }}
+          PUBLISH_RELEASE_INPUT: ${{ inputs.publish_release }}
         run: |
           $sourceRoot = Join-Path $env:GITHUB_WORKSPACE 'source'
+          $outputDirectory = Join-Path $env:GITHUB_WORKSPACE 'packager\release-output'
           $publishArgs = @(
             '-Target', $env:TARGET_INPUT,
             '-ReleaseTag', $env:RELEASE_TAG_INPUT,
             '-ReleaseRepo', $env:RELEASE_REPO_INPUT,
             '-SourceRoot', $sourceRoot,
-            '-SourceRef', $env:SOURCE_REF_INPUT
+            '-SourceRef', $env:SOURCE_REF_INPUT,
+            '-OutputDirectory', $outputDirectory
           )
 
+          if ($env:PUBLISH_RELEASE_INPUT -ne 'true') {
+            $publishArgs += '-BuildOnly'
+          }
           $previousSourceRef = $env:PREVIOUS_SOURCE_REF_INPUT.Trim()
           if ($previousSourceRef) {
             $publishArgs += @('-PreviousSourceRef', $previousSourceRef)
           }
-
           $releaseBodyPath = $env:RELEASE_BODY_PATH_INPUT.Trim()
           if ($releaseBodyPath) {
             if (-not [System.IO.Path]::IsPathRooted($releaseBodyPath)) {
@@ -159,3 +256,19 @@ jobs:
           }
 
           .\scripts\publish-local-release.ps1 @publishArgs
+
+      - name: Set artifact name
+        id: artifact
+        shell: pwsh
+        env:
+          TARGET_INPUT: ${{ inputs.target }}
+          RELEASE_TAG_INPUT: ${{ inputs.release_tag }}
+        run: |
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "name=windows-release-$env:TARGET_INPUT-$env:RELEASE_TAG_INPUT"
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.artifact.outputs.name }}
+          path: packager/release-output/*
+          if-no-files-found: error

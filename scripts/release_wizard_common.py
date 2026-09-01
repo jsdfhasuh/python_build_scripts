@@ -12,6 +12,7 @@ from pathlib import Path
 RELEASE_TAG_PATTERN = re.compile(r'^v[0-9]+(\.[0-9]+){1,3}([-.][A-Za-z0-9._-]+)?$')
 REPO_PATTERN = re.compile(r'^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$')
 LOCAL_STATE_NAME = '.release-wizard.local.json'
+LARGE_CHANGELOG_COMMIT_COUNT = 50
 
 
 def getRepoRoot() -> Path:
@@ -55,8 +56,11 @@ def getPowerShellExecutable() -> str:
   return shutil.which('pwsh') or shutil.which('powershell') or requireTool('powershell')
 
 
-def loadLocalState(repoRoot: Path) -> dict[str, str]:
-  statePath = repoRoot / LOCAL_STATE_NAME
+def loadLocalState(
+  repoRoot: Path,
+  localStateName: str = LOCAL_STATE_NAME,
+) -> dict[str, str]:
+  statePath = repoRoot / localStateName
   if not statePath.exists():
     return {}
 
@@ -75,8 +79,12 @@ def loadLocalState(repoRoot: Path) -> dict[str, str]:
   return state
 
 
-def saveLocalState(repoRoot: Path, state: dict[str, str]) -> None:
-  statePath = repoRoot / LOCAL_STATE_NAME
+def saveLocalState(
+  repoRoot: Path,
+  state: dict[str, str],
+  localStateName: str = LOCAL_STATE_NAME,
+) -> None:
+  statePath = repoRoot / localStateName
   statePath.write_text(
     json.dumps(state, indent=2, ensure_ascii=False) + '\n',
     encoding='utf-8',
@@ -93,6 +101,27 @@ def loadConfig(configPath: Path) -> dict[str, object]:
 def getConfigString(config: dict[str, object], fieldName: str) -> str:
   value = config.get(fieldName, '')
   return value if isinstance(value, str) else ''
+
+
+def getSourceVersion(config: dict[str, object], sourceRoot: Path) -> str:
+  versionFileTemplate = getConfigString(config, 'source_version_file')
+  if not versionFileTemplate:
+    return ''
+
+  versionFileText = versionFileTemplate.replace('${SOURCE_ROOT}', str(sourceRoot))
+  versionFile = Path(versionFileText)
+  if not versionFile.is_absolute():
+    versionFile = sourceRoot / versionFile
+  if not versionFile.is_file():
+    raise SystemExit(f'源码版本文件不存在：{versionFile}')
+
+  versionMatch = re.search(
+    r'''__version__\s*=\s*["'](?P<version>[^"']+)["']''',
+    versionFile.read_text(encoding='utf-8'),
+  )
+  if not versionMatch:
+    raise SystemExit(f'无法从源码版本文件读取 __version__：{versionFile}')
+  return versionMatch.group('version')
 
 
 def getTargets(repoRoot: Path) -> list[str]:
@@ -171,12 +200,19 @@ def promptChoice(
     print('请输入列表中的编号。')
 
 
-def promptReleaseTag(defaultValue: str = '') -> str:
+def promptReleaseTag(defaultValue: str = '', expectedVersion: str = '') -> str:
   while True:
     releaseTag = promptText('Release tag，例如 v1.0.10', defaultValue, required=True)
-    if RELEASE_TAG_PATTERN.match(releaseTag):
-      return releaseTag
-    print('Release tag 必须类似 v1.2.3。')
+    if not RELEASE_TAG_PATTERN.match(releaseTag):
+      print('Release tag 必须类似 v1.2.3。')
+      continue
+    if expectedVersion and releaseTag.removeprefix('v') != expectedVersion:
+      print(
+        f'Release tag 必须与应用版本一致：v{expectedVersion}，'
+        f'当前输入为 {releaseTag}。'
+      )
+      continue
+    return releaseTag
 
 
 def promptReleaseRepo(defaultValue: str) -> str:
@@ -253,6 +289,13 @@ def getRecentCommitRefs(sourceRoot: Path, count: int = 10) -> list[tuple[str, st
   return commits
 
 
+def getCommitCount(sourceRoot: Path, baseRef: str) -> int | None:
+  output = getGitOutput(sourceRoot, ['rev-list', '--count', f'{baseRef}..HEAD'])
+  if not output.isdigit():
+    return None
+  return int(output)
+
+
 def getLatestSourceTag(sourceRoot: Path) -> str:
   return getGitOutput(sourceRoot, ['describe', '--tags', '--abbrev=0'])
 
@@ -262,7 +305,7 @@ def getCommitDescription(sourceRoot: Path, refName: str) -> str:
   return output or refName
 
 
-def getLatestReleaseTag(releaseRepo: str) -> str:
+def getReleaseTags(releaseRepo: str, limit: int = 100) -> list[str]:
   output = getCommandOutput([
     'gh',
     'release',
@@ -270,27 +313,44 @@ def getLatestReleaseTag(releaseRepo: str) -> str:
     '--repo',
     releaseRepo,
     '--limit',
-    '1',
+    str(limit),
     '--json',
-    'tagName',
+    'tagName,isDraft',
   ])
   if not output:
-    return ''
+    return []
 
   try:
     releases = json.loads(output)
   except json.JSONDecodeError:
+    return []
+
+  if not isinstance(releases, list):
+    return []
+
+  releaseTags: list[str] = []
+  for release in releases:
+    if not isinstance(release, dict) or release.get('isDraft') is True:
+      continue
+
+    tagName = release.get('tagName', '')
+    if isinstance(tagName, str) and tagName:
+      releaseTags.append(tagName)
+  return releaseTags
+
+
+def getPreviousReleaseTag(releaseTags: list[str], currentReleaseTag: str) -> str:
+  if not releaseTags:
     return ''
 
-  if not isinstance(releases, list) or not releases:
+  if currentReleaseTag not in releaseTags:
+    return releaseTags[0]
+
+  currentIndex = releaseTags.index(currentReleaseTag)
+  if currentIndex + 1 >= len(releaseTags):
     return ''
 
-  release = releases[0]
-  if not isinstance(release, dict):
-    return ''
-
-  tagName = release.get('tagName', '')
-  return tagName if isinstance(tagName, str) else ''
+  return releaseTags[currentIndex + 1]
 
 
 def getManifestSourceCommit(releaseRepo: str, releaseTag: str) -> str:
@@ -363,8 +423,8 @@ def chooseMode() -> str:
   return promptChoice(
     '请选择发布模式',
     [
-      ('1', '完整发布：build、压缩、上传 zip 和 manifest'),
-      ('2', '跳过 build：使用已有 dist，重新压缩并上传'),
+      ('1', '完整发布：build、生成并上传全部 Release assets'),
+      ('2', '跳过 build：使用已有 dist，重新生成并上传全部 Release assets'),
       ('3', '只更新 Release 正文：不 build、不上传 assets'),
     ],
     '1',
@@ -392,7 +452,11 @@ def addPreviousRefCandidate(
   seenValues.add(value)
 
 
-def choosePreviousSourceRef(sourceRoot: Path, previousManifestCommit: str) -> str:
+def choosePreviousSourceRef(
+  sourceRoot: Path,
+  previousReleaseTag: str,
+  previousManifestCommit: str,
+) -> tuple[str, int | None]:
   candidates: list[tuple[str, str]] = []
   seenValues: set[str] = set()
 
@@ -403,10 +467,16 @@ def choosePreviousSourceRef(sourceRoot: Path, previousManifestCommit: str) -> st
         candidates,
         seenValues,
         previousManifestCommit,
-        f'上一个 Release manifest source_commit：{commitDescription}',
+        (
+          f'上一个 Release {previousReleaseTag} manifest source_commit：'
+          f'{commitDescription}'
+        ),
       )
     else:
-      print(f'上一个 Release manifest source_commit 不在本地源码 history：{previousManifestCommit}')
+      print(
+        '上一个 Release manifest source_commit 不在本地源码 history：'
+        f'{previousManifestCommit}'
+      )
 
   latestSourceTag = getLatestSourceTag(sourceRoot)
   if latestSourceTag:
@@ -438,19 +508,40 @@ def choosePreviousSourceRef(sourceRoot: Path, previousManifestCommit: str) -> st
   choices.append((manualKey, '手动输入源码 commit/tag/branch'))
 
   defaultKey = '1' if candidates else autoKey
-  selectedKey = promptChoice('请选择 PreviousSourceRef（更新日志起点）', choices, defaultKey)
-  if selectedKey == autoKey:
-    return ''
-  if selectedKey == manualKey:
-    manualRef = promptText('请输入 PreviousSourceRef', required=True)
-    if not testCommitish(sourceRoot, manualRef):
-      raise SystemExit(f'PreviousSourceRef 不在源码仓 history 里：{manualRef}')
-    return manualRef
+  while True:
+    selectedKey = promptChoice('请选择 PreviousSourceRef（更新日志起点）', choices, defaultKey)
+    if selectedKey == autoKey:
+      print('提交数量将在发布脚本自动确定更新日志范围后计算。')
+      return '', None
 
-  selectedRef = valueByKey[selectedKey]
-  if not testCommitish(sourceRoot, selectedRef):
-    raise SystemExit(f'PreviousSourceRef 不在源码仓 history 里：{selectedRef}')
-  return selectedRef
+    if selectedKey == manualKey:
+      selectedRef = promptText('请输入 PreviousSourceRef', required=True)
+    else:
+      selectedRef = valueByKey[selectedKey]
+
+    if not testCommitish(sourceRoot, selectedRef):
+      print(f'PreviousSourceRef 不在源码仓 history 里：{selectedRef}')
+      continue
+
+    commitCount = getCommitCount(sourceRoot, selectedRef)
+    if commitCount is None:
+      print(f'无法计算更新日志提交数量：{selectedRef}..HEAD')
+      continue
+
+    print(f'更新日志范围：{selectedRef}..HEAD（{commitCount} 个提交）')
+    if commitCount > LARGE_CHANGELOG_COMMIT_COUNT:
+      shouldContinue = promptYesNo(
+        (
+          f'范围超过 {LARGE_CHANGELOG_COMMIT_COUNT} 个提交，'
+          'Release Notes 会很长，仍要使用吗'
+        ),
+        False,
+      )
+      if not shouldContinue:
+        print('已放弃这个更新日志起点，请重新选择。')
+        continue
+
+    return selectedRef, commitCount
 
 
 def buildPublishCommand(
@@ -526,7 +617,9 @@ def printSummary(
   releaseRepo: str,
   sourceRoot: Path,
   sourceRef: str,
+  previousReleaseTag: str,
   previousSourceRef: str,
+  previousCommitCount: int | None,
   notes: str,
   releaseBodyPath: str,
   mandatory: bool,
@@ -542,7 +635,10 @@ def printSummary(
   print(f'源码目录：{sourceRoot}')
   print(f'源码 ref：{sourceRef}')
   print(f'源码 HEAD：{headCommit}')
+  print(f'上一个 Release：{previousReleaseTag or "未找到"}')
   print(f'更新日志起点：{previousSourceRef or "自动判断"}')
+  commitCountLabel = previousCommitCount if previousCommitCount is not None else '自动判断'
+  print(f'预计更新提交数：{commitCountLabel}')
   print(f'Manifest notes：{notes or "默认使用版本号"}')
   print(f'强制更新：{"是" if mandatory else "否"}')
   print(f'自定义 Release 正文：{releaseBodyPath or "无"}')
@@ -551,13 +647,19 @@ def printSummary(
   print(subprocess.list2cmdline(command))
 
 
-def main() -> int:
-  parser = argparse.ArgumentParser(description='交互式本地发布向导')
+def main(
+  fixedTarget: str | None = None,
+  localStateName: str = LOCAL_STATE_NAME,
+) -> int:
+  description = '交互式本地发布向导'
+  if fixedTarget:
+    description = f'{fixedTarget} 交互式本地发布向导'
+  parser = argparse.ArgumentParser(description=description)
   parser.add_argument('--yes', action='store_true', help='跳过最终确认，直接执行')
   args = parser.parse_args()
 
   repoRoot = getRepoRoot()
-  state = loadLocalState(repoRoot)
+  state = loadLocalState(repoRoot, localStateName)
   requireTool('git')
   requireTool('gh')
   powerShellExe = getPowerShellExecutable()
@@ -571,11 +673,18 @@ def main() -> int:
   if not targets:
     raise SystemExit('configs 目录下没有 target JSON。')
 
-  printHeader('本地发布向导')
+  title = f'{fixedTarget} 本地发布向导' if fixedTarget else '本地发布向导'
+  printHeader(title)
   print(f'当前 Python：{sys.executable}')
   print('提示：直接回车会使用方括号里的默认值。')
 
-  target = chooseTarget(targets, getDefaultTarget(targets, state))
+  if fixedTarget:
+    if fixedTarget not in targets:
+      raise SystemExit(f'找不到打包目标配置：configs/{fixedTarget}.json')
+    target = fixedTarget
+    print(f'打包目标：{target}')
+  else:
+    target = chooseTarget(targets, getDefaultTarget(targets, state))
   config = loadConfig(repoRoot / 'configs' / f'{target}.json')
   sourceRepo = getConfigString(config, 'source_repo')
   releaseRepoDefault = (
@@ -592,26 +701,42 @@ def main() -> int:
   sourceRoot = promptSourceRoot(sourceRootDefault)
   currentBranch = getCurrentBranch(sourceRoot)
   headCommit = getHeadCommit(sourceRoot)
+  sourceVersion = getSourceVersion(config, sourceRoot)
   print(f'源码当前分支：{currentBranch or "detached HEAD"}')
   print(f'源码 HEAD：{headCommit}')
+  if sourceVersion:
+    print(f'应用版本：{sourceVersion}')
   printRecentCommits(sourceRoot)
 
-  latestReleaseTag = getLatestReleaseTag(releaseRepo)
-  suggestedReleaseTag = bumpPatchVersion(latestReleaseTag)
+  releaseTags = getReleaseTags(releaseRepo)
+  latestReleaseTag = releaseTags[0] if releaseTags else ''
+  suggestedReleaseTag = (
+    f'v{sourceVersion}' if sourceVersion else bumpPatchVersion(latestReleaseTag)
+  )
 
   printHeader('Release 信息')
   if latestReleaseTag:
     print(f'发布仓最新 Release：{latestReleaseTag}')
-  releaseTag = promptReleaseTag(suggestedReleaseTag)
+  releaseTag = promptReleaseTag(suggestedReleaseTag, expectedVersion=sourceVersion)
   notesDefault = releaseTag.lstrip('v')
   notes = promptText('Manifest notes', notesDefault, required=False)
   sourceRefDefault = currentBranch or 'local'
   sourceRef = promptText('SourceRef，写入 manifest', sourceRefDefault, required=True)
 
-  previousManifestCommit = getManifestSourceCommit(releaseRepo, latestReleaseTag)
+  previousReleaseTag = getPreviousReleaseTag(releaseTags, releaseTag)
+  previousManifestCommit = getManifestSourceCommit(releaseRepo, previousReleaseTag)
+  if previousReleaseTag:
+    print(f'更新日志对应的上一个 Release：{previousReleaseTag}')
   if previousManifestCommit:
-    print(f'检测到上一个 Release manifest source_commit：{previousManifestCommit}')
-  previousSourceRef = choosePreviousSourceRef(sourceRoot, previousManifestCommit)
+    print(
+      f'检测到上一个 Release {previousReleaseTag} manifest source_commit：'
+      f'{previousManifestCommit}'
+    )
+  previousSourceRef, previousCommitCount = choosePreviousSourceRef(
+    sourceRoot,
+    previousReleaseTag,
+    previousManifestCommit,
+  )
 
   modeName = getModeName(chooseMode())
   mandatory = False
@@ -643,7 +768,9 @@ def main() -> int:
     releaseRepo=releaseRepo,
     sourceRoot=sourceRoot,
     sourceRef=sourceRef,
+    previousReleaseTag=previousReleaseTag,
     previousSourceRef=previousSourceRef,
+    previousCommitCount=previousCommitCount,
     notes=notes,
     releaseBodyPath=releaseBodyPath,
     mandatory=mandatory,
@@ -657,7 +784,7 @@ def main() -> int:
     'sourceRoot': str(sourceRoot),
     'releaseRepo': releaseRepo,
   })
-  saveLocalState(repoRoot, state)
+  saveLocalState(repoRoot, state, localStateName)
 
   if not args.yes and not promptYesNo('确认开始执行', False):
     print('已取消。')

@@ -14,6 +14,9 @@ There is no lint or test framework in this repository.
 - Clean build artifacts: `python build.py --clean`
 - Write spec to custom directory: `python build.py --specpath <dir>`
 - Local Release fallback: `.\scripts\publish-local-release.ps1 -Target emo-vision-train -ReleaseTag v1.2.3 -SourceRoot D:\training_platform`
+- Emo Master artifacts: `.\scripts\publish-local-release.ps1 -Target emo-master -ReleaseTag v0.6.0 -SourceRoot <emo_master> -BuildOnly -OutputDirectory <dir>`
+- Vision Train wizard: `python scripts\release_wizard_emo_vision_train.py`
+- Emo Master wizard: `python scripts\release_wizard_emo_master.py`
 
 For local validation of external source targets, set `SOURCE_ROOT` first. Example:
 `$env:SOURCE_ROOT='D:\training_platform'; $env:RELEASE_TAG='v0.0.0-local'; python build.py --config configs\emo-vision-train.json --dry-run`
@@ -23,6 +26,7 @@ For local validation of external source targets, set `SOURCE_ROOT` first. Exampl
 - Minimal validation:
   - `python -m py_compile build.py`
   - `python build.py --config configs\emo-vision-train.json --dry-run` with `SOURCE_ROOT` set
+  - `python build.py --config configs\emo-master.json --dry-run` with `SOURCE_ROOT` set
   - `python build.py`
 
 ## Configuration
@@ -30,18 +34,22 @@ For local validation of external source targets, set `SOURCE_ROOT` first. Exampl
 - `source_repo`: external source repository in `owner/repo` form
 - `release_repo`: optional default GitHub Release repository in `owner/repo` form
 - `python_version`: Python version used by GitHub Actions
+- `pyinstaller_version`: optional pinned PyInstaller version metadata
 - `release_asset_name`: GitHub Release asset name template
+- `source_version_file`: optional source file used to validate release tag against `__version__`
 - `ci_extra_packages`: extra packages installed by GitHub Actions after source requirements
 - `entry`: path to entry script, usually using `${SOURCE_ROOT}`
 - `name`: output name
 - `onefile`: true/false, onefile or onedir
 - `console`: true/false, console window
+- `collect_conda_runtime_dlls`: collect the full Conda runtime DLL set; defaults to true
 - `icon`: icon path or null
 - `add_data`: list of data mappings
 - `hidden_imports`: list of hidden imports
 - `excludes`: list of excluded modules
 - `collect_binaries`: list of modules to collect binaries from
 - `extra_args`: raw PyInstaller args
+- `installer`: optional Inno Setup configuration and installer smoke-test settings
 
 ## Code Style
 Follow these rules when editing Python in this repository.

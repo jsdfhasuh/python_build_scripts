@@ -1,8 +1,9 @@
 build/
 dist/
+artifacts/
 *.egg-info/
 __pycache__/
 *.pyc
 .vscode/
 *.spec
-.release-wizard.local.json
+.release-wizard*.local.json

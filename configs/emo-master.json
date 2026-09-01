@@ -1,0 +1,73 @@
+{
+  "source_repo": "jsdfhasuh/emo_master",
+  "release_repo": "jsdfhasuh/emo_master",
+  "python_version": "3.10",
+  "pyinstaller_version": "6.22.2",
+  "release_asset_name": "emo-master-windows-${RELEASE_TAG}.zip",
+  "source_version_file": "${SOURCE_ROOT}/src/emo_master/__init__.py",
+  "ci_extra_packages": [
+    "pyinstaller==6.22.2"
+  ],
+  "entry": "${SOURCE_ROOT}/src/emo_master/apps/windows_entry.py",
+  "name": "EmoMaster",
+  "onefile": false,
+  "console": false,
+  "collect_conda_runtime_dlls": false,
+  "icon": null,
+  "add_data": [
+    "${SOURCE_ROOT}/src/emo_master/apps/designer/ui/styles/app.qss:emo_master/apps/designer/ui/styles",
+    "${SOURCE_ROOT}/src/emo_master/apps/runtime/context/migrations:emo_master/apps/runtime/context/migrations"
+  ],
+  "hidden_imports": [
+    "PySide2.QtCore",
+    "PySide2.QtGui",
+    "PySide2.QtUiTools",
+    "PySide2.QtWidgets",
+    "cv2",
+    "grpc",
+    "numpy",
+    "onnxruntime",
+    "yaml"
+  ],
+  "excludes": [
+    "torch",
+    "torchvision",
+    "ultralytics",
+    "onnxruntime_gpu",
+    "onnxruntime.capi.onnxruntime_providers_cuda"
+  ],
+  "collect_binaries": [
+    "onnxruntime"
+  ],
+  "extra_args": [
+    "--runtime-hook",
+    "pyi_rth_onnxruntime.py",
+    "--paths=${SOURCE_ROOT}/src",
+    "--collect-submodules",
+    "emo_master.plugins.builtins",
+    "--collect-data",
+    "emo_master.plugins.builtins",
+    "--copy-metadata",
+    "onnxruntime"
+  ],
+  "installer": {
+    "enabled": true,
+    "compiler_version": "6.7.3",
+    "release_asset_name": "emo-master-setup-${RELEASE_TAG}.exe",
+    "app_id": "{71D80D81-6AFF-54D9-9DBE-7181A248D76D}",
+    "app_name": "Emo Master",
+    "publisher": "jsdfhasuh",
+    "default_dir_name": "{localappdata}\\Programs\\EmoMaster",
+    "executable": "EmoMaster.exe",
+    "start_menu_name": "Emo Master",
+    "desktop_shortcut_name": "Emo Master",
+    "smoke_test": true,
+    "forbidden_names": [
+      "torch",
+      "torchvision",
+      "ultralytics",
+      "onnxruntime_providers_cuda",
+      "onnxruntime_providers_tensorrt"
+    ]
+  }
+}

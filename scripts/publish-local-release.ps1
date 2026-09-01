@@ -9,9 +9,11 @@ param(
   [string]$ReleaseBodyPath = '',
   [string]$Notes = '',
   [string]$ManifestName = 'manifest.json',
+  [string]$OutputDirectory = '',
   [switch]$Mandatory,
   [switch]$SkipBuild,
-  [switch]$NotesOnly
+  [switch]$NotesOnly,
+  [switch]$BuildOnly
 )
 
 $ErrorActionPreference = 'Stop'
@@ -146,17 +148,30 @@ function Get-PreviousManifestBaseRef {
 
   $releaseJson = & gh release list `
     --repo $ReleaseRepoName `
-    --limit 20 `
-    --json tagName 2>$null
+    --limit 100 `
+    --json tagName,isDraft 2>$null
   if ($LASTEXITCODE -ne 0 -or -not $releaseJson) {
     return $null
   }
 
-  $releases = @($releaseJson | ConvertFrom-Json)
-  foreach ($release in $releases) {
-    if (-not $release.tagName -or $release.tagName -eq $CurrentReleaseTag) {
-      continue
+  $releases = @($releaseJson | ConvertFrom-Json | Where-Object {
+      $_.tagName -and -not $_.isDraft
+    })
+  $currentReleaseIndex = -1
+  for ($index = 0; $index -lt $releases.Count; $index += 1) {
+    if ($releases[$index].tagName -eq $CurrentReleaseTag) {
+      $currentReleaseIndex = $index
+      break
     }
+  }
+
+  $candidateStartIndex = 0
+  if ($currentReleaseIndex -ge 0) {
+    $candidateStartIndex = $currentReleaseIndex + 1
+  }
+
+  for ($index = $candidateStartIndex; $index -lt $releases.Count; $index += 1) {
+    $release = $releases[$index]
 
     $downloadDir = Join-Path ([System.IO.Path]::GetTempPath()) "release-manifest-$([System.Guid]::NewGuid().ToString('N'))"
     New-Item -ItemType Directory -Path $downloadDir | Out-Null
@@ -489,12 +504,58 @@ function Set-GhReleaseNotes {
   }
 }
 
+function Resolve-AssetNameTemplate {
+  param(
+    [Parameter(Mandatory = $true)][string]$Template,
+    [Parameter(Mandatory = $true)][string]$VersionTag,
+    [Parameter(Mandatory = $true)][string]$TargetName
+  )
+
+  return $Template.Replace('${RELEASE_TAG}', $VersionTag).Replace('${TARGET}', $TargetName)
+}
+
+function Assert-SourceVersionMatchesTag {
+  param(
+    [Parameter(Mandatory = $true)][object]$Config,
+    [Parameter(Mandatory = $true)][string]$SourceRootPath,
+    [Parameter(Mandatory = $true)][string]$ExpectedVersion
+  )
+
+  if (-not ($Config.PSObject.Properties.Name -contains 'source_version_file')) {
+    return
+  }
+  $versionFile = [string]$Config.source_version_file
+  $versionFile = $versionFile.Replace('${SOURCE_ROOT}', $SourceRootPath)
+  if (-not [System.IO.Path]::IsPathRooted($versionFile)) {
+    $versionFile = Join-Path $SourceRootPath $versionFile
+  }
+  if (-not (Test-Path -LiteralPath $versionFile -PathType Leaf)) {
+    throw "Source version file not found: $versionFile"
+  }
+  $versionContent = Get-Content -LiteralPath $versionFile -Raw
+  $versionMatch = [regex]::Match(
+    $versionContent,
+    '__version__\s*=\s*["''](?<version>[^"'']+)["'']'
+  )
+  if (-not $versionMatch.Success) {
+    throw "Unable to read __version__ from $versionFile"
+  }
+  $actualVersion = $versionMatch.Groups['version'].Value
+  if ($actualVersion -ne $ExpectedVersion) {
+    throw "Release tag version $ExpectedVersion does not match application version $actualVersion"
+  }
+}
+
 if ($Target -notmatch '^[A-Za-z0-9_.-]+$') {
   throw "Invalid target name: $Target"
 }
 
 if ($ReleaseTag -notmatch '^v[0-9]+(\.[0-9]+){1,3}([-.][A-Za-z0-9._-]+)?$') {
   throw "ReleaseTag must look like v1.2.3, got: $ReleaseTag"
+}
+
+if ($NotesOnly -and $BuildOnly) {
+  throw 'NotesOnly and BuildOnly cannot be used together'
 }
 
 $repoRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
@@ -515,10 +576,15 @@ foreach ($field in @('name', 'release_asset_name', 'source_repo')) {
   }
 }
 
-$assetName = $config.release_asset_name
-$assetName = $assetName.Replace('${RELEASE_TAG}', $ReleaseTag)
-$assetName = $assetName.Replace('${TARGET}', $Target)
+$assetName = Resolve-AssetNameTemplate `
+  -Template ([string]$config.release_asset_name) `
+  -VersionTag $ReleaseTag `
+  -TargetName $Target
 $version = $ReleaseTag.TrimStart('v')
+Assert-SourceVersionMatchesTag `
+  -Config $config `
+  -SourceRootPath $sourceRootPath.Path `
+  -ExpectedVersion $version
 if (-not $Notes) {
   $Notes = $version
 }
@@ -608,7 +674,52 @@ try {
     throw "Dist directory not found: $distDir"
   }
 
-  $assetPath = Join-Path ([System.IO.Path]::GetTempPath()) $assetName
+  $artifactDirectory = [System.IO.Path]::GetTempPath()
+  $trimmedOutputDirectory = $OutputDirectory.Trim()
+  if ($trimmedOutputDirectory) {
+    if (-not [System.IO.Path]::IsPathRooted($trimmedOutputDirectory)) {
+      $trimmedOutputDirectory = Join-Path $repoRoot $trimmedOutputDirectory
+    }
+    New-Item -ItemType Directory -Path $trimmedOutputDirectory -Force | Out-Null
+    $artifactDirectory = (Resolve-Path -LiteralPath $trimmedOutputDirectory).Path
+  }
+
+  $setupName = ''
+  $setupPath = ''
+  $setupSha256 = ''
+  $setupDownloadUrl = ''
+  $installerEnabled = $false
+  if ($config.PSObject.Properties.Name -contains 'installer' -and $config.installer) {
+    $installerEnabled = [bool]$config.installer.enabled
+  }
+  if ($installerEnabled) {
+    if (-not $config.installer.release_asset_name) {
+      throw 'Missing installer config field: release_asset_name'
+    }
+    $setupName = Resolve-AssetNameTemplate `
+      -Template ([string]$config.installer.release_asset_name) `
+      -VersionTag $ReleaseTag `
+      -TargetName $Target
+    $setupPath = Join-Path $artifactDirectory $setupName
+    if (Test-Path -LiteralPath $setupPath) {
+      Remove-Item -LiteralPath $setupPath -Force
+    }
+    & (Join-Path $repoRoot 'scripts\build-windows-installer.ps1') `
+      -ConfigPath $configPath `
+      -DistDir $distDir `
+      -ReleaseTag $ReleaseTag `
+      -Version $version `
+      -OutputPath $setupPath
+    if ($LASTEXITCODE -ne 0) {
+      throw "Installer build failed with exit code $LASTEXITCODE"
+    }
+    Assert-ReleaseAssetSize -Path $setupPath
+    $setupSha256 = Get-AssetSha256 -Path $setupPath
+    $encodedSetupName = [System.Uri]::EscapeDataString($setupName)
+    $setupDownloadUrl = "https://github.com/$resolvedReleaseRepo/releases/download/$ReleaseTag/$encodedSetupName"
+  }
+
+  $assetPath = Join-Path $artifactDirectory $assetName
   if (Test-Path -LiteralPath $assetPath) {
     Remove-Item -LiteralPath $assetPath -Force
   }
@@ -644,27 +755,58 @@ try {
     source_compare_url = $sourceCompareUrl
     archive_compression = $archiveCompression
   }
+  if ($installerEnabled) {
+    $manifest['assets'] = [ordered]@{
+      portable = [ordered]@{
+        name = $assetName
+        url = $downloadUrl
+        sha256 = $assetSha256
+      }
+      setup = [ordered]@{
+        name = $setupName
+        url = $setupDownloadUrl
+        sha256 = $setupSha256
+      }
+    }
+  }
 
-  $manifestPath = Join-Path ([System.IO.Path]::GetTempPath()) $ManifestName
-  $manifest | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
+  $manifestPath = Join-Path $artifactDirectory $ManifestName
+  $manifest | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
+
+  if ($BuildOnly) {
+    Write-Host "Built $assetPath"
+    if ($installerEnabled) {
+      Write-Host "Built $setupPath"
+    }
+    Write-Host "Built $manifestPath"
+    Write-Host "Package SHA256: $assetSha256"
+    if ($installerEnabled) {
+      Write-Host "Setup SHA256: $setupSha256"
+    }
+    return
+  }
 
   $releaseExists = Test-GhReleaseExists -ReleaseRepoName $resolvedReleaseRepo -VersionTag $ReleaseTag
+  $releaseAssetPaths = @($assetPath)
+  if ($installerEnabled) {
+    $releaseAssetPaths += $setupPath
+  }
+  $releaseAssetPaths += $manifestPath
 
   if ($releaseExists) {
-    gh release upload $ReleaseTag $assetPath --repo $resolvedReleaseRepo --clobber
-    if ($LASTEXITCODE -ne 0) {
-      throw "Failed to upload $assetName to $resolvedReleaseRepo release $ReleaseTag"
-    }
-    gh release upload $ReleaseTag $manifestPath --repo $resolvedReleaseRepo --clobber
-    if ($LASTEXITCODE -ne 0) {
-      throw "Failed to upload $ManifestName to $resolvedReleaseRepo release $ReleaseTag"
+    foreach ($releaseAssetPath in $releaseAssetPaths) {
+      gh release upload $ReleaseTag $releaseAssetPath --repo $resolvedReleaseRepo --clobber
+      if ($LASTEXITCODE -ne 0) {
+        $failedAssetName = Split-Path -Leaf $releaseAssetPath
+        throw "Failed to upload $failedAssetName to $resolvedReleaseRepo release $ReleaseTag"
+      }
     }
     Set-GhReleaseNotes `
       -ReleaseRepoName $resolvedReleaseRepo `
       -VersionTag $ReleaseTag `
       -NotesPath $releaseNotesPath
   } else {
-    gh release create $ReleaseTag $assetPath $manifestPath `
+    gh release create $ReleaseTag @releaseAssetPaths `
       --repo $resolvedReleaseRepo `
       --title $ReleaseTag `
       --notes-file $releaseNotesPath
@@ -674,10 +816,17 @@ try {
   }
 
   Write-Host "Uploaded $assetName to $resolvedReleaseRepo release $ReleaseTag"
+  if ($installerEnabled) {
+    Write-Host "Uploaded $setupName to $resolvedReleaseRepo release $ReleaseTag"
+  }
   Write-Host "Uploaded $ManifestName to $resolvedReleaseRepo release $ReleaseTag"
   Write-Host "Manifest URL: https://github.com/$resolvedReleaseRepo/releases/latest/download/$ManifestName"
   Write-Host "Package URL: $downloadUrl"
   Write-Host "Package SHA256: $assetSha256"
+  if ($installerEnabled) {
+    Write-Host "Setup URL: $setupDownloadUrl"
+    Write-Host "Setup SHA256: $setupSha256"
+  }
   Write-Host "Source commit: $sourceCommit"
   if ($sourceCompareUrl) {
     Write-Host "Compare URL: $sourceCompareUrl"

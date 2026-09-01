@@ -89,12 +89,24 @@ git -C D:\training_platform log --oneline -n 20
 推荐优先使用交互式发布向导，它会逐步询问版本号、源码目录、更新日志起点和发布模式：
 
 ```powershell
-python scripts\release_wizard.py
+python scripts\release_wizard_emo_vision_train.py
 ```
 
 向导会自动列出可选的 `PreviousSourceRef`，包括上一个 Release manifest 的
 `source_commit`、源码仓最新 tag、最近源码 commits、`auto` 和手动输入。
 向导最后会打印真实执行的 PowerShell 命令，并要求确认后才开始发布。
+
+当重新发布一个已经存在的 tag 时，向导会跳过当前 Release，读取它前一个
+Release 的 manifest。选择更新日志起点后，向导还会显示预计提交数量；超过
+50 个提交时会默认取消并要求再次确认，避免误选旧 tag 生成过长的 Release Notes。
+
+最终确认页中应同时看到上一个 Release tag、更新日志起点和预计提交数。例如：
+
+```text
+上一个 Release：v1.0.14
+更新日志起点：576ecbc0752b7c61c28f0c929d83e916d715f705
+预计更新提交数：5
+```
 
 最稳的方式是使用单行命令：
 
@@ -247,3 +259,48 @@ $previousSourceRef = '<上一次源码commit或tag>'
   -PreviousSourceRef $previousSourceRef `
   -Notes $manifestNotes
 ```
+
+## 12. Emo Master Windows 发布
+
+`emo-master` 使用同一发布脚本，但会额外生成 Inno Setup 当前用户安装程序。
+正式 tag 去掉 `v` 后必须与 `src\emo_master\__init__.py` 中的 `__version__` 一致。
+
+推荐先运行专用向导，它会固定选择 `emo-master`，并从源码自动读取应用版本作为 tag：
+
+```powershell
+python scripts\release_wizard_emo_master.py
+```
+
+本地只构建、不上传：
+
+```powershell
+$env:ISCC_PATH = 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe'
+.\scripts\publish-local-release.ps1 `
+  -Target emo-master `
+  -ReleaseTag v0.6.0 `
+  -SourceRoot C:\Users\jsdfhasuh\my_scripts\emo_master `
+  -BuildOnly `
+  -OutputDirectory .\artifacts\emo-master-v0.6.0
+```
+
+脚本会生成并核验：
+
+- `emo-master-windows-v0.6.0.zip`
+- `emo-master-setup-v0.6.0.exe`
+- `manifest.json`
+
+installer 目标会在打包过程中扫描禁用依赖，运行便携版自检，并完成静默安装、
+安装版自检和静默卸载。卸载验收会确认程序目录删除且 `~/.emo_master` 用户数据保留。
+如需用本机模型验收冻结程序，可运行：
+
+```powershell
+.\EmoMaster.exe --self-test `
+  --model D:\path\best.onnx `
+  --image D:\path\test.jpg `
+  --expected-detections 4 `
+  --result-json .\package-inference.json
+```
+
+真实模型和图片只作为本地输入，不应复制到源码仓、打包仓或 Release。推送应用仓
+`v*` tag 后，应用仓先运行完整检查，再调用本仓 reusable workflow，最后由应用仓的
+`GITHUB_TOKEN` 发布三个 assets。

@@ -31,6 +31,7 @@ class BuildJob:
     collect_binaries: List[str] = field(default_factory=list)
     extra_args: List[str] = field(default_factory=list)
     collect_python_binary: bool = True
+    collect_conda_runtime_dlls: bool = True
     enable_torch_runtime: bool = True
 
 
@@ -240,6 +241,9 @@ def create_build_job(
         collect_binaries=get_config_list(cfg, 'collect_binaries'),
         extra_args=get_config_list(cfg, 'extra_args'),
         collect_python_binary=collect_python_binary,
+        collect_conda_runtime_dlls=bool(
+            cfg.get('collect_conda_runtime_dlls', True)
+        ),
         enable_torch_runtime=enable_torch_runtime,
     )
 
@@ -312,6 +316,24 @@ def _collect_conda_runtime_dlls() -> List[str]:
     return dlls
 
 
+def _collect_python_runtime_dlls() -> List[str]:
+    """Collect Conda DLLs required by Python's sqlite3 and ctypes extensions."""
+    candidates = [sys.prefix, os.environ.get('CONDA_PREFIX'), sys.base_prefix]
+    names = ('ffi.dll', 'sqlite3.dll')
+    seen = set()
+    dlls: List[str] = []
+    for prefix in candidates:
+        if not prefix:
+            continue
+        library_bin = os.path.join(prefix, 'Library', 'bin')
+        for name in names:
+            path = os.path.join(library_bin, name)
+            if os.path.isfile(path) and path not in seen:
+                seen.add(path)
+                dlls.append(path)
+    return dlls
+
+
 def _ensure_torch_runtime_hook() -> str:
     """Return the runtime hook that adds torch DLL directories early on startup."""
     hook_path = os.path.join(os.path.dirname(__file__), 'pyi_rth_torch_dll.py')
@@ -329,6 +351,9 @@ def needs_torch_runtime(job: BuildJob) -> bool:
 
 
 def needs_conda_runtime_dlls(job: BuildJob) -> bool:
+    if not job.collect_conda_runtime_dlls:
+        return False
+
     hidden_roots = {x.split('.')[0] for x in job.hidden_imports}
     return any(
         x in hidden_roots
@@ -425,6 +450,9 @@ def append_binary_args(cmd: List[str], job: BuildJob, collect_binaries: List[str
         cmd.append(f'--add-binary={pythonDll}{os.pathsep}.')
     else:
         print("Warning: python DLL not found; the packaged app may fail to run")
+
+    for runtimeDll in _collect_python_runtime_dlls():
+        cmd.append(f'--add-binary={runtimeDll}{os.pathsep}.')
 
 
 def build_pyinstaller_command(
