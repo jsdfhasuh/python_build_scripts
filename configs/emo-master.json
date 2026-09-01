@@ -16,7 +16,8 @@
   "icon": null,
   "add_data": [
     "${SOURCE_ROOT}/src/emo_master/apps/designer/ui/styles/app.qss:emo_master/apps/designer/ui/styles",
-    "${SOURCE_ROOT}/src/emo_master/apps/runtime/context/migrations:emo_master/apps/runtime/context/migrations"
+    "${SOURCE_ROOT}/src/emo_master/apps/runtime/context/migrations:emo_master/apps/runtime/context/migrations",
+    "${SOURCE_ROOT}/src/emo_master/plugins/builtins:emo_master/plugins/builtins"
   ],
   "hidden_imports": [
     "PySide2.QtCore",
@@ -44,8 +45,6 @@
     "pyi_rth_onnxruntime.py",
     "--paths=${SOURCE_ROOT}/src",
     "--collect-submodules",
-    "emo_master.plugins.builtins",
-    "--collect-data",
     "emo_master.plugins.builtins",
     "--copy-metadata",
     "onnxruntime"
