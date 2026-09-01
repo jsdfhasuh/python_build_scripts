@@ -195,7 +195,7 @@ jobs:
           $versionSlug = $env:INNO_VERSION.Replace('.', '_')
           $downloadUrl = "https://github.com/jrsoftware/issrc/releases/download/is-$versionSlug/innosetup-$env:INNO_VERSION.exe"
           $installerPath = Join-Path $env:RUNNER_TEMP "innosetup-$env:INNO_VERSION.exe"
-          $installDir = Join-Path $env:RUNNER_TEMP "Inno Setup $env:INNO_VERSION"
+          $installDir = Join-Path $env:RUNNER_TEMP "InnoSetup-$versionSlug"
           Invoke-WebRequest -Uri $downloadUrl -OutFile $installerPath
           $signature = Get-AuthenticodeSignature -LiteralPath $installerPath
           if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch 'Pyrsys B\.V\.') {
