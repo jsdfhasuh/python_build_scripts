@@ -231,28 +231,28 @@ jobs:
         run: |
           $sourceRoot = Join-Path $env:GITHUB_WORKSPACE 'source'
           $outputDirectory = Join-Path $env:GITHUB_WORKSPACE 'packager\release-output'
-          $publishArgs = @(
-            '-Target', $env:TARGET_INPUT,
-            '-ReleaseTag', $env:RELEASE_TAG_INPUT,
-            '-ReleaseRepo', $env:RELEASE_REPO_INPUT,
-            '-SourceRoot', $sourceRoot,
-            '-SourceRef', $env:SOURCE_REF_INPUT,
-            '-OutputDirectory', $outputDirectory
-          )
+          $publishArgs = @{
+            Target = $env:TARGET_INPUT
+            ReleaseTag = $env:RELEASE_TAG_INPUT
+            ReleaseRepo = $env:RELEASE_REPO_INPUT
+            SourceRoot = $sourceRoot
+            SourceRef = $env:SOURCE_REF_INPUT
+            OutputDirectory = $outputDirectory
+          }
 
           if ($env:PUBLISH_RELEASE_INPUT -ne 'true') {
-            $publishArgs += '-BuildOnly'
+            $publishArgs['BuildOnly'] = $true
           }
           $previousSourceRef = $env:PREVIOUS_SOURCE_REF_INPUT.Trim()
           if ($previousSourceRef) {
-            $publishArgs += @('-PreviousSourceRef', $previousSourceRef)
+            $publishArgs['PreviousSourceRef'] = $previousSourceRef
           }
           $releaseBodyPath = $env:RELEASE_BODY_PATH_INPUT.Trim()
           if ($releaseBodyPath) {
             if (-not [System.IO.Path]::IsPathRooted($releaseBodyPath)) {
               $releaseBodyPath = Join-Path $env:GITHUB_WORKSPACE "packager\$releaseBodyPath"
             }
-            $publishArgs += @('-ReleaseBodyPath', $releaseBodyPath)
+            $publishArgs['ReleaseBodyPath'] = $releaseBodyPath
           }
 
           .\scripts\publish-local-release.ps1 @publishArgs
