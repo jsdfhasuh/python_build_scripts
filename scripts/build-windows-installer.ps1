@@ -73,7 +73,8 @@ function ConvertTo-InnoLiteral {
 function Invoke-HiddenProcess {
   param(
     [Parameter(Mandatory = $true)][string]$FilePath,
-    [string[]]$Arguments = @()
+    [string[]]$Arguments = @(),
+    [switch]$AllowFailure
   )
 
   $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
@@ -90,7 +91,13 @@ function Invoke-HiddenProcess {
   try {
     $process.WaitForExit()
     if ($process.ExitCode -ne 0) {
+      if ($AllowFailure) {
+        return $process.ExitCode
+      }
       throw "$FilePath failed with exit code $($process.ExitCode)"
+    }
+    if ($AllowFailure) {
+      return 0
     }
   }
   finally {
@@ -124,15 +131,19 @@ function Assert-SelfTest {
   if (Test-Path -LiteralPath $ResultPath) {
     Remove-Item -LiteralPath $ResultPath -Force
   }
-  Invoke-HiddenProcess `
+  $exitCode = Invoke-HiddenProcess `
     -FilePath $ExecutablePath `
-    -Arguments @('--self-test', '--result-json', $ResultPath)
+    -Arguments @('--self-test', '--result-json', $ResultPath) `
+    -AllowFailure
   if (-not (Test-Path -LiteralPath $ResultPath -PathType Leaf)) {
-    throw "Self-test did not create its result JSON: $ResultPath"
+    throw "Self-test exited with code $exitCode and did not create its result JSON: $ResultPath"
   }
   $result = Get-Content -LiteralPath $ResultPath -Raw | ConvertFrom-Json
   if ($result.status -ne 'ok') {
-    throw "Package self-test failed: $($result.errors -join '; ')"
+    throw "Package self-test failed with exit code ${exitCode}: $($result.errors -join '; ')"
+  }
+  if ($exitCode -ne 0) {
+    throw "Package self-test reported status ok but exited with code $exitCode"
   }
 }
 
