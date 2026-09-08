@@ -1,402 +1,367 @@
-# Python 打包脚本改进计划：自定义程序名称与图标
+# VisionWorkshop 便携 ZIP 打包改进计划：程序名称与图标
 
-**项目：** `jsdfhasuh/python_build_scripts`  
-**编写日期：** 2026-09-08  
-**版本：** v1.1  
-**状态：** 实施计划；本次仅提交文档，M0–M5 均待实施，未执行 Windows 构建或升级验收。  
-**文档位置：** `docs/plans/2026-09-08-packaging-branding-improvement-plan.md`
-
+**打包仓库：** `jsdfhasuh/python_build_scripts`  
+**主要对象：** VisionWorkshop，基于现有 `emo-vision-train` 构建目标  
+**更新日期：** 2026-09-08  
+**版本：** v1.2，替代 v1.1 的多项目及安装器实施范围  
 **计划分支：** `docs/build-branding-plan-20260908`  
-**本次提交边界：** 仅新增本计划，不修改打包代码、生产配置、工作流或外部应用，不构建、不发布 Release。
+**文档路径：** `docs/plans/2026-09-08-packaging-branding-improvement-plan.md`  
+**状态：** 计划修订；M0–M5 均待实施，本次不修改功能代码、不构建、不发布 Release。
 
-## 1. 结论与实施原则
+## 1. 本次修订的结论
 
-需要改进，但不需要重写打包系统。
-
-现有 `build.py` 已能通过 JSON 的 `name`、`icon` 生成 PyInstaller 参数。此次应补齐的是统一配置解析、发布与安装同步、临时覆盖、输出隔离、发布前检查，以及测试保障，而不是重复实现另一套 PyInstaller 封装。[R1]
-
-本次以 Windows 为范围，面向本仓库打包的多个外部 Python 项目，不把功能写死为某个训练平台。默认目标配置继续有效；自定义外观不修改源码仓库名、Python 包名、用户数据目录、安装 AppId 或更新身份。
-
-特别注意：EXE 文件名也参与启动与更新契约，不能简单地将它视为纯外观。程序窗口标题与窗口图标则由目标程序控制，不能仅凭打包参数承诺已修改。[R8][R9][E1]
-
-### 1.1 核查基线
-
-| 仓库 | 分支 | 本次核查的提交 |
-|---|---|---|
-| `jsdfhasuh/python_build_scripts` | `master` | `ab4a33e586138fb381a87ae21cc83b5e8d79adbe` |
-| `jsdfhasuh/emo-vision-train`，仅核查更新兼容性 | `main` | `59352fd5a0f183693f3384940dd2d5923e317e15` |
-
-实施时应先重新确认分支 HEAD。若代码已变化，重新核对相应函数，不按本计划中的旧行号机械修改。本计划所称风险来自静态代码分析，不等于已完成真实安装、升级或 GUI 测试。
-
-## 2. 当前实现与需要解决的问题
-
-| 编号 | 已核查情况 | 改进要求 | 优先级 |
-|---|---|---|---|
-| F01 | `append_common_args()` 已传递 `--name`、`--icon`。[R1] | 保留并复用；新增统一的覆盖与校验入口。 | P0 |
-| F02 | 构建、发布、安装器分别读取配置；安装器有独立的 `executable` 和多个显示名称。[R2][R3] | 同一次执行统一读取一份最终生效配置，避免名称不同步。 | P0 |
-| F03 | 构建端展开环境变量，PowerShell 发布端另行替换部分模板；临时配置容易引入路径基准变化。[R1][R2] | 明确每种路径的基准，解析后使用绝对路径，避免重复展开。 | P0 |
-| F04 | 发布脚本通过 `dist/<name>` 查找目录，`-SkipBuild` 分支没有构建配置匹配证明。[R2] | 自定义构建输出隔离，复用产物前验证构建记录及内容。 | P0 |
-| F05 | 主程序改名时，训练平台更新器仍按旧进程传入的 EXE 名称查找、重启。[R8] | 增加改名发布门禁；不把新字段写入 manifest 当作旧客户端已支持迁移。 | P0 |
-| F06 | Inno 脚本配置了 `UninstallDisplayIcon`，未接入 `SetupIconFile`。[R3] | 分别处理主程序图标、安装器图标和卸载显示图标。 | P0 |
-| F07 | 向导未接入外观参数；启动时就要求 `gh` 登录。[R4] | 增加外观步骤；先选择执行模式，只构建路径不依赖发布账户。 | P1 |
-| F08 | Actions checkout 打包仓库时固定 `ref: master`，手动输入和可复用入口均无外观字段。[R5] | 修正实际执行版本的选择，并让两个入口调用同一配置解析流程。 | P1 |
-| F09 | Actions 的源码默认 ref 仍为旧功能分支；该 ref 在本次前序读取中返回 404。[R5] | 不再依赖这个旧分支；按明确输入或目标仓库默认分支解析并记录源码提交。 | P1 |
-| F10 | 仓库树未包含测试目录，`AGENTS.md` 也明确尚无自动化测试。[R6] | 从配置单元测试开始，再补 Windows 构建和安装冒烟测试。 | P0 |
-| F11 | 安装器无条件执行应用 `--self-test`，烟测还有 `.emo_master` 专用数据目录逻辑。[R3] | 本期只保证现有安装目标；不能给任意目标加 `installer.enabled=true` 就宣称通用安装支持。 | 边界 |
-
-P0 为功能交付前必备；P1 为完整操作入口；P2 为后续独立扩展。不要把显示名称改动顺带扩展成依赖系统、GUI 或安装框架的全面重构。
-
-## 3. 功能范围与不变项
-
-### 3.1 第一版交付
-
-支持本次构建覆盖程序文件名、显示名称、EXE 图标；对原本已启用安装器的目标同步安装名称、快捷方式目标，并可指定安装器图标。支持仅本次使用、显式选择本地预设、恢复默认配置。
-
-本地 `build.py`、PowerShell 发布入口、两个现有向导、Actions 应遵循同一解析规则。新增命令行参数是计划接口，现有版本尚不支持。
-
-第一版以 `.ico` 为标准输入，不加入 PNG/SVG 自动转换、在线图标下载或新的图形界面。ZIP 和 setup 文件名继续由独立模板控制，可显式覆盖，不强制跟随显示名称变化。
-
-### 3.2 三种名称必须分离
-
-| 概念 | 示例 | 作用与边界 |
-|---|---|---|
-| 构建目标 | `emo-vision-train` | 选择源码仓库、依赖与默认构建配置，不因外观变化而重命名。 |
-| 程序文件名 | `VisionWorkshop` | 生成 `VisionWorkshop.exe`；可能影响更新、脚本和快捷方式。 |
-| 显示名称 | `视觉工坊` | 安装界面、快捷方式等面向用户的文字；运行时标题需要应用配合。 |
-
-下列项目不随外观覆盖自动变化：`source_repo`、`release_repo`、源码入口与包名、依赖列表、用户数据目录、安装 `app_id`、默认安装目录、更新通道、版本号语义、更新器文件名及参数契约。
-
-安装器 `AppId` 用于安装身份识别。临时改外观仍属于同一应用，默认保持不变；需要并行安装两个独立产品属于另一个需求，不能只换显示名称就视为已支持。[E2]
-
-## 4. 统一配置设计
-
-### 4.1 一个解析核心，多个薄入口
-
-建议新增：
-
-- 根目录 `build_config.py`：配置合并、类型与名称校验、路径解析、安装字段派生、变更摘要。
-- `scripts/resolve_build_config.py`：供 PowerShell 和 CI 调用的薄命令行入口；复用上述模块，不再实现一份逻辑。
-
-现有 `build.py` 直接调用公共模块。发布脚本先生成最终配置，再将同一文件交给构建、安装器和归档阶段；下游不得重新读取原始 JSON 覆盖最终结果。
-
-处理顺序：
+本次主要改进 **VisionWorkshop 的名称、图标和 ZIP 打包流程**，继续采用：
 
 ```text
-目标原始配置
-  → 显式选中的本地预设
-  → 本次命令行或向导输入
-  → 校验与派生
-  → 本次最终配置 + 变更摘要
-  → EXE / 安装器 / ZIP / 发布检查
+下载 ZIP → 解压整个文件夹 → 双击 VisionWorkshop.exe
 ```
 
-优先级为：本次显式输入 > 显式选中的预设 > 原始目标配置。向导只是参数输入方式，不另设一套优先级。不能因为本机曾保存过某个预设就自动改变后续默认构建。
+不新增安装向导，不生成 setup.exe，不改变“解压即用”的使用方式。此前计划把另一个目标的安装器联动也列为必做项，范围过大；本版本删除这部分实施任务和安装、卸载验收要求。
 
-### 4.2 拟新增覆盖字段
+保留现有 PyInstaller 打包能力，只补齐名称与图标的配置入口，以及 EXE、包内目录、ZIP、发布步骤使用同一配置的一致性。不要为了这个需求重写整个打包系统。
 
-| 覆盖字段 | 生效位置 | 规则 |
-|---|---|---|
-| `program_name` | 顶层 `name` | 输入不带 `.exe`；显式覆盖时同步安装器 EXE 目标。 |
-| `display_name` | 最终配置的显示名称与安装显示字段 | 显式覆盖时同步安装器 `app_name`、`start_menu_name`、`desktop_shortcut_name`。 |
-| `icon_path` | 顶层 `icon` | 指向已验证的 `.ico`，下游接收绝对路径。 |
-| `setup_icon_path` | `installer.setup_icon`，拟新增 | 明确指定优先；否则在本次显式替换主图标时继承主图标。 |
-| `release_asset_name` | 便携 ZIP 模板 | 单独显式设置，不因显示名称改变而隐式重写。 |
-| `setup_asset_name` | `installer.release_asset_name` | 仅在安装器启用时有效。 |
+### 1.1 相比 v1.1 的范围变更
 
-无覆盖时保留原配置，包括 `EmoMaster` 与 `Emo Master` 这类原本不同的文件名和显示名称。不能为了“统一”而把现有合法配置强制改成同一个字符串。
-
-仅改 `program_name` 时，不擅自覆盖原本独立设置的显示名称，但应在确认页提示两者不同；用户可再显式设置 `display_name`。
-
-空白交互输入代表沿用当前默认。恢复默认是放弃覆盖项、重新从原始配置解析，不是删除原始图标。第一版无需额外实现“彻底移除 EXE 图标”开关，避免把未指定、继承和移除混为一谈。
-
-### 4.3 参数建议
-
-| 功能 | `build.py` | PowerShell 发布脚本 |
-|---|---|---|
-| 程序文件名 | `--program-name` | `-ProgramName` |
-| 显示名称 | `--display-name` | `-DisplayName` |
-| EXE 图标 | `--icon-path` | `-IconPath` |
-| 本地预设 | `--branding-preset` | `-BrandingPreset` |
-| 安装器图标 | 可由配置提供 | `-SetupIconPath` |
-| 便携包名称模板 | 可由配置提供 | `-ReleaseAssetName` |
-| 安装包名称模板 | 可由配置提供 | `-SetupAssetName` |
-| 预览 | 保留 `--dry-run` | 增加 `-DryRun` |
-| 明确指定复用记录 | 不适用 | `-BuildRecordPath`，与 `-SkipBuild` 配合 |
-
-直接 `build.py` 只构建 PyInstaller 产物，不承担发布或生成 Inno 安装器。最终配置的内部传递接口应与用户覆盖参数互斥，禁止下游再次覆盖或再次展开已经解析的内容。
-
-### 4.4 路径与字符串规则
-
-旧配置的路径语义不做隐式迁移。发布入口仍以打包仓库根目录为工作目录；直接调用旧版 `build.py` 路径行为由兼容测试保护。
-
-新增覆盖图标的相对路径统一以打包仓库根目录为基准，并在帮助中明确说明。支持 `${SOURCE_ROOT}/...` 与拟新增 `${PACKAGER_ROOT}/...`，但不得向现有进程全局写入长期环境变量。绝对路径按实际文件解析。
-
-最终配置写入临时目录后，不能按该临时目录重新解释原来的相对路径。将图标、入口、数据源、运行时 hook 等相关文件路径在对应边界解析清楚，同时保护 `add_data` 的源/目标分隔规则，不做任意字符串拼接。
-
-对当前阶段必需的路径，未定义变量、文件不存在或目录误填应在编译前报错。资产模板在需要 ReleaseTag 的阶段再完整解析；纯 EXE 预览不应凭空要求一个发布版本号。显示名称是字面量，不应因为含有 `$`、`%` 就被重复展开为环境变量。
-
-### 4.5 校验规则
-
-程序文件名不得为空，不带 `.exe`，不得包含路径分隔符、控制字符、Windows 保留字符、保留设备名称、尾随点或空格。校验按 Windows 规则执行，即使配置单元测试运行在其他系统也不能套用 POSIX 文件名规则。[E3]
-
-允许经过校验的中文、英文和空格，不强制用户使用英文。快捷方式名称同样是文件名，需要校验；无法用于快捷方式的显示名称应明确报错或要求独立快捷方式名，不能静默截断。
-
-主程序名还要与 updater 构建任务名、最终复制目标 `updater.exe` 做不区分大小写的冲突检查，防止两个任务输出同名 EXE/spec，或复制更新器时覆盖主程序。
-
-ICO 至少检查真实文件头、图像目录、尺寸和数据范围，不只检查扩展名。推荐多尺寸图标；缺少推荐尺寸给警告，格式损坏直接失败。安装器推荐包含 16、32、48、64、256 像素图像。[E4]
-
-ZIP、setup 以及 manifest 的输出名称也按单个安全文件名验证：展开模板后不得含路径分隔符、绝对路径或目录穿越，各个产物名称不能相互覆盖。对最终输出目录执行边界检查。
-
-新输入只走允许的字段映射，不能覆盖任意源码路径、依赖或仓库字段。`extra_args` 如与名称、图标、输出路径或打包模式冲突，在自定义构建模式中应报错，不接受“最后一个参数获胜”。第一版不承诺修改用户手写 `.spec`；检测到相关不支持组合应提前说明。
-
-## 5. 构建、输出隔离与产物复用
-
-### 5.1 构建职责
-
-沿用当前 PyInstaller 参数生成、Torch/ONNX Runtime hook、Conda DLL 收集与 updater 构建逻辑。此次不顺带调整依赖版本、CUDA 组合、控制台开关、压缩算法或模型资源收集策略。
-
-EXE 名称与图标通过 PyInstaller 的正式参数写入，不能先打包旧名字再手动重命名文件。程序名变化时，安装器目标和归档目录必须跟随同一最终配置。[E1]
-
-现有两个发布目标均采用目录式主程序。自定义功能第一版的发布验收以这些目录式配置为范围；`build.py` 原有单文件构建仍应保留。不要因为基础构建支持 onefile 就声称现有 updater 复制、ZIP 发布和安装逻辑已经支持任意 onefile 组合。
-
-### 5.2 输出隔离
-
-无外观覆盖的普通构建继续保持现有输出约定。自定义构建使用独立构建上下文，建议：
-
-```text
-build/branding/<target>/<build-id>/
-  effective-config.json       # 本地私有：可能含绝对路径
-  build-record.json           # 本地完整校验记录
-  work/<job>/
-  spec/<job>/
-
-dist/branding/<target>/<build-id>/
-  <program-name>/
-    <program-name>.exe
-    updater.exe              # 仅原配置已启用时
-    _internal/...
-
-release-output/branding/<target>/<build-id>/
-  <archive>.zip
-  <setup>.exe                 # 仅安装器已启用时
-  manifest.json
-  build-summary.json         # 脱敏摘要
-```
-
-路径为建议布局，具体字段由解析器统一计算。`copy_updater_to_app_dir()` 等函数应接收显式构建目录，不再自行假设固定的 `dist` 根路径。每个 job 的 work/spec 独立，防止主程序与 updater 或两个并行构建互相覆盖。
-
-默认构建目录若未做并行隔离，应有同一目标的并发保护，不能宣称默认路径可以安全并发。
-
-### 5.3 `SkipBuild` 安全检查
-
-使用旧目录不等于当前配置已构建。`-SkipBuild` 通过显式的 `-BuildRecordPath` 定位构建记录与对应产物；向导也必须明确选择记录，不能自动猜测“最近一个目录”。复用时至少验证：目标、源码提交、构建器提交、有效配置摘要、图标内容哈希、Python/PyInstaller 版本及相关构建环境记录、预期 EXE、输出文件清单与内容哈希。
-
-仅源码 commit 相同不能证明本地工作树未变。第一版对存在源码未提交修改的情况不允许 `SkipBuild`，要求重新构建；这不等同于全面禁止正常的本地开发构建。
-
-不存在构建记录、图标内容变化、配置变化或产物被改动时，拒绝复用，并给出“重新完整构建”的操作说明。旧版 dist 首次使用新的复用检查时也应要求重建，这是有意增加的安全限制。
-
-构建记录只能在全部构建任务和 updater 复制成功后原子写成完成状态，失败记录不得用于发布。除 Git SHA 外，记录实际参与构建的图标、运行时 hook、配置、资源等输入摘要；源码或输入在构建期间变化应使记录失效。`build_id`、时间戳和隔离目录绝对路径等执行信息不参与语义配置指纹，否则相同配置无法复用。符号链接或指向输出根目录外的记录不得成为读取或发布任意文件的入口。
-
-构建记录用于防止错用旧产物，不代表已实现二进制逐字节可复现构建。完整配置与用户绝对路径不直接放入公开 ZIP 或自动上传目录。
-
-## 6. 发布与自动更新兼容性
-
-### 6.1 已确认的训练平台改名风险
-
-训练平台 `auto_update.py` 默认以当前 `sys.executable` 的文件名作为安装后重启名称；`updater.py` 接收 `--exe`，随后用同一个名称查找和重启。[R8]
-
-因此，旧程序为 `emo-vision-train.exe`，新包只提供 `VisionWorkshop.exe` 时，即使解压目录的兜底逻辑找到了新包，后续仍会按旧名寻找启动文件并失败。这是代码逻辑分析结论，尚未进行真实 Windows 升级复现。
-
-单纯保持 `updater.exe` 原名，或者在 manifest 增加一个 `program_name` 字段，不能让旧更新器自动理解这个变化。
-
-### 6.2 第一版发布门禁
-
-普通无覆盖发布保持现有流程。包含外观覆盖的向导默认选择“只构建，不发布”；公开发布必须显式选择，并显示仓库、tag、产物名称和更新兼容检查结果。
-
-对于启用现有更新器且修改了主 EXE 名称的目标，第一版禁止向原自动更新通道发布此包。不能提供一个通用强制开关绕过这项检查。未来只有在独立的更新迁移方案完成并有测试证据后，才能解除对应限制。发布检查以目标的原始程序名称及明确的更新契约为基线；无法证明新通道隔离的改名目标应保守阻断。仅修改 `ReleaseRepo`、tag 或 `ManifestName` 不等于改变已打包程序里的更新地址，不能绕过此限制。
-
-**仅构建不等于运行时已禁止更新。** 打包器不会自动改变训练平台启动后的更新检查行为。改名版即使手动分发，仍可能从原通道下载不匹配的包。因此，在目标应用没有受支持的关闭或隔离更新方案前，这类产物只能标记为构建验证版，不能宣称已经满足可交付更新兼容性。
-
-临时使用更稳妥的路线是保留原主 EXE 名称，改变图标与面向用户的名称；窗口标题仍按第 10 节由应用显式适配。这条路线仍需正常构建和安装验收。
-
-### 6.3 保持旧 manifest 契约
-
-继续保留旧客户端使用的 `version`、`url`、`sha256`、`mandatory`、`notes` 及原有扩展字段，不能用新嵌套结构替换旧字段。[R2]
-
-新增构建信息优先放在独立、脱敏的 `build-summary.json`；确有需要才增加兼容性的 manifest 字段。不能改变老字段含义，也不能将构建机绝对路径、token、完整环境变量或含凭据 URL 放入公开文件。
-
-### 6.4 执行模式
-
-| 模式 | 应有行为 |
+| 项目 | v1.2 决定 |
 |---|---|
-| 预览 | 解析、校验、显示计划；不执行 PyInstaller，不联网发布，不改原配置。 |
-| 只构建 | 生成本地 EXE/ZIP/既有安装目标产物；不要求 gh 登录，不查询远端 Release。 |
-| 构建并发布 | 本地校验通过后再鉴权、生成必要远端信息并上传。 |
-| 跳过构建后发布 | 除发布检查外，还必须通过第 5.3 节复用验证。 |
-| 只更新说明 | 不生成或修改外观产物；收到外观覆盖参数应明确拒绝。 |
+| 主要交付对象 | 聚焦 VisionWorkshop，不再要求同时为所有目标开发外观功能。 |
+| 产物形式 | 目录式程序加 ZIP；不新增安装版和单文件主程序。 |
+| 主程序名 | VisionWorkshop.exe 是明确的验收目标，不以只改 ZIP 名称代替 EXE 改名。 |
+| 安装器相关任务 | 删除安装名称、安装器图标、快捷方式、AppId、安装目录及安装/卸载测试任务。 |
+| 其他项目 | 保持 emo-master 原有配置和行为，只检查共享代码的兼容性，不扩展其功能。 |
+| 显示名称参数 | 不作为本期必填或主交付项；未适配窗口代码时不能宣称界面已改名。 |
+| 自动更新检查 | 保留；它是便携版更新兼容性问题，不是安装器需求。 |
+| 本地多预设系统 | 降为后续可选功能；先做一个显式选择的 VisionWorkshop 配置档。 |
 
-冲突模式必须在任何编译或远端写操作前失败，例如 `NotesOnly + BuildOnly`、`NotesOnly + 外观参数`、未给记录却要求 `SkipBuild`；`DryRun` 永远不编译、不上传，向导 `--yes` 也不能绕过校验或改变发布模式。
+## 2. 项目对应关系与核查依据
 
-只构建模式保留本地 Git 信息，但不能为了查找上个 Release 强制联网。其 manifest 中的远端 URL 只能明确标注为拟发布地址，不得打印为已可下载；也可将其作为未发布的本地候选清单处理。
+### 2.1 不将对外名称误当作仓库迁移
 
-## 7. 安装器联动
+| 概念 | 本次采用的值 |
+|---|---|
+| 对外程序名称 | `VisionWorkshop` |
+| 已有构建目标 | `emo-vision-train` |
+| 已有目标配置 | `configs/emo-vision-train.json` |
+| 当前配置中的源码仓库 | `jsdfhasuh/emo-vision-train` |
+| 当前配置中的发布仓库 | `jsdfhasuh/emo-vision-train-release` |
+| 本次自定义 EXE | `VisionWorkshop.exe` |
+| ZIP 内唯一应用根目录 | `VisionWorkshop/` |
+| VisionWorkshop 配置档的 ZIP 名称模板 | `VisionWorkshop-windows-${RELEASE_TAG}.zip` |
 
-`program_name` 显式覆盖时，同步 `installer.executable=<program_name>.exe`。`display_name` 显式覆盖时同步安装界面、开始菜单和桌面快捷方式名称。无覆盖时保留原有独立设置。[R3]
+“主要改 VisionWorkshop”在本计划中表示为现有训练平台生成这一名称的便携版本，不代表已经存在新仓库，也不表示需要重命名 GitHub 仓库、Python 包或构建目标。
 
-图标分层处理：主 EXE 通过 PyInstaller 嵌入；安装器和卸载程序自身图标通过 `SetupIconFile`；系统卸载列表继续以 `UninstallDisplayIcon` 指向实际主 EXE。快捷方式目标也必须指向同一实际 EXE。[E1][E4]
+### 2.2 代码基线
 
-生成 Inno 脚本时，用户输入必须做字段类型对应的转义与控制字符校验。特别区分可信配置中的 `{app}`、`{localappdata}` 常量和用户名称中的字面花括号，不能只处理引号或对所有字段做同一替换。[E5]
+2026-09-08 重新确认的打包仓库 `master` 为 `ab4a33e586138fb381a87ae21cc83b5e8d79adbe`。本次修订前的文档提交为 `d3e00305cd9613c9d959a736391e15570404a6a9`。
 
-不随显示名称改变 AppId 和默认安装目录。对于同 AppId 的旧版升级，还要验证旧快捷方式与旧 EXE 的处理，不能以全目录清空作为清理策略，不得删除用户数据。实际不支持的升级组合明确列为受限，不以全新安装通过替代升级通过。
+| 已核查内容 | 对本计划的影响 |
+|---|---|
+| `build.py` 已通过 `name`、`icon` 传给 PyInstaller。[R1] | 复用现有机制，不先打包旧 EXE 再手工改名。 |
+| 训练平台配置为 `onefile: false`，ZIP 资产名，启用了 updater，没有启用安装器。[R2] | 保留目录式、解压即用的产物结构和 updater。 |
+| 发布脚本按 `config.name` 查找 dist，另行读取 JSON 并生成 ZIP 与 manifest。[R3] | 名称覆盖必须贯穿构建、归档和发布，不能只改变 build.py 内存中的值。 |
+| 向导没有名称、图标输入，并在较早阶段检查 gh 登录。[R4] | 为 VisionWorkshop 增加入口；预览和仅构建路径不应要求发布账户。 |
+| Actions 固定检出打包仓库 master。[R5] | 新分支验收要确认实际执行的脚本 SHA，不能误测旧脚本。 |
+| 仓库指南未定义自动化测试，也限制在打包仓库直接修改外部应用。[R6] | 增加轻量测试；目标程序的运行时外观、更新协议修改单独处理。 |
 
-保留现有 Emo Master 自检，不为通过新功能测试而删除或跳过自检。现有 `--self-test` 和 `.emo_master` 约定不是通用应用标准；训练平台安装器及通用自检配置化另列后续任务。安装/卸载测试在专用 Windows 测试环境执行。
+更新兼容性参考前次静态核查的 `jsdfhasuh/emo-vision-train@59352fd5a0f183693f3384940dd2d5923e317e15`。实施前必须重新核对目标源码的实际提交，不能将该历史检查当成最新版本的实测结论。[R7]
 
-## 8. 发布向导与本地预设
+## 3. 明确的交付范围
 
-在两个现有目标向导复用的 `release_wizard_common.py` 中增加外观步骤，不复制两个几乎相同的向导实现。
+### 3.1 第一版必须完成
 
-拟议交互：
+实现 VisionWorkshop 主程序文件名、EXE 图标、包内目录名和 ZIP 文件名的统一配置；支持通过命令行和现有训练平台发布向导使用，并接入现有 Windows Actions。原始目标配置保留，取消覆盖即可恢复原名称和图标。
+
+主程序仍然采用目录式打包，依赖和资源随整个目录压缩。自定义产物与默认产物分开，失败时不拿上次 dist 冒充新结果。预览和仅构建不上传，真实发布必须显式选择并经过更新兼容检查。
+
+### 3.2 本期明确不做
+
+不修改 `scripts/build-windows-installer.ps1`，不修改 `configs/emo-master.json`，不为 VisionWorkshop 加 `installer` 配置，不新增桌面或开始菜单快捷方式，不实现安装、卸载及安装升级逻辑。也不要求完成另一个项目的整套真实构建或安装验收才交付 VisionWorkshop。
+
+不重写依赖收集，不升级 Python、Torch、CUDA、ONNX Runtime 或 PyInstaller 版本，不改变控制台开关、压缩算法和运行时 hook 行为。不切换为 onefile 主程序，不引入新的图形界面框架，不做 PNG/SVG 自动转 ICO。
+
+不在打包脚本中全局替换应用字符串、打补丁修改 Qt 方法、重命名 Python 包、改变用户数据目录或修改第三方子模块。没有实际读取外观文件的应用，不因为 ZIP 中放入一个 JSON 就自动获得新窗口标题。
+
+### 3.3 更新助手与安装器的区别
+
+原配置的 `updater.exe` 保持原文件名和调用方式。它是程序收到更新包后用于替换目录和重启的助手，不是要求用户首次安装软件的 setup 程序。[R2][R7]
+
+本期保留 updater 不等于增加安装器；去掉安装器任务也不等于可以忽略 EXE 改名后的更新风险。
+
+## 4. 目标产物与成功标准
 
 ```text
-构建模式：只构建，不发布
-外观配置：使用默认 / 本次自定义 / 选择预设
-
-程序文件名，不含 .exe：VisionWorkshop
-显示名称：视觉工坊
-图标路径：assets/icons/vision-workshop.ico
-
-保存为本地预设：否
+VisionWorkshop-windows-v1.2.3.zip
+└─ VisionWorkshop/
+   ├─ VisionWorkshop.exe
+   ├─ updater.exe
+   ├─ _internal/
+   └─ 其他原有运行依赖与资源
 ```
 
-执行前展示目标配置、源码提交、程序 EXE、显示名称、主图标、安装器图标、安装包是否启用、实际输出目录、发布仓库与 tag、是否会上传、更新兼容状态，以及窗口外观是否已由应用支持。
+版本号仅为示例。具体依赖布局以原构建配置及所用 PyInstaller 的实际输出为准，不手动移动 DLL 或删减资源。
 
-当前向导本地状态加载函数只保留字符串值，不应直接塞入嵌套预设后假设可以持久化。[R4] 建议新建 `.build-branding.local.json`，使用带版本号的结构，按 target 保存多个命名预设；原向导的源码路径与仓库状态文件继续保留原格式。
+ZIP 内只包含一个完整的 `VisionWorkshop/` 应用根目录，不夹带默认旧程序目录、构建工作目录、源码仓库、私有配置或额外 setup 产物。不能把绝对路径、`dist/branding/...` 等构建机目录层级写进 ZIP。
 
-预设只有用户显式保存才写入，并以原子写入方式避免中断损坏；损坏时给出可恢复提示。新文件加入 `.gitignore`。恢复默认只清除本次覆盖，不删除用户保存的其他预设。
+用户无需预先安装 Python，也不经过新增安装向导；以 Windows 测试环境的实际启动结果验收。程序本身已有的驱动、硬件、网络等要求继续保留，不能把“解压即用”误写成“无需任何运行条件”。
 
-第一版使用路径输入，不引入 Tk/Qt 文件选择依赖。图标文件本身由用户提供，示例文件名不代表仓库已包含对应资源。
+EXE 文件图标和窗口运行时图标分开记录验收。第一版必须验证 EXE 中的新图标资源；程序打开后的窗口标题、窗口图标若未适配，应明确标注，而非报为完成。
 
-## 9. GitHub Actions
+## 5. 配置入口设计
 
-`workflow_dispatch` 和 `workflow_call` 都接入 `program_name`、`display_name`、`icon_path`。归档模板继续可通过目标配置设置，不为第一版把表单扩展成大型配置界面。
+### 5.1 原目标配置不被临时覆盖写回
 
-新增输入通过环境变量、参数列表传递给解析器，不把原始输入直接插入 PowerShell 脚本正文，也不使用 `Invoke-Expression`。CI 的图标必须存在于当前 checkout 的仓库目录，不能使用开发机上的 `D:\...` 路径；源码仓库图标在源码 checkout 后验证。
+新增一个显式选用的配置档，建议位置为 `profiles/visionworkshop.json`。使用 profiles 目录而非向 configs 根目录增加完整目标，避免目标枚举将其误当成另一个独立项目。
 
-当前 workflow 固定 checkout `master`，会导致从新分支测试工作流却实际执行 master 中的打包脚本。[R5] 应区分两种调用：
-
-- 在打包仓库手动执行：使用本次工作流所选的打包仓库提交，并记录 SHA。
-- 跨仓库可复用调用：增加 `packager_ref` 输入，推荐调用方固定打包仓库提交；不能无条件使用调用方的 `github.sha`，它可能属于源码仓库。兼容旧调用时可保留已声明的默认行为，但验收应使用明确固定版本。
-
-源码 `source_ref` 留空时按目标仓库默认分支解析，并记录最终 SHA；明确传入但不存在的 ref 必须失败，不得悄悄回退到其他分支。
-
-手动构建建议将 `publish_release` 默认改为 false，并在文档明确这项安全性变化；可复用入口现有 false 默认保持。自定义 EXE 改名的发布门禁与本地脚本完全一致。
-
-自动上传范围只包含可公开产物和脱敏摘要，不包含最终完整配置、本地预设或含绝对路径的完整记录。CI 日志展示实际 packager/source SHA，防止检查了一个版本却构建另一个版本。
-
-## 10. 目标程序运行时外观：独立适配，不混入本次自动修改
-
-本仓库的职责是构建外部应用；仓库指南也明确不在此处修改被引用应用源码。[R6] 本次计划不对外部项目做全局字符串替换、源码补丁注入或 Qt 方法 monkey patch。
-
-后续可由目标应用显式支持一个小型运行时外观配置，例如：
+拟议内容：
 
 ```json
 {
   "schema_version": 1,
-  "display_name": "视觉工坊",
-  "window_icon": "branding/app.ico"
+  "target": "emo-vision-train",
+  "program_name": "VisionWorkshop",
+  "icon_path": "${PACKAGER_ROOT}/assets/icons/visionworkshop.ico",
+  "release_asset_name": "VisionWorkshop-windows-${RELEASE_TAG}.zip"
 }
 ```
 
-打包器仅在目标已声明支持该契约时，将经过验证的配置和图标加入资源。应用负责读取配置并设置窗口标题、应用图标、主窗口图标和需要修改的关于界面文字。资源定位应兼顾源码运行和 PyInstaller 打包路径。[E6]
+这是计划中的配置格式，并非当前已有功能。图标路径只是约定；本次没有新增图标文件。实施时须由用户提供或明确选择有效 ICO，未提供时提示缺失，不能伪造一个图标或默认为已完成图标验收。
 
-不能仅在构建机设置环境变量就认为离线分发后也会生效；也不能在程序尚不读取此文件时宣称运行时改名已实现。未声明支持的目标应在确认页显示“仅修改打包/安装外观，窗口标题未适配”。没有启用安装器、也未声明运行时外观支持的目标，仅设置 `display_name` 不会改变用户可见界面；必须提示该字段本次没有可见应用位置，不能把它当成窗口改名已交付。
+配置档只承载允许的外观和归档字段。源码仓库、入口、依赖、更新地址及发布仓库仍来自原目标配置，不能借此注入任意构建或发布设置。配置档 target 与所选目标不匹配时直接失败。
 
-训练平台的更新迁移和运行时外观适配，需要在其源码仓库独立计划、测试和提交。本次不得顺带修改 X-AnyLabeling 或其他子模块指针。
+普通默认构建不得自动读取这个配置档。共享代码对 emo-master 的无覆盖调用保持原行为；第一版不开放其安装目标的外观覆盖，收到不支持的组合应明确拒绝而不是部分生效。
 
-## 11. 分阶段任务与提交顺序
+### 5.2 一个解析核心
 
-| 阶段 | 主要修改 | 完成门槛 | 建议独立提交主题 |
-|---|---|---|---|
-| M0：基线与测试骨架 | 核对最新代码；新增轻量 fixture、配置/命令基线测试 | 原两个目标在模拟路径与依赖下的命令语义固定；测试不需 Torch 或私有源码 | `test: add packager configuration baselines` |
-| M1：解析核心与基础构建 | `build_config.py`、解析 CLI、`build.py` 接入、字段校验、输出上下文、构建记录 | 默认配置兼容；自定义名/图标可预览；无重复解析；坏输入提前失败 | `feat: add validated per-build branding overrides` |
-| M2：发布链路和兼容门禁 | 发布脚本统一最终配置；模式分离；SkipBuild 检查；改名发布拦截 | 只构建不联网；不同配置不能复用；更新器改名风险可明确阻断 | `feat: unify release configuration and guard renamed builds` |
-| M3：安装器、向导、预设 | Inno 图标与字段同步；预设与确认页；两个向导共用 | 安装目标匹配实际 EXE；原自检保留；默认/临时/预设可切换 | `feat: expose branding in installers and release wizards` |
-| M4：Actions 接入 | 两个工作流入口；packager/source ref；测试工作流与上传白名单 | 新分支真正使用新脚本；不默认发布；本地和 CI 使用同一规则 | `feat: support branding overrides in GitHub Actions` |
-| M5：Windows 验收与文档 | 轻量真实打包/安装、两个真实目标、适用升级场景、操作文档 | 实测有日志与产物；未验证项如实记录；不执行生产发布 | `test: add Windows branding acceptance coverage and docs` |
+建议新增根目录 `build_config.py`，复用现有参数生成逻辑；另新增 `scripts/resolve_build_config.py` 作为 PowerShell 和 Actions 使用的薄入口。
 
-M0–M2 形成安全构建核心；M3–M5 完成完整功能。未通过相应验收，不把后面的体验入口视为功能已交付。本次计划文档放在 `docs/build-branding-plan-20260908`；后续实现可从包含本计划的提交创建 `feat/build-branding-overrides`，不要直接修改默认分支。
+```text
+原始 configs/emo-vision-train.json
+  → 显式选择的 VisionWorkshop 配置档
+  → 本次显式覆盖参数
+  → 校验、路径解析、输出目录计算
+  → 一份最终生效配置
+  → 主程序与 updater 构建 → ZIP → 发布前检查
+```
 
-不把所有改动合成一个无法独立回退的大提交。每个阶段先补测试再改业务代码；按 `AGENTS.md` 的类型标注、命名与注释要求编写新增代码，不顺带全仓格式化。
+优先级为“本次显式输入 > 显式选择的配置档 > 原始目标配置”。向导仅负责收集参数，不另写配置合并规则。下游统一读取最终配置，不在构建后重新加载原 JSON 导致名字回退。
 
-## 12. 验收矩阵
+### 5.3 拟新增参数与命名规则
 
-| 类别 | 用例 | 预期结果 |
+| 功能 | build.py | PowerShell 发布入口 |
 |---|---|---|
-| 默认兼容 | 原两个 JSON 不增加覆盖项 | 名称、依赖、控制台、资源、更新器和安装身份保持原语义。 |
-| 名称 | 英文、中文、空格、大小写 | 合法值完整保留；EXE/目录/安装目标一致。 |
-| 非法名称 | 路径、`..`、设备名、控制字符、尾随点、带 `.exe` | 编译前失败，错误明确指出字段。 |
-| 任务冲突 | 主程序名与 updater 名相同或仅大小写不同 | 拒绝，不能覆盖另一任务产物。 |
-| 图标 | 有效 ICO、中文路径、路径含空格、多尺寸 | 正确传参；真实 EXE/安装器资源检查与界面观察符合预期。 |
-| 图标失败 | 文件缺失、目录、伪 ICO、损坏图像目录 | 提前失败，不能静默使用默认图标。 |
-| 路径 | 从不同工作目录调用、配置放入临时目录 | 新覆盖路径基准明确；下游不按临时目录重新解析。 |
-| 优先级 | 原配置、预设、显式覆盖并存 | 只有一种确定结果；默认不偷偷加载预设。 |
-| 恢复 | 先自定义构建，再使用默认配置 | 原 JSON 未变；默认产物不继承上次外观。 |
-| 参数冲突 | `extra_args` 再次指定受管参数 | 自定义模式拒绝歧义，不依赖参数顺序。 |
-| 输出复用 | 图标同路径内容变化、配置变化、修改过的 dist、源码 dirty | SkipBuild 拒绝并说明重建原因。 |
-| 单文件边界 | build.py 单文件原有用法及不支持的 updater/发布组合 | 原能力保留；不支持组合提前失败，不做假兼容。 |
-| 安装 | 全新安装、运行、自检、卸载 | 名称/目标/图标正确，原应用自检通过，测试标记与临时产物清理。 |
-| 安装升级 | 同 AppId 旧版升级为自定义显示名版 | 用户数据保留；快捷方式处理明确；不能只验证全新安装。 |
-| 更新改名 | updater 目标旧 EXE 名与新包不一致 | 发布原通道被拦截；不能用新 manifest 字段假装已修复旧客户端。 |
-| 更新同名 | 保持 EXE 名，仅替换图标等外观 | 发布检查通过后仍需真实升级/重启验收。 |
-| 模式 | 离线且没有 gh 登录时只构建/预览 | 不访问 GitHub；正确生成本地产物或预览，不上传。 |
-| 说明模式 | NotesOnly 携带外观参数 | 明确拒绝，不误报外观已变化。 |
-| CI | 手动选择新分支、跨仓库复用固定 ref | 实际构建脚本 SHA 与预期一致。 |
-| 注入与泄露 | 名称包含特殊字符；摘要/上传目录检查 | 参数不作为脚本执行；不泄露 token、完整环境或本机私有路径。 |
-| 应用边界 | 目标未支持运行时外观配置 | 明确提示窗口标题/图标未接入，不宣称界面已改名。 |
+| 选择配置档 | `--branding-profile` | `-BrandingProfile` |
+| 覆盖 EXE 名称 | `--program-name` | `-ProgramName` |
+| 覆盖 EXE 图标 | `--icon-path` | `-IconPath` |
+| ZIP 名称模板 | 不负责归档 | `-ReleaseAssetName` |
+| 预览 | 沿用 `--dry-run` | 新增 `-DryRun` |
+| 仅构建 ZIP | 不负责归档 | 沿用 `-BuildOnly` |
 
-测试组织建议：使用标准库 `unittest` 建立不依赖深度学习环境的配置单元测试；PowerShell 参数和生成 Inno 脚本通过测试入口检查。另建轻量 Windows fixture，执行真实 PyInstaller 构建，再执行现有安装目标等价的安装/卸载冒烟测试。视觉效果与自动更新的端到端测试单独记录。
+顶层 `name` 控制 EXE 和 ZIP 内的应用目录，不再提供一个独立的包内目录改名参数。ZIP 外部文件名由 `release_asset_name` 独立控制；VisionWorkshop 配置档显式给出上面的名称模板，不能让“只改显示文字”静默改变下载地址。
 
-最小程序通过不代表训练平台的 Torch、Qt、ONNX 等真实依赖已验证。两个真实目标需各自记录构建结果；需要 GPU、私有源码或现场环境而未完成的测试必须标为未验证，不能用 dry-run 代替。
+本期不新增 DisplayName、SetupIconPath、SetupAssetName 等安装或无可见作用的输入。恢复默认是取消配置档及本次覆盖，不是删除原始配置或图标。
 
-## 13. 预计文件改动范围
+### 5.4 路径和有效性检查
 
-| 文件/目录 | 改动 |
+新图标覆盖的相对路径统一以打包仓库根目录为基准；支持明确的 `${PACKAGER_ROOT}` 和 `${SOURCE_ROOT}`，在最终配置中解析为绝对路径。配置档移入临时目录后不重新解释路径。旧配置的 entry、add_data、hook 及 extra_args 路径语义由兼容测试保护，不顺带迁移。
+
+必需图标未找到、指向目录、变量未定义、ICO 格式损坏，应在正式编译前失败。不能只依据 .ico 扩展名判定有效；需检查文件结构，并通过真实图像解码或后续构建校验确认可用。多尺寸图标可给出建议，但不为了转换图片引入新的运行依赖。
+
+程序名称允许合法中文、英文和空格；拒绝路径分隔符、控制字符、设备保留名、尾随点或空格，不接收自带 .exe 的程序名。与 updater 任务名及最终 `updater.exe` 做不区分大小写的冲突检查，避免复制覆盖主程序。
+
+ZIP 和 manifest 名称必须是安全的单个文件名，不允许目录穿越，且不得互相覆盖。外观字段作为字面量处理，不做 shell 求值，不重复展开为环境变量。纯 EXE 预览不强制要求 RELEASE_TAG；ZIP 构建阶段再完整校验资产模板。
+
+自定义模式下，extra_args 再指定名称、图标、输出目录或与目录式主程序冲突的选项时，应拒绝歧义；不依赖“最后一个参数获胜”。不承诺修改手写 spec 文件，不支持的组合提前说明。
+
+## 6. 构建与 ZIP 链路
+
+### 6.1 保留已有构建逻辑
+
+通过现有 PyInstaller 参数真正生成 `VisionWorkshop.exe` 及其图标。保留原依赖、资源、Torch/ONNX hook、Conda DLL 和 updater 构建逻辑。不能在旧包上手动改文件名后就宣布支持了改名构建。
+
+让构建任务及 `copy_updater_to_app_dir()` 接收明确的输出上下文。主程序、updater 的 work/spec 输出应隔离；最终只将原有 updater 放入正确的应用目录。
+
+### 6.2 自定义输出隔离
+
+建议布局：
+
+```text
+build/branding/emo-vision-train/<build-id>/
+  effective-config.json
+  build-record.json
+  work/<job>/
+  spec/<job>/
+
+dist/branding/emo-vision-train/<build-id>/
+  VisionWorkshop/
+    VisionWorkshop.exe
+    updater.exe
+    _internal/...
+
+release-output/branding/emo-vision-train/<build-id>/
+  VisionWorkshop-windows-<tag>.zip
+  build-summary.json
+```
+
+正式发布所需的 manifest 应从同一个已校验 ZIP 生成。仅构建模式可保存未发布的本地候选清单，但不得把候选 URL 当成可下载链接，更不能让候选清单自动替换正式更新 manifest。
+
+归档从应用目录的父目录执行，只把 `VisionWorkshop/` 打入 ZIP。继续使用当前压缩方式，不在本期修改压缩算法或资源大小策略；验收需实际解压并检查目录及文件完整性。
+
+默认旧配置仍使用原输出约定。自定义失败不能回退选用旧 dist；不从全局 dist 下自动挑“最近生成”的目录。
+
+### 6.3 防止复用错误产物
+
+成功记录至少保存 target、程序名、有效配置摘要、图标内容哈希、源码与打包器提交、必要工具版本、产物目录及文件清单哈希。只有全部构建任务、资源检查和 updater 复制成功后才写入可复用状态。
+
+自定义模式下使用 SkipBuild 时必须显式指定构建记录，例如新增 `-BuildRecordPath`；未提供或与当前请求不匹配时要求重建。图标在同一路径被替换、配置变化、源码变化、dist 被编辑、记录对应目录不存在，均不能复用。
+
+对于源码有未提交修改且没有可靠输入快照的情况，允许普通本地重建，但不允许直接复用旧记录。构建过程中输入变化也应使记录失效。build-id、时间戳及隔离路径不参与语义配置指纹，避免相同配置永远无法匹配。
+
+本期只为新的自定义产物建立这套证明，不借此重构所有目标的缓存系统。原目标的无覆盖行为用回归测试保护。完整配置和私有记录留在本地，不进入公开 ZIP 或默认上传目录。
+
+## 7. 便携版自动更新兼容检查
+
+### 7.1 不删掉用户要的 EXE 改名能力
+
+本期必须能构建 `VisionWorkshop.exe`，不能以“保留旧 EXE 名称更安全”为由替代需求。同时要区分三个状态：名称与图标构建成功、Windows 解压运行通过、自动更新兼容通过。三者不能相互代替。
+
+前次核查的应用会把当前 EXE 文件名传给 updater，并在目录替换后继续按该名称重启。旧版为 `emo-vision-train.exe`、新包只有 `VisionWorkshop.exe` 时存在跨名称重启失败风险。这是静态分析结果，不是已经完成的 Windows 升级复现。[R7]
+
+### 7.2 本仓库的处理边界
+
+对于 EXE 改名、更新兼容尚未验证的 VisionWorkshop 包，默认仅构建并明确标记 `update_compatibility: unverified`，不得作为已验证更新包上传到原客户端使用的自动更新通道。
+
+不能用修改发布仓库、tag、manifest 名或增加一个新 JSON 字段来假装旧客户端已经理解新的启动名称。也不提供一个忽略检查的通用强制发布开关。
+
+**仅构建不等于程序运行时已经关闭自动更新。** 打包器不能只移除 updater、只取消上传或设置构建机环境变量，就宣称分发后的程序不会访问旧更新通道。Windows 启动测试应在可控环境进行，避免从生产通道自动安装不匹配的包。
+
+正式对外分发前，须确认目标应用实际支持的更新策略：沿用同名 VisionWorkshop 更新包，或者通过应用已支持并验证的方式关闭/隔离更新，或者另行完成跨 EXE 名迁移。该选择在目标应用任务中明确实现和验收；本次计划提交不授权修改外部源码。
+
+旧名到新名、新名到下一版新名、新名恢复旧名的自动更新均不能默认视为兼容。恢复默认打包配置只恢复今后产物，不自动完成用户已部署版本的迁移。
+
+### 7.3 不改变原更新清单契约
+
+若经过兼容验证后发布，保留原 manifest 中客户端使用的 version、url、sha256、mandatory、notes 等字段及含义。[R3] ZIP 的 URL、大小、哈希和名称都来自实际产物，不能引用旧压缩包。
+
+本期不要求用户安装软件，不将 ZIP 更新改成运行 setup 的流程；不把 updater 协议重写混入名称和图标功能。
+
+## 8. 训练平台发布向导与执行模式
+
+优先改进现有 `scripts/release_wizard_emo_vision_train.py` 对应的流程，界面可显示“VisionWorkshop / 训练平台便携打包”，内部 target 仍为 emo-vision-train。
+
+```text
+执行模式：只构建 ZIP，不发布
+外观：原始默认 / VisionWorkshop 配置档 / 本次自定义
+程序文件名：VisionWorkshop
+图标：assets/icons/visionworkshop.ico
+ZIP 文件名：VisionWorkshop-windows-v1.2.3.zip
+分发形式：ZIP，解压整个目录后运行
+运行时窗口外观：未适配时明确提示
+自动更新兼容：未验证时明确提示
+```
+
+最终确认页展示真实 EXE、应用根目录、ZIP 名、图标、输出位置、源码和打包器提交、是否会上传，以及更新兼容结论。不显示安装器、安装目录、快捷方式或卸载选项。
+
+共享代码可放在 release_wizard_common.py，但不能让 emo-master 被迫选 VisionWorkshop 配置档或进入新的 ZIP 专用流程。第一版配置档需要显式选择，不自动记住上次临时外观；多本地预设、文件选择器和图标预览后续再做。
+
+| 模式 | 要求 |
 |---|---|
-| `build_config.py` | 新增公共解析与校验模块。 |
-| `scripts/resolve_build_config.py` | 新增解析 CLI。 |
-| `build.py` | 接入覆盖、构建上下文与记录；保留已有依赖收集逻辑。 |
-| `scripts/publish-local-release.ps1` | 生效配置、模式分离、复用校验、发布门禁。 |
-| `scripts/build-windows-installer.ps1` | 读取生效配置；SetupIconFile；名称同步与转义。 |
-| `scripts/release_wizard_common.py` | 外观选择、预设、模式优先选择、确认摘要。 |
-| 两个 `scripts/release_wizard_*.py` 包装入口 | 尽量维持薄入口，仅必要兼容调整。 |
-| `.github/workflows/release-windows.yml` | 输入、打包器 ref、源码 ref、默认不发布与摘要。 |
-| `.github/workflows/test-packager.yml` | 新增无发布权限的测试工作流。 |
-| `tests/`、`tests/fixtures/` | 单元、命令拼装、配置冲突和轻量真实构建用例。 |
-| `.gitignore` | 忽略本地预设及私有构建记录，勿忽略正式测试 fixture。 |
-| `README.md`、`docs/release-runbook.md`、`AGENTS.md` | 新参数、兼容限制、测试命令、恢复默认与示例。 |
-| `docs/plans/2026-09-08-packaging-branding-improvement-plan.md` | 本计划。 |
+| 预览 | 解析、校验、显示结果；不运行 PyInstaller，不上传，不改原始配置。 |
+| 仅构建 | 构建程序与 ZIP；不要求 gh 登录，不查询远端 Release；本地源码依赖应已准备好。 |
+| 构建并发布 | 显式选择后才鉴权，经过产物与更新检查再上传。 |
+| 复用后发布 | 除发布检查外必须校验指定构建记录，不猜测旧目录。 |
+| 只改 Release 说明 | 不处理外观构建；带外观覆盖参数时明确拒绝，不能误报外观已改。 |
 
-不要求把两个现有生产配置的默认名称或图标改掉。不自动新增训练平台安装器，不修改外部应用源码，不提交 build/dist 二进制或个人图标绝对路径。
+VisionWorkshop 的自定义流程默认仅构建，不借此改变其他项目原有的发布默认值。DryRun 优先保证无构建和上传；非法模式组合必须在任何外部写操作之前失败，--yes 不得绕过检查。
 
-## 14. 计划接口使用示例
+## 9. GitHub Actions 接入
 
-以下命令是功能实施后的目标接口，**当前脚本尚不能直接使用新增参数**。路径与名字仅为示例，图标需由使用者提供。
+手动运行与可复用入口均支持显式选择仓库中的 branding_profile；优先复用同一个 VisionWorkshop 配置档，不为第一版复制大量参数和第二套默认值。临时值需要覆盖时仍由公共解析器处理，不在 YAML 里重新拼配置。
+
+配置档和 ICO 必须能在 runner 已检出的仓库中找到；不得填写开发机的 D:\ 路径，也不增加任意 URL 下载图标功能。源码仓库中的资源须在源码检出后校验。
+
+检查 checkout 打包仓库的 ref：在本仓库手动运行时使用所选的打包器版本；跨仓库复用时显式传递或固定 packager_ref，不把调用方源码仓库的 github.sha 当作打包器 SHA。[R5] 记录实际 packager/source SHA。
+
+VisionWorkshop 验收明确选择有效的源码分支或提交；不存在的 source_ref 直接失败，不默默回退。不要为修复本目标顺便升级 Actions 或依赖版本。
+
+自定义构建默认不发布，上传 Release 仍受第 7 节约束。Actions artifact 只包含预期 ZIP、脱敏摘要和经过策略允许的清单；上传 artifact 不得被描述成已经发布到客户端更新通道。
+
+输入通过环境变量和参数列表传递，不直接拼进可执行脚本字符串，不使用 Invoke-Expression。测试 workflow 使用最小权限，不访问生产更新地址，不生成或上传发布包来完成单元测试。
+
+## 10. 分阶段实施与文件范围
+
+| 阶段 | 任务 | 完成门槛 |
+|---|---|---|
+| M0：基线 | 阅读最新代码与 AGENTS，新增轻量 fixture 和命令基线测试。 | 固定训练平台默认参数；emo-master 无覆盖共享路径不变；测试不需私有源码或深度学习依赖。 |
+| M1：名称与图标 | 公共配置解析、VisionWorkshop 配置档、EXE 和图标参数、校验、构建目录隔离。 | 实际生成 VisionWorkshop 名称的命令；错误图标和名称提前失败；原 JSON 未变。 |
+| M2：便携 ZIP | 发布脚本统一配置、准确归档、记录与复用检查、仅构建模式、更新发布检查。 | ZIP 名、唯一应用根目录、EXE 一致；不混旧包，不自动发布。 |
+| M3：训练平台向导 | 暴露默认/配置档/本次覆盖与清晰确认页。 | 一次输入贯穿整个流程；没有安装器选项；其他向导无覆盖调用不受影响。 |
+| M4：Actions | 接入配置档与正确的 packager/source ref，补测试工作流。 | 新分支确实执行新脚本；本地和 CI 同一配置；不默认发布自定义包。 |
+| M5：Windows ZIP 验收 | 真实打包、解压、运行、EXE 图标检查、恢复默认及文档。 | 有 VisionWorkshop 的真实产物与结果；更新兼容按实际状态单列，不拿 dry-run 代替运行。 |
+
+建议每阶段独立提交。从 M0、M1 开始，再完成 ZIP 和向导；本期不存在“安装器阶段”。后续实现可从包含 v1.2 文档的提交建立 `feat/visionworkshop-portable-branding`，不直接修改默认分支。
+
+| 文件 | 计划改动 |
+|---|---|
+| `build_config.py` | 新增公共配置解析、校验和上下文。 |
+| `scripts/resolve_build_config.py` | 新增供 PowerShell/CI 使用的薄入口。 |
+| `profiles/visionworkshop.json` | 新增显式选择的配置档，不作为独立源码目标。 |
+| `assets/icons/visionworkshop.ico` | 仅在获得实际图标后添加；本次不生成或上传占位图标。 |
+| `build.py` | 接入名称与图标覆盖、输出上下文和成功记录。 |
+| `scripts/publish-local-release.ps1` | 最终配置、ZIP 路径与名称、只构建模式、复用及发布检查。 |
+| `scripts/release_wizard_common.py` | 共享薄逻辑；VisionWorkshop 专用入口按目标启用。 |
+| `scripts/release_wizard_emo_vision_train.py` | 保留入口，展示 VisionWorkshop 便携打包流程。 |
+| `.github/workflows/release-windows.yml` | 配置档、版本选择与 VisionWorkshop 发布限制。 |
+| `tests/`、拟新增测试 workflow | 解析、命令、ZIP 结构、模式与共享回归测试。 |
+| `README.md`、`docs/release-runbook.md`、`AGENTS.md` | 增补本目标用法、参数、测试命令和限制。 |
+| `.gitignore` | 按需忽略私有上下文和记录，不忽略正式配置档或测试 fixture。 |
+
+`configs/emo-vision-train.json` 的默认名称、图标、依赖和运行模式保持原样。若公共代码必须调整，先保证无覆盖的旧路径兼容；不是授权改写 `configs/emo-master.json` 或安装器脚本。
+
+## 11. 验收矩阵
+
+| 用例 | 预期结果 |
+|---|---|
+| 无配置档、无覆盖构建 | 继续使用原 emo-vision-train 名称和原资源配置。 |
+| VisionWorkshop 配置档 | 生成 VisionWorkshop.exe、VisionWorkshop/、VisionWorkshop-windows-<tag>.zip。 |
+| EXE 图标 | 实际 EXE 嵌入所选 ICO；不仅检查命令字符串。 |
+| ZIP 解压 | 完整目录，无额外 dist 路径、旧 EXE、旧程序目录或 setup 产物。 |
+| 普通用户运行 | 在没有预装 Python 的测试环境解压启动；记录实际已有运行条件。 |
+| 中文及空格路径 | 图标、源码、输出和解压目录处理正确，不依赖 shell 手工拼接。 |
+| 非法名称和 updater 冲突 | 编译前失败，不发生目录穿越或更新器覆盖主程序。 |
+| 缺失或损坏图标 | 明确失败，不静默换回默认图标。 |
+| 原始配置、配置档、显式覆盖 | 优先级确定；配置档 target 不符即失败；没有默认暗中加载。 |
+| 临时配置文件 | 生成后路径不以临时文件夹重新解释。 |
+| 构建失败或产物被改 | 不自动使用旧 dist；SkipBuild 要求指定且匹配的记录。 |
+| 仅构建和预览 | 不要求 gh 登录，不访问远端 Release，不上传。 |
+| 切回默认 | 不使用配置档即恢复原名称与图标，不残留上次外观。 |
+| 自动更新未知的改名包 | 构建可以验证；发布到原更新通道被拦截，运行测试明确风险。 |
+| 窗口标题与任务栏图标 | 独立记录；未在应用适配时不标记为已修改。 |
+| emo-master 兼容回归 | 无覆盖的共享配置、命令与原有安装分支逻辑不被改写，不扩展外观功能。 |
+| Actions 版本与产物 | 脚本和源码 SHA 符合所选版本；只上传预期 ZIP 和允许的摘要。 |
+
+使用标准库 unittest 等轻量测试方式，mock PyInstaller、GitHub、私有源码和大型依赖。真实 Windows 构建分轻量 fixture 和训练平台实际依赖环境两层；前者通过不能替代后者。
+
+验收记录建议保存为 `docs/evidence/visionworkshop-portable-branding-acceptance.md`，包含系统、工具版本、两仓库 SHA、命令、退出码、ZIP/EXE 信息、通过/失败/未执行项。不提交 token、个人路径或虚假的成功截图。
+
+不增加安装、卸载或安装升级测试。必要的自动更新验收属于便携程序更新，不应重新写成安装器测试。
+
+## 12. 功能实施后的操作示例
+
+以下是计划接口，**当前脚本尚不能直接使用这些新增参数**。图标文件与源码路径必须由使用者实际准备。
 
 ```powershell
-# 构建验证用：不上传 Release。
-# 此例修改了训练平台 EXE 名称，不能据此认定自动更新已兼容。
+# 生成 VisionWorkshop 便携 ZIP，不上传 Release。
+# 自动更新兼容性未验证时，仅作为受控构建/运行验收产物。
 .\scripts\publish-local-release.ps1 `
   -Target "emo-vision-train" `
   -SourceRoot "D:\Projects\emo-vision-train" `
   -ReleaseTag "v1.2.3" `
-  -ProgramName "VisionWorkshop" `
-  -DisplayName "视觉工坊" `
-  -IconPath "assets/icons/vision-workshop.ico" `
+  -BrandingProfile "profiles/visionworkshop.json" `
   -BuildOnly
 ```
 
 ```powershell
-# 取消所有覆盖，使用目标原始名称与图标。
+# 不选择配置档，不传覆盖参数，恢复原始便携包构建。
 .\scripts\publish-local-release.ps1 `
   -Target "emo-vision-train" `
   -SourceRoot "D:\Projects\emo-vision-train" `
@@ -404,103 +369,39 @@ M0–M2 形成安全构建核心；M3–M5 完成完整功能。未通过相应�
   -BuildOnly
 ```
 
-不使用新参数不意味着忽略安全检查：SkipBuild 的匹配检查、非法配置检查仍应执行。版本号校验等既有规则不得为通过示例而取消。
+还应支持不使用配置档、直接传 ProgramName、IconPath、ReleaseAssetName 的一次性方式。两种方式使用同一解析器，不能一条生成 ZIP，另一条却调用安装器。
 
-## 15. 后续独立任务（不阻塞本期核心）
+## 13. 待办与实施边界
 
-P2 可包括 PNG 转 ICO、图标预览、EXE 版本资源中的产品名称和文件说明、受支持目标的运行时外观接入、通用安装自检契约、正式跨 EXE 名迁移与独立更新通道。以上应各自有范围和验收，不在本期顺带实现。
+以下复选框均未完成，不因文档入库而视为代码已交付。
 
-本期不做跨平台打包、新打包引擎、代码签名体系迁移、依赖全面升级、新 GUI、源码包名重构或自动修改第三方子模块。
+- [ ] M0：记录最新打包器与目标源码提交；建立默认配置及共享代码回归基线。
+- [ ] M1：实现唯一解析核心、显式配置档、输入校验和冲突检查。
+- [ ] M1：接入 VisionWorkshop EXE、图标、隔离目录及正确的 updater 复制目标。
+- [ ] M2：生成单一应用根目录的 ZIP，所有阶段使用同一最终配置。
+- [ ] M2：实现仅构建/预览的无发布行为和自定义产物复用证明。
+- [ ] M2：加入跨名称更新兼容状态和发布前拦截；不绕过或伪造更新支持。
+- [ ] M3：完善训练平台向导，无安装器设置，不改变其他目标的默认行为。
+- [ ] M4：接入 Actions 配置档、正确版本和最小权限测试。
+- [ ] M5：Windows 实际打包、解压、启动、EXE 图标、默认恢复验收。
+- [ ] M5：补文档与证据，明确运行时外观、更新兼容等尚未完成事项。
 
-## 16. 交付定义与回退
+后续独立任务可以包括 VisionWorkshop 窗口标题和运行时图标的应用侧适配、跨名称更新迁移、图标格式转换与多本地预设。它们不能被误报为当前打包参数已经自动实现，也不需要通过引入安装器完成。
 
-功能完成必须同时具备：默认配置回归通过、覆盖结果一致、非法输入提前失败、默认与自定义产物隔离、危险复用与改名发布可拦截、Windows 实际构建证据、安装目标验收记录、文档与测试命令。
+本期核心交付以 VisionWorkshop 便携名称与图标链路为准；正式分发前需额外通过实际运行及已选更新策略验证。代码回退按阶段提交进行；恢复默认构建不意味着已经撤销远端发布或迁移了已部署版本。
 
-恢复默认操作为取消本次覆盖或选择默认配置。代码回退按 M0–M5 独立提交进行，不需要恢复被篡改的源码或生产 JSON，因为这些文件从设计上不应被临时外观修改。
+本次用户授权是修订并推送计划文档，不是实施 M0–M5、修改外部应用或发布构建产物。仅更新本文，不合并默认分支、不触发发布工作流、不提交任何二进制。
 
-若错误产物已发布到更新通道，简单恢复打包配置并不足以撤销已下载的包；需要独立评估发布撤回与恢复包方案。因此本计划把不兼容发布阻断安排在上传之前。
+## 参考代码
 
+除 R7 外，以下均以 `jsdfhasuh/python_build_scripts@ab4a33e586138fb381a87ae21cc83b5e8d79adbe` 为核查基线。引用是已读代码位置，不是实施完成证据。
 
-## 17. 实施清单与执行记录
+- **[R1]** `build.py`：BuildJob、load_config、append_common_args、build_pyinstaller_command、copy_updater_to_app_dir、main。
+- **[R2]** `configs/emo-vision-train.json`：source_repo、release_repo、name、icon、onefile、release_asset_name、updater。
+- **[R3]** `scripts/publish-local-release.ps1`：配置读取、dist 目录、Compress-ReleaseArchive、SkipBuild、BuildOnly、manifest、上传分支。
+- **[R4]** `scripts/release_wizard_common.py` 与 `scripts/release_wizard_emo_vision_train.py`：配置加载、模式选择、参数拼装、确认、gh 检查。
+- **[R5]** `.github/workflows/release-windows.yml`：两个调用入口、checkout ref、源码检出、构建和上传。
+- **[R6]** `AGENTS.md`：仓库职责、测试现状、新增代码规范。
+- **[R7]** 前次核查的 `jsdfhasuh/emo-vision-train@59352fd5a0f183693f3384940dd2d5923e317e15`：auto_update.py 的当前 EXE 名获取；updater.py 的 --exe、find_payload_dir、restart_app、main；ui/ui_main.py 的窗口标题设置。实施时须复核所选源码版本。
 
-以下均为待办，不因计划入库而标为完成。每个阶段完成后，在该阶段提交或 PR 中记录测试命令、退出码、关键日志和未验证项。
-
-### M0：固定基线
-
-- [ ] 重新核对 `AGENTS.md`、两个目标配置和相关脚本，记录实际 packager/source SHA。
-- [ ] 新增 `tests/test_build_config_baseline.py` 与轻量 fixture；保护现有名称、依赖、资源、控制台和 updater 参数。
-- [ ] 用 mock 替代 GitHub、PyInstaller、深度学习依赖和私有源码，不在单元测试阶段真实发布。
-
-### M1：解析与构建
-
-- [ ] 实现唯一配置解析核心及薄 CLI；用例覆盖优先级、字面量、临时配置路径和 Windows 名称规则。
-- [ ] 实现主图标/安装器图标的确定性继承、损坏 ICO 检查和 `extra_args` 冲突检查。
-- [ ] 接入隔离输出、各 job 的 work/spec 目录和 updater 最终目标碰撞检查。
-- [ ] 仅在成功构建后写有效记录，记录输入与产物摘要；原 JSON 文件哈希不变。
-
-### M2：发布安全
-
-- [ ] 发布与安装入口只消费最终配置，不重新读取原始 JSON 覆盖结果。
-- [ ] 预览、只构建、构建发布、复用发布、只改说明的职责和非法组合有自动化测试。
-- [ ] `SkipBuild` 显式选择记录；配置、图标、源码或产物不匹配时要求重建。
-- [ ] 改 EXE 名且更新兼容未知时阻断发布；换仓库/tag/manifest 名不绕过检查。
-- [ ] 旧 manifest 字段保持兼容；公开摘要不包含凭据、用户目录或完整本地配置。
-
-### M3：安装器和向导
-
-- [ ] 接入 `SetupIconFile`，同步安装与快捷方式字段，保持 AppId 与默认安装目录。
-- [ ] 两个向导共用外观步骤；显式保存/选择预设；取消操作不写原始配置。
-- [ ] 确认页标出真实生效位置、上传行为和运行时未支持项；保留原 Emo Master 自检。
-
-### M4：CI
-
-- [ ] 手动和可复用入口统一接入外观参数；明确打包仓库版本与源码 ref 的选择。
-- [ ] 通过环境变量和参数列表传递输入，不使用脚本字符串求值；不改无关依赖版本。
-- [ ] 新建最小权限测试工作流，验证新分支真正执行新脚本；上传仅用公开文件白名单。
-
-### M5：验收和文档
-
-- [ ] Windows fixture 实际构建：默认、英文改名、中文/空格名称、替换图标、恢复默认。
-- [ ] 原两个目标真实构建；既有安装目标安装、运行、自检、卸载及适用的同 AppId 升级。
-- [ ] 对有更新器的目标区分“发布门禁测试”和“真实升级重启测试”，未实测不得宣称兼容。
-- [ ] 更新 README、runbook、AGENTS；附可复现命令，所有命令注明是否上传。
-- [ ] 编写验收记录，将通过、失败、未执行分别列出；功能未完成前不改本计划为已交付。
-
-建议验收记录位置为 `docs/evidence/packaging-branding-acceptance.md`，本次不创建虚假的成功记录。记录至少包含日期、系统/解释器/工具版本、packager/source SHA、case ID、命令、退出码、产物摘要、失败原因与未验证项。禁止将凭据或构建机敏感路径加入公开记录。
-
-### 后续执行说明
-
-先读取本计划与 `AGENTS.md`，从 M0 开始。M0 通过后完成 M1，再进入发布、安装器和向导；不要只加输入框就跳到真实发布。每个阶段独立提交，不全仓格式化、不修改外部应用、不提交构建二进制、不运行生产 Release 上传。应用运行时改名或更新协议变更必须另开目标应用任务。
-
-本次授权范围是编写并提交计划文档，不代表已实施 M0–M5，也不代表已授权后续发布构建产物。
-
----
-
-## 参考依据
-
-### 仓库代码
-
-下列路径除特别说明外均位于 `jsdfhasuh/python_build_scripts` 的核查提交 `ab4a33e586138fb381a87ae21cc83b5e8d79adbe`。
-
-- **[R1]** `build.py`：`BuildJob`、`load_config()`、`expand_config_values()`、`validate_build_paths()`、`create_build_job()`、`append_common_args()`、`build_pyinstaller_command()`、`copy_updater_to_app_dir()`、`main()`。
-- **[R2]** `scripts/publish-local-release.ps1`：配置载入、`Resolve-AssetNameTemplate`、SourceRef/Release notes 处理、SkipBuild、dist 查找、安装器调用、manifest、BuildOnly 和上传分支。
-- **[R3]** `scripts/build-windows-installer.ps1`：`ConvertTo-InnoLiteral`、`New-InnoScript`、`Assert-SelfTest`、`Invoke-InstallerSmokeTest`、入口配置与主 EXE 校验。
-- **[R4]** `scripts/release_wizard_common.py`：`loadLocalState()`、`saveLocalState()`、`buildPublishCommand()`、`printSummary()`、`main()`。
-- **[R5]** `.github/workflows/release-windows.yml`：手动/复用输入、固定 master checkout、旧 source_ref 默认、源码 checkout、构建与上传步骤。
-- **[R6]** `AGENTS.md` 与该提交的仓库树：项目职责、测试基线、代码与构建规范。
-- **[R7]** `configs/emo-vision-train.json`、`configs/emo-master.json`：现有主程序名、图标、updater、安装器与依赖配置。
-- **[R8]** `jsdfhasuh/emo-vision-train@59352fd5a0f183693f3384940dd2d5923e317e15`：`auto_update.py` 中 EXE 名获取；`updater.py` 中 `find_payload_dir()`、`restart_app()`、`parse_args()`、`main()`。
-- **[R9]** 同一训练平台提交的 `ui/ui_main.py`：`MainWindow.__init__()` 明确设置 `Training Platform` 窗口标题。
-
-代码浏览基准：`https://github.com/jsdfhasuh/python_build_scripts/tree/ab4a33e586138fb381a87ae21cc83b5e8d79adbe`。
-
-### 官方资料（2026-09-08 查阅）
-
-- **[E1]** PyInstaller 使用说明：名称、图标参数及其作用。`https://pyinstaller.org/en/stable/usage.html`
-- **[E2]** Inno Setup AppId 与同一应用识别。`https://jrsoftware.org/ishelp/topic_setup_appid.htm`
-- **[E3]** Microsoft Windows 文件与路径命名规则。`https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file`
-- **[E4]** Inno Setup SetupIconFile 与推荐尺寸。`https://jrsoftware.org/ishelp/topic_setup_setupiconfile.htm`
-- **[E5]** Inno Setup 常量与字面花括号处理。`https://jrsoftware.org/ishelp/topic_consts.htm`
-- **[E6]** PyInstaller 运行时路径。`https://pyinstaller.org/en/stable/runtime-information.html`
-
-本文件的参数、文件布局、门禁和阶段安排属于拟议设计；参考代码中已有的能力与本计划将新增的能力，应始终区分。
+本文中的 profiles、公共解析模块、新增参数、检查规则和验收记录均是待实现设计；现有代码已具备的能力与计划新增的能力必须区分。
