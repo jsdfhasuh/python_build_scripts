@@ -29,6 +29,7 @@ M5 编写真实 Windows fixture 验收脚本和操作文档。
 | 记录 ID/结构不严或 schema=True 被当作 1 | 严格 schema 类型、固定记录位置、build ID、配置和文件摘要校验。 |
 | 输出路径包含 `..` 可绕过词法目录边界比较 | 在检查链接后规范化路径再比较源目录/私有目录边界；回归测试在编译前拒绝。 |
 | 发布失败可能没有清楚的本地状态 | 先保存 published=false 摘要，成功后只更新本次创建的摘要。 |
+| 英文 Windows runner 重定向输出使用 cp1252，打印中文名称崩溃 | 为新 CLI/向导/fixture 统一 UTF-8 输出，新增 ASCII/cp1252 实际子进程回归；保留未修复前的 CI 失败记录。 |
 | 可选 source_version_file 被新入口遗漏 | 恢复源码版本与 tag 的校验，并将该文件纳入输入摘要。 |
 
 ## 本地验证
@@ -36,9 +37,9 @@ M5 编写真实 Windows fixture 验收脚本和操作文档。
 环境：Linux，Python 3.13.5；未安装 Windows/Powershell 运行环境。
 
 - 从用户提供的 M1 源码包恢复后，原 71 项测试重新通过。
-- 完整单元/CLI/本地 Git/ZIP/向导/workflow 结构测试：发现 133 项，132 项通过，
+- 完整单元/CLI/本地 Git/ZIP/向导/workflow 结构测试：发现 136 项，135 项通过，
   1 项 PowerShell 执行测试因不是 Windows 而明确跳过。
-- Python AST 解析检查通过（17 个本批 Python 文件）；实际测试输出附交付包。
+- Python AST 解析检查通过（19 个本批 Python 文件）；实际测试输出附交付包。
 - 新增 tests 使用假编译器时只生成带明确测试字样的文件，不把它当成真正的 Windows EXE。
 - 使用标准库实际读写 ZIP/deflate 和 ZIP/LZMA；源文件和子模块变更测试使用真实本地 Git。
 
@@ -47,10 +48,11 @@ M5 编写真实 Windows fixture 验收脚本和操作文档。
 
 ## 未执行或仍受限
 
-真实 Windows PowerShell 参数/解析执行、真实 PyInstaller Windows fixture 编译和 EXE 运行、
-正式 VisionWorkshop 的 Qt/GPU/硬件运行、正式 ICO 视觉检查及跨 EXE 名自动更新均未在此
-Linux 环境中完成。已编写 Windows 工作流和 fixture runner，但不能把“已写测试代码”标成
-“已经在 Windows 通过”。正式产品 ICO 未由用户提供，仓库不会用测试 ICO 冒充正式资源。
+本机仍为 Linux。首次远端 CI（run `34207622954`，代码 `0547dc3`）中 Linux 测试通过，
+Windows 133 项测试全部通过，PowerShell 脚本解析通过。Windows 实包验收在中文名称的日志
+输出处遇到 cp1252 编码异常，不能标为整套实包验收通过；已修复并补回归，重跑结果另行记录。
+正式 VisionWorkshop 的 Qt/GPU/硬件运行、正式 ICO 视觉检查及跨 EXE 名自动更新没有完成。
+正式产品 ICO 未由用户提供，仓库不会用测试 ICO 冒充正式资源。
 
 源码、依赖环境和产物摘要是一种本地一致性检查，不是签名或恶意本机攻击者的安全边界，
 也不是二进制可复现承诺。声明的资源与 Git 工作文件以外的未声明外部依赖仍需要项目规范。

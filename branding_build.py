@@ -17,6 +17,7 @@ from build_records import fileHash
 from build_records import inputSnapshot
 from build_records import rejectLinks
 from build_records import writeJsonNew
+from console_utils import configureConsole
 
 
 class CompilerError(BuildConfigError):
@@ -60,6 +61,7 @@ def runBrandedBuild(
   iconPath: str | None = None, clean: bool = False, dryRun: bool = False,
   specpath: str | None = None,
 ) -> int:
+  configureConsole()
   try:
     if specpath:
       raise BuildConfigError('--specpath cannot override isolated branding outputs')

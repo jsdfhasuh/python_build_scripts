@@ -31,6 +31,7 @@ from build_records import rejectLinks
 from build_records import validateApplication
 from build_records import verifyRecord
 from build_records import writeJsonNew
+from console_utils import configureConsole
 
 
 ROOT = Path(__file__).resolve().parent
@@ -364,6 +365,7 @@ def makeParser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+  configureConsole()
   originalDirectory = Path.cwd()
   originalEnvironment = {name: os.environ.get(name) for name in ('SOURCE_ROOT', 'RELEASE_TAG')}
   try:

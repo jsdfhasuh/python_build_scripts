@@ -21,6 +21,7 @@ from branding_fixtures import makeIco
 from build_records import readJsonObject
 from build_records import gitCommit
 from portable_release import verifyArchive
+from console_utils import configureConsole
 
 
 def run(command: list[str], *, cwd: Path | None = None, timeout: int = 600) -> str:
@@ -56,6 +57,7 @@ def verifyIcon(executable: Path, icon: Path) -> None:
 
 
 def main() -> int:
+  configureConsole()
   if os.name != 'nt':
     print('This acceptance runner requires Windows; no Windows result was produced.')
     return 2

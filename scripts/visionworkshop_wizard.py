@@ -12,6 +12,7 @@ sys.path.insert(0, str(ROOT))
 from build_config import BuildConfigError
 from build_config import resolveBuildConfig
 from portable_release import main as releaseMain
+from console_utils import configureConsole
 
 
 def prompt(label: str, default: str = '') -> str:
@@ -105,6 +106,7 @@ def collectArguments(*, yes: bool = False) -> list[str] | None:
 
 
 def main(argv: list[str] | None = None) -> int:
+  configureConsole()
   parser = argparse.ArgumentParser(description=__doc__)
   parser.add_argument('--yes', action='store_true', help='Skip final confirmation, not validation')
   parser.add_argument('--legacy', action='store_true', help='Open the unchanged legacy wizard')

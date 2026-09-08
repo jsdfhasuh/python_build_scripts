@@ -1,202 +1,84 @@
 # PyInstaller Build Helper
 
-## 项目简介
-这是一个专用于构建 PyInstaller 包的主打包仓库，核心脚本为 `build.py`，
-通过读取 `configs/*.json` 生成并执行 PyInstaller 命令。
+本仓库维护 Python 项目的 Windows 打包脚本、目标配置和 GitHub Actions，不包含被打包
+应用本身的源码。原有 `emo-vision-train`、`emo-master` 目标仍保留。
 
-仓库只维护构建逻辑、打包配置和 GitHub Actions workflow，不包含被打包应用本身的源码。
-v1 默认目标为 `emo-vision-train`，源码仓库为 `jsdfhasuh/emo-vision-train`，
-发布仓库为 `jsdfhasuh/emo-vision-train-release`。仓库也提供 `emo-master` 目标，
-用于生成 Windows x64 便携版和当前用户 Inno Setup 安装包。
+## VisionWorkshop：自定义名称、图标和便携 ZIP
 
-## 使用说明
+VisionWorkshop 基于 `emo-vision-train` 目标，继续使用“下载 ZIP → 完整解压 → 运行 EXE”。
+不增加安装器，也不修改目标应用的窗口标题、窗口图标或运行时更新地址。
 
-### 运行构建
-```bash
-python build.py
-```
+新入口支持显式配置档、自定义 EXE 名与 ICO、隔离构建、ZIP 内容验证、构建记录复用和
+发布前检查。**默认只构建；改名且启用现有 updater 的产物不允许发布到自动更新通道。**
+正式产品 ICO 需要自己提供，测试 ICO 不应作为品牌资源。
 
-本地构建外部源码时，需要先设置 `SOURCE_ROOT`：
+在准备好目标依赖的 Windows Python 环境中，从本仓库根目录执行：
 
 ```powershell
-$env:SOURCE_ROOT = "D:\training_platform"
-$env:RELEASE_TAG = "v0.0.0-local"
-python build.py --config configs\emo-vision-train.json --dry-run
+# 只预览，不编译、不上传；替换为实际源码、图标和版本号。
+python .\scripts\publish_visionworkshop.py `
+  --source-root 'D:\Projects\emo-vision-train' `
+  --release-tag v1.2.3 `
+  --branding-profile profiles/visionworkshop.json `
+  --icon-path 'D:\Icons\visionworkshop.ico' `
+  --dry-run
 ```
 
-### 仅打印命令（不执行）
-```bash
-python build.py --dry-run
-```
-
-### 清理构建缓存
-```bash
-python build.py --clean
-```
-
-### 指定 spec 输出目录
-```bash
-python build.py --specpath <dir>
-```
-
-### GitHub Actions 发布
-在 GitHub Actions 中手动运行 `Release Windows Build` workflow：
-- `target`: 默认 `emo-vision-train`
-- `source_ref`: 源码仓分支、tag 或 commit，默认 `codex/yolo-pose-custom-ai-labeling`
-- `previous_source_ref`: 可选，Release Notes 的源码对比起点，例如 `v1.0`
-- `release_tag`: Release tag，例如 `v1.2.3`
-- `release_repo`: 发布仓，格式 `owner/repo`；留空时使用目标配置里的 `release_repo`，再留空则使用当前 workflow 仓库
-- `release_body_path`: 可选，打包仓里的 Markdown 文件路径；填写后完全覆盖自动生成的 Release Notes
-- `publish_release`: 是否由中央 workflow 直接发布；可复用 workflow 默认只上传 Actions artifact
-
-私有源码仓 checkout 需要在当前仓库配置 `SOURCE_REPO_TOKEN` secret。
-如果 `release_repo` 指向另一个仓库，需要配置 `RELEASE_REPO_TOKEN` secret，
-并确保它有目标发布仓的 `contents: write` 权限。
-workflow 会 checkout 完整源码历史和 tags，用同一支本地发布脚本生成 Release Notes、
-manifest、zip asset 并发布；只做打包，不做 GPU runtime 验证。
-
-workflow 同时支持 `workflow_call`。应用仓可以先执行自己的测试，再调用中央 workflow
-并设置 `publish_release: false`，最后使用应用仓自己的 `GITHUB_TOKEN` 发布下载下来的产物。
-
-### 本地打包并上传 Release
-如果 GitHub Actions 临时卡在依赖下载或构建环境，可以在本机打包后上传到指定发布仓 Release：
-
-完整发布步骤见 [本地发布操作手册](docs/release-runbook.md)。
-
-推荐日常使用项目专用的交互式发布向导：
+确认后将 `--dry-run` 换为 `--build-only`，构建程序目录及 ZIP。SOURCE_ROOT 必须是实际 Git
+仓库根目录；不要求 gh 登录。需要交互输入时运行：
 
 ```powershell
-python scripts\release_wizard_emo_vision_train.py
-python scripts\release_wizard_emo_master.py
+python .\scripts\release_wizard_emo_vision_train.py
 ```
 
-两个入口共用 `release_wizard_common.py`，但固定选择各自 target，并分别保存本地默认值。
-`emo-master` 向导会读取源码中的 `__version__`，只接受与它一致的 Release tag。
+新训练平台向导默认仅构建，不保存临时外观。需要原向导时可加 `--legacy`；原向导不支持
+新外观构建。`emo-master` 的入口 `scripts/release_wizard_emo_master.py` 保持不变。
+
+详细操作、PowerShell 参数、构建记录复用和限制见
+[VisionWorkshop 操作说明](docs/visionworkshop-branding.md)。
+实施状态见 [计划实施记录](docs/plans/2026-09-08-visionworkshop-implementation-status.md)，
+测试与已修复问题见 [代码审查记录](docs/evidence/visionworkshop-branding-review.md)。
+
+## 默认构建与原发布流程
+
+不选择外观配置档时，原始目标 JSON 不变，默认构建规则仍然适用：
 
 ```powershell
-.\scripts\publish-local-release.ps1 `
-  -Target emo-vision-train `
-  -ReleaseTag v1.2.3 `
-  -SourceRoot D:\training_platform `
-  -PreviousSourceRef v1.0 `
-  -Notes "1.2.3"
+$env:SOURCE_ROOT = 'D:\Projects\emo-vision-train'
+python .\build.py --config .\configs\emo-vision-train.json --dry-run
+# 确认后用 --clean 替换 --dry-run，实际编译默认名称的程序目录。
 ```
 
-脚本会上传两个 Release assets：
-- `emo-vision-train-windows-v1.2.3.zip`
-- `manifest.json`
+`build.py` 负责程序目录，不负责 ZIP。新 Python 发布入口负责 VisionWorkshop 便携 ZIP。
+PowerShell `scripts/publish-local-release.ps1` 根据参数选择新入口或原发布逻辑，
+原发布逻辑原样保存在同目录 `publish-local-release-legacy.ps1`。
+普通无外观参数的旧发布调用可能上传 Release，不应当作只构建命令。
 
-`emo-master` 启用了 installer，会生成三个 assets，并在构建期间验证便携版自检、
-静默安装、自检、卸载和用户数据保留：
+`emo-master` 的安装包能力仍属于它自己的原目标，不会为 VisionWorkshop 启用。
+通用配置字段和历史发布用法保留在 [原版 README](README-legacy.md) 与
+[原发布操作手册](docs/release-runbook.md)；两者描述旧入口，新外观操作以本页和专用说明为准。
+
+## GitHub Actions
+
+| 工作流 | 用途 |
+|---|---|
+| `VisionWorkshop portable ZIP` | 新的 VisionWorkshop 手动/可复用构建入口，默认不发布。 |
+| `VisionWorkshop portable tests` | Linux/Windows 单元测试和 Windows 小项目真实打包验收。 |
+| `Release Windows Build` | 原有工作流，保留旧目标和安装包行为，不接收新外观参数。 |
+
+新工作流的 `source_ref` 必须明确指定。跨仓复用时必须传 `packager_ref`，不能把源码仓的
+SHA 当作打包仓版本。ICO 必须在 runner 可读取的位置；Actions artifact 只上传 ZIP 和脱敏
+摘要，不上传私有构建记录。功能分支中的手动入口是否已在界面可见，以 GitHub 实际状态为准。
+
+## 测试
 
 ```powershell
-$env:ISCC_PATH = 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe'
-.\scripts\publish-local-release.ps1 `
-  -Target emo-master `
-  -ReleaseTag v0.6.0 `
-  -SourceRoot C:\path\to\emo_master `
-  -BuildOnly `
-  -OutputDirectory .\artifacts\emo-master-v0.6.0
+# 测试环境；不修改目标项目 requirements。
+python -m pip install Pillow PyYAML
+python -m unittest discover -s tests -v
 ```
 
-输出固定为 `emo-master-windows-${RELEASE_TAG}.zip`、
-`emo-master-setup-${RELEASE_TAG}.exe` 和 `manifest.json`。源码版本文件存在时，
-脚本会校验 tag 去掉 `v` 后与应用 `__version__` 一致。
-
-本地脚本会优先使用 `7z` 生成 ZIP/LZMA 压缩包，避免 GPU 依赖包超过
-GitHub Release 单个 asset 2GB 限制；如果没有 `7z`，会回退到 PowerShell
-`Compress-Archive`，并在超过限制时提前失败。
-
-Release 页面正文会从源码仓 git history 自动生成英文 Release Notes。生成逻辑是固定规则，
-不调用 AI/API；`-Notes` 仍然只写入 updater manifest 的短说明字段。
-
-Release Notes 的 changelog range 按以下顺序决定：
-1. `-PreviousSourceRef..HEAD`
-2. 上一个 Release manifest 里的 `source_commit..HEAD`
-3. 源码仓最新 tag，例如 `v1.0..HEAD`
-4. 找不到起点时回退到最近 30 个 commits
-
-可以用 Markdown 文件完全覆盖 Release 页面正文：
-
-```powershell
-.\scripts\publish-local-release.ps1 `
-  -Target emo-vision-train `
-  -ReleaseTag v1.2.3 `
-  -SourceRoot D:\training_platform `
-  -ReleaseBodyPath .\release-notes\v1.2.3.md
-```
-
-只更新 Release 页面正文、不重新构建、不重新上传 zip/manifest：
-
-```powershell
-.\scripts\publish-local-release.ps1 `
-  -Target emo-vision-train `
-  -ReleaseTag v1.0.7 `
-  -SourceRoot D:\training_platform `
-  -PreviousSourceRef v1.0 `
-  -NotesOnly
-```
-
-updater 可以使用固定 manifest 地址：
-`https://github.com/jsdfhasuh/emo-vision-train-release/releases/latest/download/manifest.json`
-
-`manifest.json` 字段：
-- `version`: 从 `ReleaseTag` 去掉开头 `v` 得到，例如 `v1.2.3` -> `1.2.3`
-- `url`: 当前 GitHub Release 中 zip asset 的下载地址
-- `sha256`: zip 文件的 SHA256
-- `notes`: `-Notes` 参数，默认等于版本号
-- `mandatory`: 是否强制更新，来自 `-Mandatory`
-- `source_repo`: 源码仓库，格式 `owner/repo`
-- `source_ref`: 本次打包使用的源码 ref
-- `source_commit`: 本次打包使用的源码 commit
-- `source_base_ref`: Release Notes 对比起点
-- `source_compare_url`: GitHub compare URL
-- `archive_compression`: zip 压缩方式，例如 `zip/lzma` 或 `zip/deflate`
-- `assets.portable`: 便携版的 `name/url/sha256`；仅 installer 目标生成
-- `assets.setup`: 安装程序的 `name/url/sha256`；仅 installer 目标生成
-
-### 配置说明（`configs/*.json`）
-- `source_repo`: 外部源码仓库，格式 `owner/repo`
-- `release_repo`: 可选，默认发布仓，格式 `owner/repo`
-- `python_version`: GitHub Actions 使用的 Python 版本
-- `pyinstaller_version`: 目标锁定的 PyInstaller 版本说明
-- `release_asset_name`: Release 附件名模板
-- `source_version_file`: 可选，包含 `__version__` 的源码文件，用于 tag 校验
-- `ci_extra_packages`: GitHub Actions 安装源码依赖后额外安装的打包依赖
-- `entry`: 入口脚本路径，可使用 `${SOURCE_ROOT}`
-- `name`: 输出名称
-- `onefile`: `true/false`，单文件或目录模式
-- `console`: `true/false`，是否显示控制台窗口
-- `collect_conda_runtime_dlls`: 是否自动收集整套 Conda runtime DLL，默认 `true`
-- `icon`: 图标路径或 `null`
-- `add_data`: 额外数据文件映射列表
-- `hidden_imports`: 隐式导入列表
-- `excludes`: 排除模块列表
-- `collect_binaries`: 需要收集二进制的模块列表
-- `extra_args`: 额外的 PyInstaller 原始参数
-- `installer`: 可选 Inno Setup 配置；`enabled=true` 时生成 setup asset 并运行安装验收
-
-`installer` 支持 `compiler_version`、`release_asset_name`、`app_id`、`app_name`、
-`publisher`、`default_dir_name`、`executable`、开始菜单/桌面快捷方式名称、
-`smoke_test` 和 `forbidden_names`。未配置 installer 的旧目标仍只生成 zip 和 manifest。
-
-### 示例
-```json
-{
-  "source_repo": "owner/repo",
-  "release_repo": "owner/release-repo",
-  "python_version": "3.11",
-  "release_asset_name": "app-windows-${RELEASE_TAG}.zip",
-  "ci_extra_packages": [],
-  "entry": "${SOURCE_ROOT}/app.py",
-  "name": "app",
-  "onefile": false,
-  "console": true,
-  "icon": null,
-  "add_data": [],
-  "hidden_imports": ["numpy"],
-  "excludes": [],
-  "collect_binaries": ["torch"],
-  "extra_args": ["--collect-data=ultralytics"]
-}
-```
+Windows 小项目实包验收另需 PyInstaller 和 pefile，运行
+`python scripts/verify_windows_portable.py`。测试工作流在独立环境准备这些工具。
+小项目通过不代表真实 VisionWorkshop 的 Qt/GPU/硬件或跨名称更新已经通过；正式产品验收
+单独记录，不以 dry-run、模拟编译或代码提交代替。

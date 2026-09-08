@@ -11,9 +11,11 @@ sys.path.insert(0, str(ROOT))
 
 from build_config import BuildConfigError
 from build_config import resolveBuildConfig
+from console_utils import configureConsole
 
 
 def main() -> int:
+  configureConsole()
   parser = argparse.ArgumentParser(description=__doc__)
   parser.add_argument('--config', type=Path, default=ROOT / 'configs/emo-vision-train.json')
   parser.add_argument('--branding-profile')
