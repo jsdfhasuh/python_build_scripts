@@ -6,7 +6,9 @@ and GitHub Actions workflows for external source repositories.
 Do not modify the application code that is referenced by target configs.
 
 ## Build / Lint / Test Commands
-There is no lint or test framework in this repository.
+Tests use standard-library unittest; no separate lint framework is configured.
+Unit tests use Pillow and PyYAML, without Torch or Qt. Windows fixture acceptance also uses
+PyInstaller and pefile in a separate test environment.
 
 ### Build
 - Build: `python build.py`
@@ -22,7 +24,9 @@ For local validation of external source targets, set `SOURCE_ROOT` first. Exampl
 `$env:SOURCE_ROOT='D:\training_platform'; $env:RELEASE_TAG='v0.0.0-local'; python build.py --config configs\emo-vision-train.json --dry-run`
 
 ### Single Test
-- No automated tests are defined.
+- Full unit/CLI suite: `python -m unittest discover -s tests -v`
+- Default-target baseline: `python -m unittest discover -s tests -p test_build_baseline.py -v`
+- Tests use fixtures and mocked compilers, not real Windows EXEs or a production Release.
 - Minimal validation:
   - `python -m py_compile build.py`
   - `python build.py --config configs\emo-vision-train.json --dry-run` with `SOURCE_ROOT` set
@@ -50,6 +54,23 @@ For local validation of external source targets, set `SOURCE_ROOT` first. Exampl
 - `collect_binaries`: list of modules to collect binaries from
 - `extra_args`: raw PyInstaller args
 - `installer`: optional Inno Setup configuration and installer smoke-test settings
+
+## VisionWorkshop Opt-in Portable Branding
+- Usage: `docs/visionworkshop-branding.md`; review: `docs/evidence/visionworkshop-branding-review.md`.
+- The new CLI is `python scripts/publish_visionworkshop.py`; no publication without `--publish`.
+- `build.py` supports directory-only branding; the shared portable CLI adds ZIP and build records.
+- Select a profile explicitly. Never write overlays back to target JSON or silently reuse dist.
+- Private build records are not public artifacts. Verify configuration, source, tools and files.
+- Reject EXE-renaming publication with unverified updater compatibility. Runtime updates are NOT disabled.
+- The production ICO is not included. Test fixture icons are not product branding assets.
+- Keep configs, existing runtime hooks, installer code and dependency versions unchanged.
+- Original PowerShell publisher is preserved verbatim as `publish-local-release-legacy.ps1`.
+  The public wrapper routes only portable requests; master and old defaults keep their old logic.
+- New workflows are `visionworkshop-portable.yml` and `visionworkshop-tests.yml`.
+  Cross-repository callers must supply packager_ref; do not infer it from a source-repository SHA.
+- Run `python -m unittest discover -s tests -v`. On Windows also run
+  `python scripts/verify_windows_portable.py` for real fixture compilation and EXE checks.
+- Fixture success is not product GUI/GPU/hardware/update acceptance. Record skipped/not-run checks honestly.
 
 ## Code Style
 Follow these rules when editing Python in this repository.

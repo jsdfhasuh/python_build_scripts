@@ -1,0 +1,221 @@
+name: VisionWorkshop portable ZIP
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: Exact source branch, tag or commit (no fallback)
+        required: true
+        type: string
+      release_tag:
+        description: Version label, for example v1.2.3
+        required: true
+        type: string
+      branding_profile:
+        description: Profile relative to the packager checkout
+        default: profiles/visionworkshop.json
+        type: string
+      icon_path:
+        description: Optional ICO override; use PACKAGER_ROOT or SOURCE_ROOT template variables
+        default: ''
+        type: string
+      program_name:
+        description: Optional executable name override (without .exe)
+        default: ''
+        type: string
+      packager_ref:
+        description: Optional explicit packager ref; manual runs default to selected workflow SHA
+        default: ''
+        type: string
+      publish_release:
+        description: Explicit publication; renamed updater builds are blocked
+        default: false
+        type: boolean
+      release_repo:
+        description: Optional release repository override (does not bypass compatibility checks)
+        default: ''
+        type: string
+  workflow_call:
+    inputs:
+      source_ref:
+        required: true
+        type: string
+      release_tag:
+        required: true
+        type: string
+      branding_profile:
+        default: profiles/visionworkshop.json
+        type: string
+      icon_path:
+        default: ''
+        type: string
+      program_name:
+        default: ''
+        type: string
+      packager_ref:
+        required: true
+        type: string
+      publish_release:
+        default: false
+        type: boolean
+      release_repo:
+        default: ''
+        type: string
+    secrets:
+      SOURCE_REPO_TOKEN:
+        required: false
+      RELEASE_REPO_TOKEN:
+        required: false
+    outputs:
+      artifact_name:
+        value: ${{ jobs.build.outputs.artifact_name }}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 90
+    outputs:
+      artifact_name: ${{ steps.artifact.outputs.name }}
+    steps:
+      - name: Select the packager revision
+        id: revision
+        shell: pwsh
+        env:
+          REQUESTED_REF: ${{ inputs.packager_ref }}
+          CALLER_REPOSITORY: ${{ github.repository }}
+          CALLER_SHA: ${{ github.sha }}
+        run: |
+          $ref = $env:REQUESTED_REF
+          if (-not $ref) {
+            if ($env:CALLER_REPOSITORY -ne 'jsdfhasuh/python_build_scripts') {
+              throw 'Cross-repository callers must supply packager_ref explicitly'
+            }
+            $ref = $env:CALLER_SHA
+          }
+          if ($ref -match '[\r\n]' -or $ref.StartsWith('-')) { throw 'Invalid packager_ref' }
+          Add-Content $env:GITHUB_OUTPUT "ref=$ref"
+      - uses: actions/checkout@v7
+        with:
+          repository: jsdfhasuh/python_build_scripts
+          ref: ${{ steps.revision.outputs.ref }}
+          path: packager
+          persist-credentials: false
+      - name: Load unchanged target metadata
+        id: config
+        shell: pwsh
+        env:
+          SOURCE_REF: ${{ inputs.source_ref }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          if (-not $env:SOURCE_REF -or $env:SOURCE_REF.StartsWith('-')) { throw 'source_ref is required' }
+          if ($env:RELEASE_TAG -notmatch '^v[0-9]+(\.[0-9]+){1,3}([-.][A-Za-z0-9._-]+)?$') {
+            throw 'Invalid release_tag'
+          }
+          $config = Get-Content packager/configs/emo-vision-train.json -Raw | ConvertFrom-Json
+          if ($config.source_repo -notmatch '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$') {
+            throw 'Invalid source repository in target configuration'
+          }
+          if ($config.python_version -notmatch '^\d+\.\d+(\.\d+)?$') { throw 'Invalid Python version' }
+          Add-Content $env:GITHUB_OUTPUT "source_repo=$($config.source_repo)"
+          Add-Content $env:GITHUB_OUTPUT "python_version=$($config.python_version)"
+      - uses: actions/checkout@v7
+        with:
+          repository: ${{ steps.config.outputs.source_repo }}
+          ref: ${{ inputs.source_ref }}
+          path: source
+          token: ${{ secrets.SOURCE_REPO_TOKEN || github.token }}
+          submodules: recursive
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ steps.config.outputs.python_version }}
+          cache: pip
+          cache-dependency-path: source/requirements.txt
+      - name: Install ICO validator
+        run: python -m pip install Pillow
+      - name: Preflight before heavy dependencies
+        shell: pwsh
+        working-directory: packager
+        env:
+          PROFILE: ${{ inputs.branding_profile }}
+          ICON: ${{ inputs.icon_path }}
+          PROGRAM: ${{ inputs.program_name }}
+          TAG: ${{ inputs.release_tag }}
+          SOURCE_REF: ${{ inputs.source_ref }}
+          PUBLISH: ${{ inputs.publish_release }}
+          RELEASE_REPO: ${{ inputs.release_repo }}
+        run: |
+          $arguments = @(
+            'scripts/publish_visionworkshop.py', '--dry-run',
+            "--source-root=$(Join-Path $env:GITHUB_WORKSPACE 'source')",
+            "--source-ref=$env:SOURCE_REF", "--release-tag=$env:TAG"
+          )
+          if ($env:PROFILE) { $arguments += "--branding-profile=$env:PROFILE" }
+          if ($env:ICON) { $arguments += "--icon-path=$env:ICON" }
+          if ($env:PROGRAM) { $arguments += "--program-name=$env:PROGRAM" }
+          if ($env:PUBLISH -eq 'true') { $arguments += '--publish' }
+          if ($env:RELEASE_REPO) { $arguments += "--release-repo=$env:RELEASE_REPO" }
+          python -X utf8 @arguments
+          if ($LASTEXITCODE -ne 0) { throw 'Portable preflight failed' }
+      - name: Install unchanged source and CI dependencies
+        shell: pwsh
+        working-directory: source
+        run: |
+          python -m pip install -r requirements.txt
+          if ($LASTEXITCODE -ne 0) { throw 'Source dependencies failed' }
+          $config = Get-Content ../packager/configs/emo-vision-train.json -Raw | ConvertFrom-Json
+          $packages = @($config.ci_extra_packages)
+          if ($packages.Count) {
+            python -m pip install @packages
+            if ($LASTEXITCODE -ne 0) { throw 'Configured CI dependencies failed' }
+          }
+          python -c 'import PyInstaller'
+          if ($LASTEXITCODE -ne 0) { throw 'The source build environment must include PyInstaller' }
+      - name: Build through the shared portable entry
+        shell: pwsh
+        working-directory: packager
+        env:
+          PROFILE: ${{ inputs.branding_profile }}
+          ICON: ${{ inputs.icon_path }}
+          PROGRAM: ${{ inputs.program_name }}
+          TAG: ${{ inputs.release_tag }}
+          SOURCE_REF: ${{ inputs.source_ref }}
+          PUBLISH: ${{ inputs.publish_release }}
+          RELEASE_REPO: ${{ inputs.release_repo }}
+          GH_TOKEN: ${{ secrets.RELEASE_REPO_TOKEN }}
+        run: |
+          $arguments = @(
+            'scripts/publish_visionworkshop.py',
+            "--source-root=$(Join-Path $env:GITHUB_WORKSPACE 'source')",
+            "--source-ref=$env:SOURCE_REF", "--release-tag=$env:TAG",
+            '--output-directory=release-output/ci'
+          )
+          if ($env:PROFILE) { $arguments += "--branding-profile=$env:PROFILE" }
+          if ($env:ICON) { $arguments += "--icon-path=$env:ICON" }
+          if ($env:PROGRAM) { $arguments += "--program-name=$env:PROGRAM" }
+          if ($env:RELEASE_REPO) { $arguments += "--release-repo=$env:RELEASE_REPO" }
+          if ($env:PUBLISH -eq 'true') {
+            if (-not $env:GH_TOKEN) { throw 'Publication requires an explicit RELEASE_REPO_TOKEN' }
+            $arguments += '--publish'
+          } else { $arguments += '--build-only' }
+          python -X utf8 @arguments
+          if ($LASTEXITCODE -ne 0) { throw 'Portable build failed' }
+      - name: Set artifact name
+        id: artifact
+        shell: pwsh
+        env:
+          RUN_ID: ${{ github.run_id }}
+          ATTEMPT: ${{ github.run_attempt }}
+        run: Add-Content $env:GITHUB_OUTPUT "name=visionworkshop-portable-$env:RUN_ID-$env:ATTEMPT"
+      - name: Upload only public ZIP and summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.artifact.outputs.name }}
+          path: |
+            packager/release-output/ci/*.zip
+            packager/release-output/ci/build-summary.json
+          if-no-files-found: error

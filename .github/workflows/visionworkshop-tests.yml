@@ -1,0 +1,61 @@
+name: VisionWorkshop portable tests
+
+on:
+  push:
+    branches: [feat/visionworkshop-portable-branding]
+  pull_request:
+    paths:
+      - '*.py'
+      - 'scripts/**'
+      - 'profiles/**'
+      - 'tests/**'
+      - '.github/workflows/visionworkshop-*.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: Install test-only tools
+        run: python -m pip install Pillow PyYAML pyinstaller==6.22.2 pefile
+      - name: Unit and integration tests
+        run: python -m unittest discover -s tests -v
+      - name: Parse PowerShell scripts
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $scripts = @(
+            'scripts/publish-local-release.ps1',
+            'scripts/publish-local-release-legacy.ps1',
+            'scripts/compress-portable-archive.ps1'
+          )
+          foreach ($script in $scripts) {
+            $tokens = $null
+            $errors = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile(
+              (Join-Path $PWD $script), [ref]$tokens, [ref]$errors
+            )
+            if ($errors.Count) { throw ($errors | Out-String) }
+          }
+      - name: Real Windows fixture build, unzip, icon and launch tests
+        if: runner.os == 'Windows'
+        run: python scripts/verify_windows_portable.py
+      - name: Upload fixture evidence only
+        if: success() && runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-fixture-evidence-${{ github.run_id }}
+          path: artifacts/windows-portable-acceptance.json
+          if-no-files-found: error

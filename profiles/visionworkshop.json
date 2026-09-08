@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "target": "emo-vision-train",
+  "program_name": "VisionWorkshop",
+  "icon_path": "${PACKAGER_ROOT}/assets/icons/visionworkshop.ico",
+  "release_asset_name": "VisionWorkshop-windows-${RELEASE_TAG}.zip"
+}

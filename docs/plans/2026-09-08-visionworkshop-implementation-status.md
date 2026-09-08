@@ -1,0 +1,22 @@
+# VisionWorkshop v1.2 计划实施状态
+
+日期：2026-09-08。历史计划保留当时的状态；本文件记录本轮代码交付。
+
+| 阶段 | 本轮实现 | 验证边界 |
+|---|---|---|
+| M0 | 保留默认目标/命令基线 | 自动测试通过，不修改原目标配置。 |
+| M1 | 统一解析、ICO 校验、命名和输出隔离 | 单元/CLI 验证通过，正式图标仍由用户提供。 |
+| M2 | 构建记录、ZIP、复用一致性、显式发布及更新门禁 | 真实本地 Git/ZIP 与模拟编译流程通过；不是 Windows 产品运行证明。 |
+| M3 | 训练平台专用向导，默认只构建 | 提示/取消/默认/门禁测试通过；不修改应用窗口。 |
+| M4 | 专用手动/可复用工作流及测试工作流 | YAML/输入/权限/分支选择结构检查通过；实际 CI 运行结果单独记录。 |
+| M5 | Windows 实际编译/解压/启动/图标 fixture runner、使用说明、审查记录 | Windows fixture 和真实 VisionWorkshop 产品尚未在本机执行。 |
+
+原 PowerShell 发布脚本原样保留到同目录 legacy 文件；新入口只路由新参数。
+采用独立 VisionWorkshop workflow，不改旧 workflow 和 emo-master 的安装能力；
+新自定义路径共享同一个配置和发布核心，没有增加安装器。
+
+代码接入完成不等于 Windows 产品验收完成。正式 ICO、Qt/GPU/硬件启动和跨名称更新需要
+目标应用侧真实验证；不允许绕过现有更新门禁发布未验证改名包。
+
+详见 [操作说明](../visionworkshop-branding.md) 和
+[审查与验证记录](../evidence/visionworkshop-branding-review.md)。
