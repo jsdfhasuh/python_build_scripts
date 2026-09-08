@@ -234,6 +234,15 @@ git -C D:\training_platform rev-parse --verify "<ref>^{commit}"
 
 解决方式：更新打包仓里的 `scripts\publish-local-release.ps1`，然后重新执行。
 
+### `ERROR: Can't allocate required memory!`
+
+7-Zip 在压缩大型 GPU/CUDA 打包目录时内存分配失败，通常会返回退出码 `8`。
+发布脚本会先使用两个 LZMA 压缩线程；如果仍然遇到退出码 `8`，会自动删除
+未完成的 ZIP，并降为单线程重试。
+
+如果单线程仍然失败，可以关闭占用内存较高的程序，然后使用向导的“跳过 build”
+模式重新压缩并发布，不需要再次执行 PyInstaller。
+
 ### Release asset is larger than 2048 MB
 
 GitHub Release 单个 asset 必须小于 2 GB。

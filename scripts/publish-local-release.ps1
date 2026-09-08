@@ -53,18 +53,46 @@ function Compress-ReleaseArchive {
   if ($sevenZip) {
     $distParent = Split-Path -Parent $DistDir
     $distName = Split-Path -Leaf $DistDir
+    $threadCounts = @(2, 1)
     Push-Location -LiteralPath $distParent
     try {
-      & $sevenZip.Source a -tzip -mm=LZMA -mx=9 -mmt=on $AssetPath $distName |
-        ForEach-Object { Write-Host $_ }
-      if ($LASTEXITCODE -ne 0) {
-        throw "7z failed with exit code $LASTEXITCODE"
+      foreach ($threadCount in $threadCounts) {
+        if (Test-Path -LiteralPath $AssetPath) {
+          Remove-Item -LiteralPath $AssetPath -Force
+        }
+
+        Write-Host "Compressing with 7-Zip LZMA using $threadCount thread(s)..."
+        $sevenZipArguments = @(
+          'a',
+          '-tzip',
+          '-mm=LZMA',
+          '-mx=9',
+          '-md=64m',
+          "-mmt=$threadCount",
+          $AssetPath,
+          $distName
+        )
+        & $sevenZip.Source @sevenZipArguments | ForEach-Object { Write-Host $_ }
+        $exitCode = $LASTEXITCODE
+        if ($exitCode -eq 0) {
+          return 'zip/lzma'
+        }
+
+        if (Test-Path -LiteralPath $AssetPath) {
+          Remove-Item -LiteralPath $AssetPath -Force
+        }
+
+        if ($exitCode -eq 8 -and $threadCount -ne $threadCounts[-1]) {
+          Write-Warning '7-Zip could not allocate memory. Retrying LZMA compression with one thread.'
+          continue
+        }
+
+        throw "7z failed with exit code $exitCode while using $threadCount compression thread(s)"
       }
     }
     finally {
       Pop-Location
     }
-    return 'zip/lzma'
   }
 
   Write-Warning '7z was not found; falling back to Compress-Archive. Large GPU builds may exceed the GitHub Release asset size limit.'
