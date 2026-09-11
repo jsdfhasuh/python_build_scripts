@@ -1,5 +1,6 @@
 """Bounded console progress for long, synchronous release operations."""
 
+import sys
 from threading import Event
 from threading import Lock
 from threading import Thread
@@ -52,4 +53,10 @@ class ReleaseProgress:
       if self.totalFiles is not None:
         details.append(f'{self.filesDone}/{self.totalFiles} files')
       details.append(f'elapsed {monotonic() - self.started:.1f}s')
-      print(f'[{self.label}] ' + ' | '.join(details), flush=True)
+      text = f'[{self.label}] ' + ' | '.join(details)
+      try:
+        print(text, flush=True)
+      except UnicodeEncodeError:
+        encoding = getattr(sys.stdout, 'encoding', None) or 'ascii'
+        safeText = text.encode(encoding, errors='backslashreplace').decode(encoding)
+        print(safeText, flush=True)

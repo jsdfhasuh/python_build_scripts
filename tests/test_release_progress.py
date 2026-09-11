@@ -53,6 +53,18 @@ class ReleaseProgressTests(unittest.TestCase):
     self.assertIn('completed', output.getvalue())
     self.assertIn('0/0 files', output.getvalue())
 
+  def test_legacy_windows_encoding_does_not_break_progress(self) -> None:
+    raw = io.BytesIO()
+    output = io.TextIOWrapper(raw, encoding='cp1252', errors='strict')
+    label = 'ZIP ' + chr(0x6821) + chr(0x9a8c)
+    with contextlib.redirect_stdout(output):
+      with ReleaseProgress(label, totalFiles=1) as progress:
+        progress.advance(fileCount=1)
+    output.flush()
+    text = raw.getvalue().decode('cp1252')
+    self.assertIn(r'ZIP \u6821\u9a8c', text)
+    self.assertIn('completed', text)
+
 
 if __name__ == '__main__':
   unittest.main()
