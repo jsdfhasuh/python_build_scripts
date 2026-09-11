@@ -19,6 +19,7 @@ from build_config import BuildConfigError
 from build_config import resolveBuildConfig
 from build_records import fileHash
 from build_records import gitState
+from build_records import objectHash
 from build_records import readJsonObject
 from build_records import scanFiles
 from build_records import verifyRecord
@@ -280,19 +281,125 @@ class PortableTests(unittest.TestCase):
 
   def test_new_publication_failure_keeps_summary_unpublished(self) -> None:
     with patch('portable_release.runChecked', return_value=''), \
+         patch('portable_release.requireNewRelease'), \
          patch('portable_release.publishAssets', side_effect=BuildConfigError('upload failed')):
       with self.assertRaisesRegex(BuildConfigError, 'upload failed'):
-        self.runLocal('--program-name', 'emo-vision-train', '--publish')
+        self.runLocal('--program-name', 'emo-vision-train', '--publish', '--changelog-all')
     summary = readJsonObject(next(self.packager.rglob('build-summary.json')))
     self.assertFalse(summary['published'])
 
   def test_explicit_publication_success_marks_summary(self) -> None:
     with patch('portable_release.runChecked', return_value=''), \
+         patch('portable_release.requireNewRelease'), \
          patch('portable_release.publishAssets') as publish:
-      result = self.runLocal('--program-name', 'emo-vision-train', '--publish')
+      result = self.runLocal('--program-name', 'emo-vision-train', '--publish', '--changelog-all')
     self.assertTrue(result['published'])
     publish.assert_called_once()
     self.assertTrue(readJsonObject(next(self.packager.rglob('build-summary.json')))['published'])
+
+  def test_publication_verifies_zip_contents_and_post_build_record_only_once(self) -> None:
+    with patch('portable_release.runChecked', return_value='') as upload, \
+         patch('portable_release.requireNewRelease'), \
+         patch('portable_release.verifyArchiveContents',
+               wraps=portable_release.verifyArchiveContents) as contents, \
+         patch('portable_release.verifyRecord', wraps=verifyRecord) as record:
+      result = self.runLocal('--program-name', 'emo-vision-train', '--publish', '--changelog-all')
+    self.assertTrue(result['published'])
+    contents.assert_called_once()
+    record.assert_called_once()
+    self.assertEqual(upload.call_args.args[0][:3], ['gh', 'release', 'create'])
+    for label in ('ZIP \u5b8c\u6574\u5185\u5bb9\u6821\u9a8c', '\u53d1\u5e03\u524d\u590d\u67e5\u6e90\u7801', '\u4e0a\u4f20\u524d\u590d\u67e5 ZIP \u6307\u7eb9', '\u4e0a\u4f20 ZIP'):
+      self.assertIn(label, self.log.getvalue())
+
+  def test_reused_build_gets_fresh_zip_verification_before_publication(self) -> None:
+    self.runLocal('--program-name', 'emo-vision-train')
+    self.compiler.reset_mock()
+    with patch('portable_release.runChecked', return_value=''), \
+         patch('portable_release.requireNewRelease'), \
+         patch('portable_release.verifyArchiveContents',
+               wraps=portable_release.verifyArchiveContents) as contents, \
+         patch('portable_release.verifyRecord', wraps=verifyRecord) as record:
+      result = self.runLocal('--program-name', 'emo-vision-train', '--publish', '--changelog-all',
+                             '--skip-build', '--build-record-path', str(self.recordPath()))
+    self.assertTrue(result['published'])
+    self.compiler.assert_not_called()
+    contents.assert_called_once()
+    self.assertEqual(record.call_count, 2)  # Reuse preflight and the final publication check.
+
+  def test_changed_zip_is_rejected_even_with_same_size_and_mtime(self) -> None:
+    def write(path, data):
+      writeJsonNew(path, data)
+      if path.name == 'build-summary.json':
+        archive = path.parent / data['asset_name']
+        before = archive.stat()
+        value = archive.read_bytes()
+        archive.write_bytes(value[:-1] + bytes([value[-1] ^ 1]))
+        os.utime(archive, ns=(before.st_atime_ns, before.st_mtime_ns))
+    with patch('portable_release.runChecked') as upload, \
+         patch('portable_release.requireNewRelease'), \
+         patch('portable_release.writeJsonNew', side_effect=write):
+      with self.assertRaisesRegex(BuildConfigError, 'ZIP changed before publication'):
+        self.runLocal('--program-name', 'emo-vision-train', '--publish', '--changelog-all')
+    upload.assert_not_called()
+    self.assertFalse(readJsonObject(next(self.packager.rglob('build-summary.json')))['published'])
+
+  def test_rewriting_summary_hash_cannot_replace_current_run_verification(self) -> None:
+    def write(path, data):
+      if path.name == 'build-summary.json':
+        archive = path.parent / data['asset_name']
+        value = archive.read_bytes()
+        archive.write_bytes(value[:-1] + bytes([value[-1] ^ 1]))
+        data['asset_sha256'] = fileHash(archive)
+      writeJsonNew(path, data)
+    with patch('portable_release.runChecked') as upload, \
+         patch('portable_release.requireNewRelease'), \
+         patch('portable_release.writeJsonNew', side_effect=write):
+      with self.assertRaisesRegex(BuildConfigError, 'verification does not match'):
+        self.runLocal('--program-name', 'emo-vision-train', '--publish', '--changelog-all')
+    upload.assert_not_called()
+
+  def assertPublicationChangeRejected(self, changeSource: bool) -> None:
+    def write(path, data):
+      writeJsonNew(path, data)
+      if path.name == 'build-summary.json':
+        changed = (self.source / 'helper.py' if changeSource else
+                   next((self.packager / 'dist').rglob('emo-vision-train.exe')))
+        changed.write_bytes(b'changed after ZIP verification')
+    with patch('portable_release.runChecked') as upload, \
+         patch('portable_release.requireNewRelease'), \
+         patch('portable_release.writeJsonNew', side_effect=write):
+      with self.assertRaisesRegex(BuildConfigError, 'inputs|artifacts changed'):
+        self.runLocal('--program-name', 'emo-vision-train', '--publish', '--changelog-all')
+    upload.assert_not_called()
+    self.assertFalse(readJsonObject(next(self.packager.rglob('build-summary.json')))['published'])
+
+  def test_changed_source_is_still_rejected_before_upload(self) -> None:
+    self.assertPublicationChangeRejected(True)
+
+  def test_changed_artifact_is_still_rejected_before_upload(self) -> None:
+    self.assertPublicationChangeRejected(False)
+
+  def test_local_zip_changed_during_record_recheck_is_not_finalized(self) -> None:
+    def verify(*args, **kwargs):
+      result = verifyRecord(*args, **kwargs)
+      archive = next(self.packager.glob('release-output/**/*.zip'))
+      archive.write_bytes(archive.read_bytes() + b'changed')
+      return result
+    with patch('portable_release.verifyRecord', side_effect=verify):
+      with self.assertRaisesRegex(BuildConfigError, 'ZIP changed before finalization'):
+        self.runLocal('--build-only')
+    self.assertFalse(list(self.packager.rglob('build-summary.json')))
+    self.assertFalse(list(self.packager.glob('release-output/**/*.zip')))
+
+  def test_cancelled_content_verification_never_uploads_or_marks_success(self) -> None:
+    with patch('portable_release.runChecked') as upload, \
+         patch('portable_release.requireNewRelease'), \
+         patch('portable_release.verifyArchiveContents', side_effect=KeyboardInterrupt):
+      with self.assertRaises(KeyboardInterrupt):
+        self.runLocal('--program-name', 'emo-vision-train', '--publish', '--changelog-all')
+    upload.assert_not_called()
+    self.assertFalse(list(self.packager.rglob('build-summary.json')))
+    self.assertFalse(list(self.packager.glob('release-output/**/*.zip')))
 
 
 class ArchiveTests(unittest.TestCase):
@@ -313,7 +420,33 @@ class ArchiveTests(unittest.TestCase):
 
   def test_valid_lzma_zip_streams_and_matches(self) -> None:
     self.writeZip([('VisionWorkshop/VisionWorkshop.exe', b'test')])
-    portable_release.verifyArchive(self.path, 'VisionWorkshop', self.expected)
+    verified = portable_release.verifyArchive(self.path, 'VisionWorkshop', self.expected)
+    self.assertEqual(verified.programName, 'VisionWorkshop')
+    self.assertEqual(verified.sha256, fileHash(self.path))
+    self.assertEqual(verified.size, self.path.stat().st_size)
+    self.assertEqual(verified.filesSha256, objectHash(self.expected))
+
+  def test_change_during_verification_invalidates_the_result(self) -> None:
+    self.writeZip([('VisionWorkshop/VisionWorkshop.exe', b'test')])
+    verifyContents = portable_release.verifyArchiveContents
+    def change(*args):
+      verifyContents(*args)
+      before = self.path.stat()
+      value = self.path.read_bytes()
+      self.path.write_bytes(value[:-1] + bytes([value[-1] ^ 1]))
+      os.utime(self.path, ns=(before.st_atime_ns, before.st_mtime_ns))
+    with patch('portable_release.verifyArchiveContents', side_effect=change):
+      with self.assertRaisesRegex(BuildConfigError, 'ZIP changed during content verification'):
+        portable_release.verifyArchive(self.path, 'VisionWorkshop', self.expected)
+
+  def test_large_member_advances_byte_progress_before_the_file_finishes(self) -> None:
+    self.writeZip([('VisionWorkshop/VisionWorkshop.exe', b'test')])
+    with patch('portable_release.CHUNK', 2), \
+         patch.object(portable_release.ReleaseProgress, 'advance', autospec=True) as advance:
+      portable_release.verifyArchive(self.path, 'VisionWorkshop', self.expected)
+    updates = [call.kwargs for call in advance.call_args_list
+               if call.args[0].label == 'ZIP \u5b8c\u6574\u5185\u5bb9\u6821\u9a8c']
+    self.assertEqual(updates, [{'byteCount': 2}, {'byteCount': 2}, {'fileCount': 1}])
 
   def test_unsafe_members_fail(self) -> None:
     cases = ['../escape', 'Other/app.exe', '/VisionWorkshop/file',
@@ -369,6 +502,7 @@ class CompressionPolicyTests(unittest.TestCase):
         self.assertEqual(portable_release.compressArchive(app, output), 'zip/lzma')
       self.assertIn('-mmt=2', calls[0])
       self.assertIn('-mmt=1', calls[1])
+      self.assertTrue(all('-mcu=on' in command for command in calls))
       self.assertEqual(output.read_bytes(), b'ok')
 
   def test_other_7z_errors_are_not_silently_retried(self) -> None:

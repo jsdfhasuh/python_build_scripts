@@ -73,14 +73,30 @@ def main() -> int:
     source.mkdir()
     (source / '.gitignore').write_text('__pycache__/\n', encoding='utf-8')
     (source / 'main.py').write_text(
-      'import json, sys\nfrom pathlib import Path\n'
-      'print(json.dumps({"name": Path(sys.executable).name, '
+      'import hashlib, json, sys\nfrom pathlib import Path\n'
+      'result = {"name": Path(sys.executable).name, '
       '"frozen": bool(getattr(sys, "frozen", False)), '
-      '"data": Path(__file__).with_name("asset.txt").read_text()}))\n', encoding='utf-8',
+      '"data": Path(__file__).with_name("asset.txt").read_text()}\n'
+      'config = Path(sys._MEIPASS) / "branding.json"\n'
+      'if config.exists():\n'
+      '  branding = json.loads(config.read_text())\n'
+      '  result["display_name"] = branding["display_name"]\n'
+      '  result["window_icon_sha256"] = hashlib.sha256(\n'
+      '    (config.parent / branding["window_icon"]).read_bytes()).hexdigest()\n'
+      'print(json.dumps(result))\n', encoding='utf-8',
     )
     (source / 'updater.py').write_text('print("fixture-updater-only")\n', encoding='utf-8')
     (source / 'asset.txt').write_text('resource-ok', encoding='utf-8')
     icon = source / 'fixture.ico'
+    branding = source / 'branding.json'
+    branding.write_text(json.dumps({
+      'display_name': 'VisionWorkshop', 'window_icon': 'fixture.ico',
+    }), encoding='utf-8')
+    profile = root / 'runtime-profile.json'
+    profile.write_text(json.dumps({
+      'schema_version': 1, 'target': 'emo-vision-train',
+      'runtime_branding_path': str(branding),
+    }), encoding='utf-8')
     config = root / 'emo-vision-train.json'
     config.write_text(json.dumps({
       'name': 'emo-vision-train', 'entry': str(source / 'main.py'), 'onefile': False,
@@ -107,6 +123,8 @@ def main() -> int:
                    '--output-directory', str(output)]
       if png is not None:
         arguments += ['--program-name', name, '--icon-path', str(icon)]
+      if index == 0:
+        arguments += ['--branding-profile', str(profile)]
       print(f'Building fixture {index}: {name}', flush=True)
       run(arguments, cwd=ROOT)
       created = set((ROOT / 'build/branding').rglob('build-record.json')) - before
@@ -122,7 +140,11 @@ def main() -> int:
         content.extractall(extraction)
       executable = extraction / name / f'{name}.exe'
       result = json.loads(run([str(executable)], timeout=30))
-      if result != {'name': f'{name}.exe', 'frozen': True, 'data': 'resource-ok'}:
+      expected = {'name': f'{name}.exe', 'frozen': True, 'data': 'resource-ok'}
+      if index == 0:
+        expected.update(display_name='VisionWorkshop',
+                        window_icon_sha256=hashlib.sha256(icon.read_bytes()).hexdigest())
+      if result != expected:
         raise RuntimeError(f'Unexpected frozen fixture result: {result}')
       if run([str(extraction / name / 'updater.exe')], timeout=30).strip() != 'fixture-updater-only':
         raise RuntimeError('The updater fixture did not launch')
@@ -139,6 +161,7 @@ def main() -> int:
         'zip_hash': summary['asset_sha256'], 'unpack_and_launch': 'passed',
         'updater_fixture_launch': 'passed', 'record_reuse': 'passed',
         'pe_icon_match': 'passed' if png is not None else 'default-not-customized',
+        'runtime_branding_resources': 'passed' if index == 0 else 'not-configured',
       })
   artifact = ROOT / 'artifacts/windows-portable-acceptance.json'
   artifact.parent.mkdir(exist_ok=True)

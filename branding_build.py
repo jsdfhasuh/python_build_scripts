@@ -3,6 +3,7 @@
 import json
 import os
 import shlex
+import shutil
 import sys
 from pathlib import Path
 
@@ -26,12 +27,48 @@ class CompilerError(BuildConfigError):
     super().__init__(f'Compiler failed with exit code {returncode}; no success record written')
 
 
+def buildCommands(
+  resolved: ResolvedBuild, context: BuildContext, *, clean: bool = True,
+) -> list[tuple[build.BuildJob, list[str]]]:
+  commands = build.build_job_commands(resolved.config, clean=clean, context=context)
+  if resolved.legacyProgramNames:
+    job = build.BuildJob(
+      label='legacy-launcher', entry=resolved.config['legacy_launcher_entry'],
+      name=resolved.legacyProgramNames[0], onefile=True, console=False,
+      icon=resolved.config.get('icon'), collect_conda_runtime_dlls=False,
+      enable_torch_runtime=False,
+    )
+    commands.append((job, build.build_pyinstaller_command(
+      job, clean, str(context.specPath(job.label)), str(context.distRoot),
+      str(context.workPath(job.label)),
+    )))
+  return commands
+
+
+def copyCompatibilityEntrypoints(resolved: ResolvedBuild, context: BuildContext) -> None:
+  appDir = context.distRoot / resolved.programName
+  updater = resolved.config.get('updater') or {}
+  copies = []
+  if updater.get('enabled') and updater.get('name', 'updater') != 'updater':
+    name = f'{updater["name"]}.exe'
+    copies.append((context.distRoot / name, appDir / name))
+  if resolved.legacyProgramNames:
+    source = context.distRoot / f'{resolved.legacyProgramNames[0]}.exe'
+    copies.extend((source, appDir / f'{name}.exe') for name in resolved.legacyProgramNames)
+  for source, target in copies:
+    rejectLinks(source)
+    rejectLinks(target)
+    if target.exists():
+      raise BuildConfigError(f'Refusing to replace an existing packaged entrypoint: {target}')
+    shutil.copy2(source, target)
+
+
 def executeBuild(
   resolved: ResolvedBuild, context: BuildContext, sourceRoot: Path, *, clean: bool = True,
 ) -> dict:
   if sys.platform != 'win32':
     raise BuildConfigError('Actual VisionWorkshop EXE builds require Windows; use --dry-run here')
-  commands = build.build_job_commands(resolved.config, clean=clean, context=context)
+  commands = buildCommands(resolved, context, clean=clean)
   before = inputSnapshot(resolved, sourceRoot)
   rejectLinks(context.workRoot)
   rejectLinks(context.distRoot)
@@ -41,6 +78,7 @@ def executeBuild(
     if code:
       raise CompilerError(code)
   build.copy_updater_to_app_dir(resolved.config, context.distRoot)
+  copyCompatibilityEntrypoints(resolved, context)
   icon = resolved.config.get('icon')
   if icon and fileHash(Path(icon)) != resolved.iconSha256:
     raise BuildConfigError('Icon changed during compilation; rebuild before using this output')
@@ -69,7 +107,7 @@ def runBrandedBuild(
       configPath, profilePath=profilePath, programName=programName, iconPath=iconPath,
     )
     context = createBuildContext(resolved)
-    commands = build.build_job_commands(resolved.config, clean=clean, context=context)
+    commands = buildCommands(resolved, context, clean=clean)
     summary = resolved.summary()
     summary['dist_directory'] = str(context.distRoot / resolved.programName)
     print(json.dumps(summary, ensure_ascii=False, indent=2))

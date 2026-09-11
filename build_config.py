@@ -17,11 +17,14 @@ from dataclasses import dataclass
 from datetime import datetime
 from datetime import timezone
 from pathlib import Path
+from pathlib import PureWindowsPath
 
 
 SUPPORTED_TARGET = 'emo-vision-train'
 PROFILE_FIELDS = {
   'schema_version', 'target', 'program_name', 'icon_path', 'release_asset_name',
+  'runtime_branding_path',
+  'updater_program_name', 'legacy_program_names',
 }
 MANAGED_OPTIONS = {
   '--name', '--icon', '--distpath', '--workpath', '--specpath', '--onefile', '--onedir',
@@ -184,6 +187,50 @@ def validateIcon(path: Path) -> str:
   return hashlib.sha256(data).hexdigest()
 
 
+def addRuntimeBranding(config: dict, path: Path) -> None:
+  import build
+
+  if path.name != 'branding.json':
+    raise BuildConfigError('Runtime branding configuration must be named branding.json')
+  data = readJsonObject(path)
+  if data.keys() - {'display_name', 'window_icon'}:
+    raise BuildConfigError('Runtime branding supports only display_name and window_icon')
+  name = requireText(data.get('display_name'), 'Runtime display name')
+  if len(name) > 80 or not name.isprintable():
+    raise BuildConfigError('Runtime display name must be printable and at most 80 characters')
+  text = requireText(data.get('window_icon'), 'Runtime window icon').replace('\\', '/')
+  relative = PureWindowsPath(text)
+  if relative.drive or relative.root or '..' in relative.parts or ':' in text:
+    raise BuildConfigError('Runtime window icon must be relative without parent traversal')
+  for part in relative.parts:
+    validateFileName(part, 'Runtime icon path component')
+  icon = path.parent.joinpath(*relative.parts).resolve()
+  if not icon.is_relative_to(path.parent):
+    raise BuildConfigError('Runtime window icon cannot escape the branding directory')
+  iconSha = validateIcon(icon)
+  mappings = config.get('add_data', [])
+  if not isinstance(mappings, list) or not all(isinstance(item, str) for item in mappings):
+    raise BuildConfigError('main.add_data must be a list of strings')
+  targets = (PureWindowsPath('branding.json'), relative)
+  for item in mappings:
+    source, destination = build.split_add_data(item)
+    sourcePath = Path(source)
+    destinationPath = PureWindowsPath(destination)
+    for target in targets:
+      if sourcePath.is_dir() and target.is_relative_to(destinationPath):
+        collision = sourcePath.joinpath(*target.relative_to(destinationPath).parts).exists()
+      else:
+        collision = target == destinationPath / sourcePath.name
+      if collision:
+        raise BuildConfigError(f'Runtime branding conflicts with existing add_data: {item}')
+  config['add_data'] = [*mappings, f'{path}:.', f'{icon}:{relative.parent.as_posix()}']
+  config['runtime_branding'] = {
+    'display_name': name, 'window_icon': relative.as_posix(),
+    'config_sha256': hashlib.sha256(path.read_bytes()).hexdigest(),
+    'window_icon_sha256': iconSha,
+  }
+
+
 def validateExtraArgs(config: dict, label: str) -> None:
   arguments = config.get('extra_args', []) or []
   if not isinstance(arguments, list) or not all(isinstance(item, str) for item in arguments):
@@ -230,6 +277,18 @@ class ResolvedBuild:
     return self.programName.casefold() != self.originalName.casefold()
 
   @property
+  def legacyProgramNames(self) -> list[str]:
+    return self.config.get('legacy_program_names', [])
+
+  @property
+  def updateCompatibility(self) -> str:
+    if not self.renamed:
+      return 'unchanged-name-not-retested'
+    if self.programName == 'VisionWorkshop' and self.originalName in self.legacyProgramNames:
+      return 'legacy-launcher-contract'
+    return 'unverified'
+
+  @property
   def fingerprint(self) -> str:
     payload = {'config': self.config, 'icon_sha256': self.iconSha256}
     encoded = json.dumps(payload, ensure_ascii=False, sort_keys=True).encode('utf-8')
@@ -243,7 +302,8 @@ class ResolvedBuild:
     return result
 
   def assertPublicationAllowed(self) -> None:
-    if self.renamed and (self.config.get('updater') or {}).get('enabled'):
+    if (self.renamed and (self.config.get('updater') or {}).get('enabled')
+        and self.updateCompatibility != 'legacy-launcher-contract'):
       raise BuildConfigError(
         'EXE rename has unverified updater compatibility. Build locally only; do not '
         'publish to an existing update channel. Changing a repo, tag or manifest is '
@@ -255,13 +315,17 @@ class ResolvedBuild:
       'target': self.target,
       'program_name': self.programName,
       'original_program_name': self.originalName,
+      'updater_program_name': (self.config.get('updater') or {}).get('name'),
+      'legacy_program_names': self.legacyProgramNames,
       'icon_path': self.config.get('icon'),
       'icon_sha256': self.iconSha256,
       'release_asset_template': self.assetTemplate,
       'config_sha256': self.fingerprint,
       'distribution': 'portable-directory',
-      'window_branding': 'not-adapted-by-packager',
-      'update_compatibility': 'unverified',
+      'window_branding': ('bundled-not-runtime-verified' if self.config.get('runtime_branding')
+                          else 'not-adapted-by-packager'),
+      'runtime_branding': self.config.get('runtime_branding'),
+      'update_compatibility': self.updateCompatibility,
       'runtime_updates_disabled': False,
     }
 
@@ -317,6 +381,10 @@ def resolveBuildConfig(
   updater = cfg.get('updater') or {}
   if not isinstance(updater, dict):
     raise BuildConfigError('updater configuration must be an object')
+  if 'updater_program_name' in overlay:
+    if not updater.get('enabled'):
+      raise BuildConfigError('An updater name override requires an enabled updater')
+    updater['name'] = validateProgramName(overlay['updater_program_name'])
   if updater.get('enabled'):
     updaterName = validateProgramName(updater.get('name', 'updater'))
     if cfg['name'].casefold() in (updaterName.casefold(), 'updater'):
@@ -338,6 +406,35 @@ def resolveBuildConfig(
     icon = Path(cfg['icon']).resolve()
     iconSha = validateIcon(icon)
     cfg['icon'] = str(icon)
+
+  if 'runtime_branding_path' in overlay:
+    brandingPath = resolveResourcePath(
+      overlay['runtime_branding_path'], root, sourceRoot, 'Runtime branding path',
+    )
+    addRuntimeBranding(cfg, brandingPath)
+    if 'updater_program_name' in overlay:
+      addRuntimeBranding(updater, brandingPath)
+      updater['icon'] = cfg.get('icon')
+
+  if 'legacy_program_names' in overlay:
+    names = overlay['legacy_program_names']
+    if not isinstance(names, list) or not names:
+      raise BuildConfigError('legacy_program_names must be a non-empty list')
+    names = [validateProgramName(name) for name in names]
+    if cfg['name'] != 'VisionWorkshop':
+      raise BuildConfigError('Legacy launchers currently support only VisionWorkshop')
+    if originalName not in names:
+      raise BuildConfigError('Legacy launchers must include the original program name')
+    if len({name.casefold() for name in names}) != len(names):
+      raise BuildConfigError('Duplicate legacy program names')
+    reserved = {cfg['name'].casefold(), updater.get('name', 'updater').casefold(), 'updater'}
+    if any(name.casefold() in reserved for name in names):
+      raise BuildConfigError('Legacy launcher collides with main/updater executable')
+    launcher = root / 'legacy_launcher.py'
+    if not launcher.is_file():
+      raise BuildConfigError(f'Legacy launcher source is missing: {launcher}')
+    cfg['legacy_program_names'] = names
+    cfg['legacy_launcher_entry'] = str(launcher)
 
   # Asset templates are intentionally not expanded by os.path.expandvars.
   assetTemplate = requireText(

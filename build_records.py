@@ -137,6 +137,8 @@ def toolVersions() -> dict:
 def inputSnapshot(resolved: ResolvedBuild, sourceRoot: Path) -> dict:
   import build
   paths = {Path(job.entry) for job in build.create_build_jobs(resolved.config)}
+  if resolved.legacyProgramNames:
+    paths.add(Path(resolved.config['legacy_launcher_entry']))
   versionFile = resolved.config.get('source_version_file')
   if versionFile:
     versionPath = Path(versionFile)
@@ -217,9 +219,19 @@ def validateApplication(resolved: ResolvedBuild, appDir: Path) -> dict:
   required = [f'{resolved.programName}.exe']
   if (resolved.config.get('updater') or {}).get('enabled'):
     required.append('updater.exe')
+    required.append(f'{resolved.config["updater"].get("name", "updater")}.exe')
+  required.extend(f'{name}.exe' for name in resolved.legacyProgramNames)
   for name in required:
     if name not in files or files[name]['size'] == 0:
       raise BuildConfigError(f'Expected executable missing or empty: {appDir / name}')
+  if (resolved.config.get('updater') or {}).get('enabled'):
+    namedUpdater = f'{resolved.config["updater"].get("name", "updater")}.exe'
+    if files[namedUpdater] != files['updater.exe']:
+      raise BuildConfigError('Named updater and legacy updater.exe must contain identical bytes')
+  if resolved.legacyProgramNames:
+    expected = files[f'{resolved.legacyProgramNames[0]}.exe']
+    if any(files[f'{name}.exe'] != expected for name in resolved.legacyProgramNames):
+      raise BuildConfigError('Legacy launchers must contain identical bytes')
   for name in files:
     if (Path(name).name in ('effective-config.json', 'build-record.json', 'build-result.json')
         or '.git' in Path(name).parts):
