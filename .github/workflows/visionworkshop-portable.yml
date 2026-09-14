@@ -52,7 +52,7 @@ on:
         default: ''
         type: string
       mandatory:
-        description: Mandatory update metadata
+        description: Unsupported by protocol 2 - must remain false
         default: false
         type: boolean
       release_body_path:
@@ -126,6 +126,8 @@ jobs:
   build:
     runs-on: windows-latest
     timeout-minutes: 90
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
     outputs:
       artifact_name: ${{ steps.artifact.outputs.name }}
     steps:
@@ -191,7 +193,8 @@ jobs:
         working-directory: packager
         env:
           RELEASE_INPUTS_JSON: ${{ toJSON(inputs) }}
-          GH_TOKEN: ${{ secrets.RELEASE_REPO_TOKEN }}
+          GH_TOKEN: ${{ secrets.RELEASE_REPO_TOKEN || github.token }}
+          RELEASE_REPO_TOKEN: ${{ secrets.RELEASE_REPO_TOKEN }}
         run: |
           python -X utf8 actions_release.py prepare `
             --source-root (Join-Path $env:GITHUB_WORKSPACE 'source') `
@@ -216,7 +219,8 @@ jobs:
         shell: pwsh
         working-directory: packager
         env:
-          GH_TOKEN: ${{ secrets.RELEASE_REPO_TOKEN }}
+          GH_TOKEN: ${{ secrets.RELEASE_REPO_TOKEN || github.token }}
+          RELEASE_REPO_TOKEN: ${{ secrets.RELEASE_REPO_TOKEN }}
         run: |
           python -X utf8 actions_release.py build `
             --state (Join-Path $env:RUNNER_TEMP 'vision-train-release')

@@ -78,7 +78,7 @@ def scanFiles(root: Path) -> dict[str, dict]:
   return dict(sorted(files.items()))
 
 
-def gitState(root: Path) -> dict:
+def gitState(root: Path, *, details: dict | None = None) -> dict:
   def call(*args: str) -> str:
     result = subprocess.run(
       ['git', '-C', str(root), *args], capture_output=True, text=True,
@@ -101,11 +101,13 @@ def gitState(root: Path) -> dict:
       path = root / name
       rejectLinks(path)
       if path.is_dir():
-        tracked[name] = gitState(path)
+        tracked[name] = gitState(path, details=details)
       elif path.is_file():
         tracked[name] = fileHash(path)
       else:
         tracked[name] = 'missing'
+      if details is not None and not path.is_dir() and tracked[name] != 'missing':
+        details[str(path.resolve())] = tracked[name]
     return {
       'commit': commit, 'dirty': bool(status), 'status_sha256': objectHash(status),
       'submodules': submodules, 'working_files_sha256': objectHash(tracked),
@@ -135,7 +137,9 @@ def toolVersions() -> dict:
   }
 
 
-def inputSnapshot(resolved: ResolvedBuild, sourceRoot: Path) -> dict:
+def inputSnapshot(
+  resolved: ResolvedBuild, sourceRoot: Path, *, details: dict | None = None,
+) -> dict:
   import build
   paths = {Path(job.entry) for job in build.create_build_jobs(resolved.config)}
   if resolved.legacyProgramNames:
@@ -166,14 +170,18 @@ def inputSnapshot(resolved: ResolvedBuild, sourceRoot: Path) -> dict:
     if build.needs_torch_runtime(job):
       paths.add(Path(build._ensure_torch_runtime_hook()))
   inputs = {}
+  resourceFiles = {}
   for path in sorted(paths, key=str):
     if not path.is_absolute():
       path = resolved.packagerRoot / path
     rejectLinks(path)
     if path.is_dir():
-      inputs[str(path.resolve())] = objectHash(scanFiles(path))
+      files = scanFiles(path)
+      inputs[str(path.resolve())] = objectHash(files)
+      resourceFiles.update({str((path / name).resolve()): value for name, value in files.items()})
     elif path.is_file():
       inputs[str(path.resolve())] = fileHash(path)
+      resourceFiles[str(path.resolve())] = inputs[str(path.resolve())]
     else:
       raise BuildConfigError(f'Build input does not exist: {path}')
   # Include executable packager code, not its changing dist/work files.
@@ -184,8 +192,13 @@ def inputSnapshot(resolved: ResolvedBuild, sourceRoot: Path) -> dict:
   for path in packagerFiles:
     rejectLinks(path)
     packagerDigest[path.relative_to(resolved.packagerRoot).as_posix()] = fileHash(path)
+  sourceFiles = {} if details is not None else None
+  source = gitState(sourceRoot, details=sourceFiles)
+  if details is not None:
+    details.update(source_files=sourceFiles, resource_files=resourceFiles,
+                   packager_files=packagerDigest)
   return {
-    'source_root': str(sourceRoot.resolve()), 'source': gitState(sourceRoot),
+    'source_root': str(sourceRoot.resolve()), 'source': source,
     'packager': {'commit': gitCommit(resolved.packagerRoot)},
     'packager_code_sha256': objectHash(packagerDigest),
     'environment_sha256': objectHash({key: os.environ.get(key, '') for key in (
@@ -234,7 +247,8 @@ def validateApplication(resolved: ResolvedBuild, appDir: Path) -> dict:
     if any(files[f'{name}.exe'] != expected for name in resolved.legacyProgramNames):
       raise BuildConfigError('Legacy launchers must contain identical bytes')
   for name in files:
-    if (Path(name).name in ('effective-config.json', 'build-record.json', 'build-result.json')
+    if (Path(name).name in ('effective-config.json', 'build-record.json', 'build-result.json',
+                           'input-snapshot-before.json', 'input-changes.json')
         or '.git' in Path(name).parts):
       raise BuildConfigError(f'Private build record/source metadata must not be bundled: {name}')
   return files
@@ -242,10 +256,47 @@ def validateApplication(resolved: ResolvedBuild, appDir: Path) -> dict:
 
 def completeRecord(
   resolved: ResolvedBuild, context: BuildContext, sourceRoot: Path, before: dict,
+  beforeDetails: dict | None = None,
 ) -> dict:
-  after = inputSnapshot(resolved, sourceRoot)
+  afterDetails = {}
+  after = inputSnapshot(resolved, sourceRoot, details=afterDetails)
   if after != before:
-    raise BuildConfigError('Source, resources, tools or packager changed during build; rebuild')
+    categories = sorted(key for key in set(before) | set(after) if before.get(key) != after.get(key))
+    changes = {}
+    detailCategories = set(beforeDetails) | set(afterDetails) if beforeDetails is not None else set()
+    for category in sorted(detailCategories):
+      old = (beforeDetails or {}).get(category, {})
+      new = afterDetails.get(category, {})
+      changes[category] = {
+        'added': sorted(set(new) - set(old)),
+        'removed': sorted(set(old) - set(new)),
+        'modified': sorted(key for key in set(old) & set(new) if old[key] != new[key]),
+      }
+    diagnostic = context.workRoot / 'input-changes.json'
+    writeJsonNew(diagnostic, {'categories': categories, 'changes': changes,
+                             'before': before, 'after': after,
+                             'before_details': beforeDetails, 'after_details': afterDetails})
+    counts = ', '.join(f'{category}: ' + '/'.join(
+      str(len(items[kind])) for kind in ('added', 'removed', 'modified'))
+      for category, items in changes.items() if any(items.values()))
+    examples = []
+    for category, items in changes.items():
+      for kind, names in items.items():
+        for name in names:
+          path = Path(name)
+          if path.is_absolute():
+            path = next((path.relative_to(root.resolve()) for root in
+                         (sourceRoot, resolved.packagerRoot)
+                         if path.is_relative_to(root.resolve())), Path(path.name))
+          if len(examples) < 10:
+            examples.append(f'{category}/{kind}: {path.as_posix()}')
+    raise BuildConfigError(
+      'Source, resources, tools or packager changed during build; rebuild. '
+      f'Changed categories: {", ".join(categories)}. '
+      f'File counts (added/removed/modified): {counts or "none"}. '
+      f'File examples (up to 10): {json.dumps(examples, ensure_ascii=True)}. '
+      f'Private diagnostics: {diagnostic}'
+    )
   files = validateApplication(resolved, context.distRoot / resolved.programName)
   source = before['source']
   reusable = bool(source.get('commit') and not source['dirty'] and source['submodules_ready'])

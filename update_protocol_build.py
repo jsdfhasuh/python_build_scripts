@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 from build_config import BuildConfigError
+from build_environment import pythonChildEnvironment
 
 
 ASSET_PREFIX = 'VisionWorkshop-windows-x86_64'
@@ -25,7 +26,7 @@ def runProducer(resolved, context, sourceRoot, action, *arguments) -> dict:
   command = [sys.executable, str(helper), action, '--work', str(context.workRoot),
              '--app', str(context.distRoot / resolved.programName), *map(str, arguments)]
   result = subprocess.run(command, cwd=sourceRoot, text=True, encoding='utf-8',
-                          capture_output=True, check=False)
+                          capture_output=True, check=False, env=pythonChildEnvironment())
   if result.returncode:
     raise BuildConfigError(f'Protocol producer {action} failed: {result.stderr.strip()}')
   return json.loads(result.stdout) if result.stdout.strip() else {}

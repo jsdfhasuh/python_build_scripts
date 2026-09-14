@@ -370,6 +370,11 @@ class WorkflowTests(unittest.TestCase):
     data = yaml.safe_load((ROOT / '.github/workflows' / name).read_text(encoding='utf-8'))
     return data, data.get('on', data.get(True))
 
+  def test_configuration_and_assets_trigger_tests_after_merge(self) -> None:
+    _, triggers = self.load('visionworkshop-tests.yml')
+    self.assertIn('master', triggers['push']['branches'])
+    self.assertTrue({'configs/**', 'assets/**'} <= set(triggers['pull_request']['paths']))
+
   def test_dispatch_and_reuse_share_input_names(self) -> None:
     _, triggers = self.load('visionworkshop-portable.yml')
     self.assertEqual(set(triggers['workflow_dispatch']['inputs']),

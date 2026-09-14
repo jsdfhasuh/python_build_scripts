@@ -2,12 +2,14 @@ name: VisionWorkshop portable tests
 
 on:
   push:
-    branches: [feat/visionworkshop-portable-branding]
+    branches: [master, feat/visionworkshop-portable-branding]
   pull_request:
     paths:
       - '*.py'
       - 'scripts/**'
       - 'profiles/**'
+      - 'configs/**'
+      - 'assets/**'
       - 'tests/**'
       - '.github/workflows/visionworkshop-*.yml'
       - '.github/workflows/release-windows.yml'

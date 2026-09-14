@@ -54,7 +54,7 @@ on:
         default: ''
         type: string
       mandatory:
-        description: Vision Train mandatory update metadata
+        description: Unsupported by Vision Train protocol 2 - must remain false
         default: false
         type: boolean
       changelog_all:

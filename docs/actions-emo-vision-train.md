@@ -17,7 +17,7 @@ Python 发布入口，不再经过旧 PowerShell 发布逻辑。Master 的构建
 | `previous_source_ref` | 留空从上次正式发布解析源码 commit；这是日志起点，不是差异包基线 |
 | `release_title` | 留空使用程序名加版本号 |
 | `notes` | 留空使用版本号，传给共享发布入口的短说明 |
-| `mandatory` | 默认 `false`，传给共享发布入口的强制更新标记 |
+| `mandatory` | 必须为 `false`；当前协议 2 不支持强制更新标记，开启时预检直接报错 |
 | `release_body_path` | 可选，选定打包器版本中已有的 `.md` 文件，相对打包仓库根目录 |
 | `changelog_all` | 默认 `false`，无正式历史版本时自动启用；不能与显式日志起点同时选择 |
 | `release_repo` | 留空使用配置；协议 2 固定发布到 `jsdfhasuh/emo-vision-train-release` |
@@ -53,6 +53,17 @@ Python 发布入口，不再经过旧 PowerShell 发布逻辑。Master 的构建
 源码 SHA、打包器 SHA、发布版本、基线版本、日志范围、标题、发布模式和协议资产数量。
 准备记录和基线放在 runner 临时目录，不修改 checkout 或写回目标 JSON。
 
+构建进程及 Python 子进程禁止生成普通导入字节码，避免编译时在源码资源目录新增
+`__pycache__` 导致输入快照变化。已有缓存和其他文件仍参与原有校验，不删除源码文件，
+不忽略真实资源变更。
+
+每次编译前在隔离工作目录写入私有 `input-snapshot-before.json`。输入一致性检查失败时，
+另写 `input-changes.json`，包含前后指纹，以及源码、资源和打包器文件的新增、删除、修改
+清单。日志输出变化类别、文件数量、最多十个变化文件的相对路径和私有诊断路径，
+不输出文件内容或令牌。这两个记录
+不会加入公开 ZIP 或 Actions Artifact；托管 runner 清理后本地记录不再可用，应先根据
+日志中的变化类别及文件示例缩小排查范围。没有关闭一致性检查，也不会把失败构建标成成功。
+
 构建和预检使用同一组固定参数。构建程序及 updater 后生成：
 
 - 完整包：一个 `*-full.zip`、`VisionWorkshop-windows-x86_64-release_identity.json`、
@@ -68,9 +79,11 @@ Actions 公开资产暂存步骤在共享发布入口成功返回后执行；发
 
 ## 令牌与验证
 
-私有源码读取配置 `SOURCE_REPO_TOKEN`；发布仓库查询及发布使用 `RELEASE_REPO_TOKEN`。
-正式发布必须显式配置发布令牌。公开仓库查询可不认证，但限流或读取失败仍直接停止，
-不能被误判为首次发布。Secrets 不作为普通输入或构建记录保存。
+私有源码读取配置 `SOURCE_REPO_TOKEN`；发布仓库查询优先使用 `RELEASE_REPO_TOKEN`，
+未配置时回退到只读 `github.token`，因此仅构建公开发布仓库的产物不要求发布令牌。
+正式发布在准备和执行阶段都检查显式 `RELEASE_REPO_TOKEN`，只读回退不能满足发布检查。
+私有发布仓库仍需要具有读取权限的令牌；限流或读取失败直接停止，不能被误判为首次发布。
+Secrets 不作为普通输入或构建记录保存。
 
 每次修改后运行 `python -m unittest discover -s tests -v` 和工作流 YAML/actionlint 检查。
 Windows 可运行 `python scripts/verify_windows_portable.py` 做小项目真实 EXE 验收。

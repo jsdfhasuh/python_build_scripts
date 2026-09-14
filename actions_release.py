@@ -13,6 +13,7 @@ from pathlib import PureWindowsPath
 from urllib.parse import quote
 
 from build_config import BuildConfigError
+from build_environment import pythonChildEnvironment
 from build_records import fileHash
 from build_records import rejectLinks
 from build_records import writeJsonNew
@@ -197,7 +198,7 @@ def prepareBaseline(repo: str, release: dict, source: Path, state: Path,
   result = subprocess.run([
     sys.executable, '-X', 'utf8', str(ROOT / 'scripts/validate_actions_baseline.py'),
     '--source-root', str(source), '--lock', str(lockPath),
-  ], check=False)
+  ], check=False, env=pythonChildEnvironment())
   if result.returncode:
     raise BuildConfigError('Source producer cannot validate/freeze this baseline; '
                            'update the source producer or explicitly select none')
@@ -259,8 +260,10 @@ def prepareRequest(inputs: dict, source: Path, state: Path, output: Path) -> dic
   if repo != RELEASE_REPO:
     raise BuildConfigError('Protocol-2 publication repository is fixed')
   publishing = booleanInput(inputs, 'publish_release')
-  if publishing and not os.environ.get('GH_TOKEN'):
+  if publishing and not os.environ.get('RELEASE_REPO_TOKEN'):
     raise BuildConfigError('Publication requires an explicit RELEASE_REPO_TOKEN')
+  if booleanInput(inputs, 'mandatory'):
+    raise BuildConfigError('Protocol 2 does not support mandatory updates; leave mandatory=false')
   body = resolveBody(ROOT, inputs.get('release_body_path', '').strip())
   arguments = [f'--source-root={source}', f'--source-ref={head}',
                f'--expected-source-commit={head}', f'--release-tag={tag}',
@@ -302,8 +305,6 @@ def prepareRequest(inputs: dict, source: Path, state: Path, output: Path) -> dic
     arguments.append(f'--previous-source-ref={previousRef}')
   if allHistory:
     arguments.append('--changelog-all')
-  if booleanInput(inputs, 'mandatory'):
-    arguments.append('--mandatory')
   if lockPath:
     arguments += [f'--delta-base-tag={baseline["tag_name"]}', f'--delta-base-lock={lockPath}',
                   f'--delta-base-lock-sha256={fileHash(lockPath)}']
@@ -347,7 +348,9 @@ def executeRequest(path: Path, *, dryRun: bool = False) -> None:
              *request['arguments']]
   if dryRun:
     command.append('--dry-run')
-  if subprocess.run(command, cwd=ROOT, check=False).returncode:
+  if request.get('publish') and not os.environ.get('RELEASE_REPO_TOKEN'):
+    raise BuildConfigError('Publication requires an explicit RELEASE_REPO_TOKEN')
+  if subprocess.run(command, cwd=ROOT, check=False, env=pythonChildEnvironment()).returncode:
     raise BuildConfigError('Shared portable release entry failed')
 
 

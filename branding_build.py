@@ -14,6 +14,7 @@ from build_config import BuildContext
 from build_config import ResolvedBuild
 from build_config import createBuildContext
 from build_config import resolveBuildConfig
+from build_environment import preventSourceBytecode
 from build_records import completeRecord
 from build_records import fileHash
 from build_records import inputSnapshot
@@ -109,16 +110,20 @@ def removeProtocolBytecode(resolved: ResolvedBuild, context: BuildContext) -> No
     print(f'Removed {len(files)} development bytecode files from isolated release output')
 
 
+@preventSourceBytecode()
 def executeBuild(
   resolved: ResolvedBuild, context: BuildContext, sourceRoot: Path, *, clean: bool = True,
 ) -> dict:
   if sys.platform != 'win32':
     raise BuildConfigError('Actual VisionWorkshop EXE builds require Windows; use --dry-run here')
   commands = buildCommands(resolved, context, clean=clean)
-  before = inputSnapshot(resolved, sourceRoot)
+  beforeDetails = {}
+  before = inputSnapshot(resolved, sourceRoot, details=beforeDetails)
   rejectLinks(context.workRoot)
   rejectLinks(context.distRoot)
   context.prepare(resolved)
+  writeJsonNew(context.workRoot / 'input-snapshot-before.json',
+               {'snapshot': before, 'details': beforeDetails})
   if protocolEnabled(resolved):
     prepareProtocol(resolved, context, sourceRoot, before['source']['commit'])
   for _, command in commands:
@@ -133,7 +138,7 @@ def executeBuild(
   if protocolEnabled(resolved):
     removeProtocolBytecode(resolved, context)
     runProducer(resolved, context, sourceRoot, 'finalize')
-  record = completeRecord(resolved, context, sourceRoot, before)
+  record = completeRecord(resolved, context, sourceRoot, before, beforeDetails)
   receipt = {
     'schema_version': 1, **resolved.summary(), 'status': 'built-directory',
     'dist_directory': str(context.distRoot / resolved.programName),

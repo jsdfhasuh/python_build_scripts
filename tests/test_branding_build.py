@@ -144,6 +144,24 @@ class CommandIntegrationTests(unittest.TestCase):
       self.assertEqual(execute.call_count, 1)
     self.assertFalse(list(self.root.rglob('build-result.json')))
 
+  def test_compiler_children_do_not_change_declared_source_resources(self) -> None:
+    package = self.root / 'cache_probe'
+    package.mkdir()
+    (package / '__init__.py').write_text('VALUE = 1\n', encoding='utf-8')
+    config = json.loads(self.config.read_text(encoding='utf-8'))
+    config['add_data'] = [f'{package}:cache_probe']
+    self.config.write_text(json.dumps(config), encoding='utf-8')
+
+    def compiler(command):
+      subprocess.run([sys.executable, '-c', 'import cache_probe'], cwd=self.root, check=True)
+      return self.fakeCompiler(command)
+
+    with patch('branding_build.sys.platform', 'win32'), \
+         patch('build.run_command', side_effect=compiler):
+      self.assertEqual(self.runBuild(), 0, self.output.getvalue())
+    self.assertFalse(list(package.rglob('*.pyc')))
+    self.assertEqual(len(list(self.root.rglob('input-snapshot-before.json'))), 1)
+
   def test_missing_outputs_do_not_fall_back_to_default_dist(self) -> None:
     old = self.root / 'dist' / 'emo-vision-train'
     old.mkdir(parents=True)

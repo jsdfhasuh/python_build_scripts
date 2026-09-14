@@ -110,18 +110,32 @@ class RequestTests(unittest.TestCase):
 
   def test_publish_requires_token(self):
     self.inputs['publish_release'] = True
-    with patch.dict(os.environ, {'GH_TOKEN': ''}):
+    with patch.dict(os.environ, {'GH_TOKEN': 'read-only-token', 'RELEASE_REPO_TOKEN': ''}):
       with self.assertRaisesRegex(BuildConfigError, 'RELEASE_REPO_TOKEN'):
         self.prepare()
 
   def test_publish_passes_document_flags(self):
-    self.inputs.update({'publish_release': True, 'mandatory': True, 'release_title': 'Title',
+    self.inputs.update({'publish_release': True, 'release_title': 'Title',
                         'notes': 'Some notes', 'changelog_all': True})
-    with patch.dict(os.environ, {'GH_TOKEN': 'fixture-token'}):
+    with patch.dict(os.environ, {'GH_TOKEN': 'fixture-token',
+                                 'RELEASE_REPO_TOKEN': 'fixture-token'}):
       result = self.prepare()
-    for arg in ('--publish', '--mandatory', '--release-title=Title', '--notes=Some notes'):
+    for arg in ('--publish', '--release-title=Title', '--notes=Some notes'):
       self.assertIn(arg, result['arguments'])
     self.assertNotIn('--build-only', result['arguments'])
+
+  def test_build_only_accepts_read_token_without_publish_secret(self):
+    with patch.dict(os.environ, {'GH_TOKEN': 'read-only-token', 'RELEASE_REPO_TOKEN': ''}):
+      result = self.prepare()
+    self.assertFalse(result['publish'])
+    self.history.assert_called_once()
+
+  def test_mandatory_fails_before_history_or_compilation(self):
+    self.inputs['mandatory'] = True
+    with self.assertRaisesRegex(BuildConfigError, 'does not support mandatory'):
+      self.prepare()
+    self.history.assert_not_called()
+    self.execute.assert_not_called()
 
   def test_query_failure_does_not_build(self):
     self.history.side_effect = BuildConfigError('HTTP 401')
@@ -359,13 +373,28 @@ class WorkflowTests(unittest.TestCase):
     self.assertIn('actions_release.py build', execute['run'])
     self.assertIn('RELEASE_INPUTS_JSON', prepare['env'])
     self.assertNotIn('RELEASE_INPUTS_JSON', execute['env'])
-    self.assertEqual(prepare['env']['GH_TOKEN'], '${{ secrets.RELEASE_REPO_TOKEN }}')
-    self.assertEqual(execute['env']['GH_TOKEN'], '${{ secrets.RELEASE_REPO_TOKEN }}')
+    for step in (prepare, execute):
+      self.assertEqual(step['env']['GH_TOKEN'], '${{ secrets.RELEASE_REPO_TOKEN || github.token }}')
+      self.assertEqual(step['env']['RELEASE_REPO_TOKEN'], '${{ secrets.RELEASE_REPO_TOKEN }}')
     for step in steps:
       self.assertNotIn('${{ inputs.', step.get('run', ''))
 
 
 class ExecutionTests(unittest.TestCase):
+  def test_build_cannot_publish_with_only_a_read_token(self):
+    with tempfile.TemporaryDirectory() as directory:
+      path = Path(directory) / 'request.json'
+      path.write_text(json.dumps({
+        'source_root': directory, 'source_commit': 'a' * 40, 'packager_commit': 'a' * 40,
+        'baseline_lock': '', 'arguments': ['--publish'], 'publish': True,
+      }))
+      with patch.object(ci.content, 'resolveCommit', return_value='a' * 40), \
+           patch.dict(os.environ, {'GH_TOKEN': 'read-token', 'RELEASE_REPO_TOKEN': ''}), \
+           patch.object(ci.subprocess, 'run') as run:
+        with self.assertRaisesRegex(BuildConfigError, 'explicit RELEASE_REPO_TOKEN'):
+          ci.executeRequest(path)
+      run.assert_not_called()
+
   def test_dry_run_and_build_share_exact_arguments(self):
     with tempfile.TemporaryDirectory() as directory:
       path = Path(directory) / 'request.json'
