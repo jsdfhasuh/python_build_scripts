@@ -405,6 +405,50 @@ def runDeltaProducer(
   return delta
 
 
+def validateDeltaAssets(
+  delta: dict, buildId: str, filesSha256: str, output: Path,
+) -> list[str]:
+  if not isinstance(delta, dict):
+    raise BuildConfigError('Delta producer must return a JSON object')
+  if (delta.get('verified_target_sha256') != filesSha256
+      or delta.get('target_files_sha256') != filesSha256):
+    raise BuildConfigError('Delta reconstruction verification is missing or targets another build')
+  baseId = delta.get('from_build_id')
+  if (not isinstance(baseId, str)
+      or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_-]{0,127}', baseId)
+      or baseId == buildId or delta.get('to_build_id') != buildId):
+    raise BuildConfigError('Delta producer returned mismatched build identities')
+  zipName = delta.get('zip_asset_name')
+  expectedName = f'{ASSET_PREFIX}-{buildId}-from-{baseId}-delta.zip'
+  if zipName != expectedName:
+    raise BuildConfigError('Delta producer returned missing or invalid zip_asset_name')
+  size, digest = delta.get('zip_size'), delta.get('zip_sha256')
+  if (type(size) is not int or not 0 < size <= MAX_ASSET_BYTES
+      or not isinstance(digest, str) or not re.fullmatch(r'[0-9a-f]{64}', digest)):
+    raise BuildConfigError('Delta producer returned invalid ZIP size or SHA-256')
+  descriptorName = zipName[:-4] + '_descriptor.json'
+  for name in (zipName, descriptorName):
+    rejectLinks(output / name)
+    if not (output / name).is_file():
+      raise BuildConfigError(f'Delta producer output is missing: {name}')
+  if artifactRecords([output / zipName])[zipName] != {
+    'size': size, 'digest': 'sha256:' + digest,
+  }:
+    raise BuildConfigError('Delta ZIP differs from the producer size or SHA-256')
+  descriptorPath = output / descriptorName
+  if descriptorPath.stat().st_size > 65536:
+    raise BuildConfigError('Delta descriptor exceeds metadata size limit')
+  try:
+    descriptor = json.loads(descriptorPath.read_text(encoding='utf-8'))
+  except (ValueError, UnicodeError) as exc:
+    raise BuildConfigError('Delta descriptor is not valid UTF-8 JSON') from exc
+  expectedDescriptor = {key: value for key, value in delta.items()
+                        if key != 'verified_target_sha256'}
+  if descriptor != expectedDescriptor:
+    raise BuildConfigError('Delta descriptor differs from the verified producer result')
+  return [zipName, descriptorName]
+
+
 def runRelease(args: argparse.Namespace) -> dict:
   validateModes(args)
   if args.notes_only:
@@ -491,10 +535,10 @@ def runRelease(args: argparse.Namespace) -> dict:
     names = [assetName, ASSET_PREFIX + '-release_identity.json', ASSET_PREFIX + '-package_files.json']
     if args.delta_base_tag:
       delta = runDeltaProducer(args, resolved, context, sourceRoot, output)
-      if delta.get('verified_target_sha256') != record['update_protocol']['files_sha256']:
-        raise BuildConfigError('Delta reconstruction verification is missing or targets another build')
+      names.extend(validateDeltaAssets(
+        delta, context.buildId, record['update_protocol']['files_sha256'], output,
+      ))
       summary['delta_reconstruction_sha256'] = delta['verified_target_sha256']
-      names.extend([delta['zip_name'], delta['zip_name'][:-4] + '_descriptor.json'])
     summary['protocol_asset_names'] = names
     summary['protocol_assets'] = artifactRecords([output / name for name in names])
     summary['update_protocol'] = record['update_protocol']

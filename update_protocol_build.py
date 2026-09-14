@@ -29,7 +29,13 @@ def runProducer(resolved, context, sourceRoot, action, *arguments) -> dict:
                           capture_output=True, check=False, env=pythonChildEnvironment())
   if result.returncode:
     raise BuildConfigError(f'Protocol producer {action} failed: {result.stderr.strip()}')
-  return json.loads(result.stdout) if result.stdout.strip() else {}
+  try:
+    payload = json.loads(result.stdout) if result.stdout.strip() else {}
+  except ValueError as exc:
+    raise BuildConfigError(f'Protocol producer {action} returned invalid JSON') from exc
+  if not isinstance(payload, dict):
+    raise BuildConfigError(f'Protocol producer {action} must return a JSON object')
+  return payload
 
 
 def prepareProtocol(resolved, context, sourceRoot, sourceCommit):
