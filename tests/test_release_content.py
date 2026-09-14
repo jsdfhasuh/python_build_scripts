@@ -137,8 +137,50 @@ class ReleaseApiTests(unittest.TestCase):
            self.assertRaises(BuildConfigError):
         content.getRelease('tests/releases', 'v1.0.20')
     with patch.object(content.subprocess, 'run',
-                      return_value=subprocess.CompletedProcess([], 1, '', 'gh: Not Found (HTTP 404)')):
+                      return_value=subprocess.CompletedProcess([], 1, '', 'gh: Not Found (HTTP 404)')), \
+         patch.object(content, 'runTool', return_value='[[]]'):
       self.assertIsNone(content.getRelease('tests/releases', 'v1.0.20'))
+
+  def test_tag_404_finds_draft_on_later_page(self) -> None:
+    draft = {**self.release, 'draft': True}
+    pages = [[{'id': 11, 'tag_name': 'v1.0.19'}], [draft]]
+    with patch.object(content.subprocess, 'run',
+                      return_value=subprocess.CompletedProcess([], 1, '', 'gh: Not Found (HTTP 404)')), \
+         patch.object(content, 'runTool', return_value=json.dumps(pages)) as run:
+      self.assertEqual(content.getRelease('tests/releases', 'v1.0.20'), draft)
+    run.assert_called_once_with(['gh', 'api', '--paginate', '--slurp',
+                                 'repos/tests/releases/releases?per_page=100'])
+
+  def test_existing_draft_blocks_new_release_creation(self) -> None:
+    with patch.object(content, 'checkRepository'), \
+         patch.object(content.subprocess, 'run',
+                      return_value=subprocess.CompletedProcess([], 1, '', 'gh: Not Found (HTTP 404)')), \
+         patch.object(content, 'runTool', return_value=json.dumps([[{**self.release, 'draft': True}]])):
+      with self.assertRaises(BuildConfigError):
+        content.requireNewRelease('tests/releases', 'v1.0.20')
+
+  def test_draft_list_errors_are_not_treated_as_a_free_tag(self) -> None:
+    for response in ('broken', '{}', '[{}]', '[[null]]',
+                     json.dumps([[self.release, self.release]]),
+                     json.dumps([[{**self.release, 'id': True}]])):
+      with self.subTest(response=response), \
+           patch.object(content.subprocess, 'run',
+                        return_value=subprocess.CompletedProcess([], 1, '', 'gh: Not Found (HTTP 404)')), \
+           patch.object(content, 'runTool', return_value=response), \
+           self.assertRaises(BuildConfigError):
+        content.getRelease('tests/releases', 'v1.0.20')
+    with patch.object(content.subprocess, 'run',
+                      return_value=subprocess.CompletedProcess([], 1, '', 'gh: Not Found (HTTP 404)')), \
+         patch.object(content, 'runTool', side_effect=BuildConfigError('HTTP 403')), \
+         self.assertRaises(BuildConfigError):
+      content.getRelease('tests/releases', 'v1.0.20')
+
+  def test_successful_tag_lookup_does_not_scan_list(self) -> None:
+    with patch.object(content.subprocess, 'run',
+                      return_value=subprocess.CompletedProcess([], 0, json.dumps(self.release), '')), \
+         patch.object(content, 'runTool') as run:
+      self.assertEqual(content.getRelease('tests/releases', 'v1.0.20'), self.release)
+    run.assert_not_called()
 
   def test_download_counts_do_not_invalidate_body_preview(self) -> None:
     changed = copy.deepcopy(self.release)

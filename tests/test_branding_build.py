@@ -7,6 +7,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import branding_build
@@ -14,6 +15,7 @@ import build
 from branding_fixtures import makeIco
 from branding_fixtures import writeProject
 from build_config import createBuildContext
+from build_config import BuildConfigError
 from build_config import resolveBuildConfig
 
 
@@ -101,6 +103,40 @@ class CommandIntegrationTests(unittest.TestCase):
     self.assertFalse(receipt['reusable_build_record'])
     self.assertEqual(receipt['windows_launch_test'], 'not-run')
 
+  def test_protocol_caches_are_removed_before_finalize_and_record(self) -> None:
+    config = json.loads(self.config.read_text(encoding='utf-8'))
+    config['update_protocol'] = 2
+    self.config.write_text(json.dumps(config), encoding='utf-8')
+    events = []
+
+    def compiler(command):
+      result = self.fakeCompiler(command)
+      if '--onedir' in command:
+        dist = Path(command[command.index('--distpath') + 1])
+        name = command[command.index('--name') + 1]
+        cache = dist / name / '_internal' / '__pycache__' / 'module.pyc'
+        cache.parent.mkdir(parents=True)
+        cache.write_bytes(b'development cache')
+      return result
+
+    def finalize(resolved, context, source, action):
+      self.assertEqual(action, 'finalize')
+      self.assertFalse(list(context.distRoot.rglob('__pycache__')))
+      events.append('finalize')
+      return {}
+
+    def record(*args):
+      events.append('record')
+      return {'reusable': False}
+
+    with patch('branding_build.sys.platform', 'win32'), \
+         patch('build.run_command', side_effect=compiler), \
+         patch('branding_build.prepareProtocol'), \
+         patch('branding_build.runProducer', side_effect=finalize), \
+         patch('branding_build.completeRecord', side_effect=record):
+      self.assertEqual(self.runBuild(), 0)
+    self.assertEqual(events, ['finalize', 'record'])
+
   def test_failed_compiler_writes_no_success_receipt(self) -> None:
     with patch('branding_build.sys.platform', 'win32'), \
          patch('build.run_command', return_value=7) as execute:
@@ -133,6 +169,74 @@ class CommandIntegrationTests(unittest.TestCase):
          patch('build.run_command', side_effect=self.fakeCompiler):
       self.assertEqual(self.runBuild(), 0)
     self.assertEqual(self.config.read_bytes(), data)
+
+
+class ProtocolBytecodeTests(unittest.TestCase):
+  def setUp(self):
+    temporary = tempfile.TemporaryDirectory()
+    self.addCleanup(temporary.cleanup)
+    self.root = Path(temporary.name).resolve()
+    self.context = SimpleNamespace(distRoot=self.root / 'dist')
+    self.resolved = SimpleNamespace(programName='Application')
+    self.app = self.context.distRoot / self.resolved.programName
+    self.app.mkdir(parents=True)
+
+  def write(self, relative):
+    path = self.app / relative
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(b'fixture')
+    return path
+
+  def clean(self):
+    branding_build.removeProtocolBytecode(self.resolved, self.context)
+
+  def test_removes_copied_caches_but_preserves_runtime_files_and_backups(self):
+    self.write('_internal/pkg/__pycache__/module.cpython-311.pyc')
+    self.write('_internal/pkg/__pycache__/nested/module.pyo')
+    (self.app / '__pycache__').mkdir()
+    keep = [self.write(name) for name in (
+      'Application.exe', '_internal/base_library.zip', '_internal/pkg/module.py',
+      '_internal/sourceless.pyc', 'model.pt.bak',
+    )]
+    sibling = self.root / 'source-cache.pyc'
+    sibling.write_bytes(b'source')
+    self.clean()
+    self.assertFalse(list(self.app.rglob('__pycache__')))
+    self.assertTrue(all(path.read_bytes() == b'fixture' for path in keep))
+    self.assertEqual(sibling.read_bytes(), b'source')
+    self.clean()
+
+  def test_unexpected_cache_contents_fail_before_any_deletion(self):
+    cache = self.write('__pycache__/module.pyc')
+    unexpected = self.write('_internal/__pycache__/important.json')
+    with self.assertRaisesRegex(BuildConfigError, 'Unexpected file'):
+      self.clean()
+    self.assertTrue(cache.exists())
+    self.assertTrue(unexpected.exists())
+
+  def test_output_escape_and_dist_root_are_rejected(self):
+    for name in ('..', '.', str(self.root)):
+      self.resolved.programName = name
+      with self.subTest(name=name), self.assertRaisesRegex(BuildConfigError, 'Invalid isolated'):
+        self.clean()
+
+  def test_missing_output_is_rejected(self):
+    self.resolved.programName = 'Missing'
+    with self.assertRaisesRegex(BuildConfigError, 'Invalid isolated'):
+      self.clean()
+
+  def test_linked_cache_is_rejected_without_touching_target(self):
+    outside = self.root / 'outside'
+    outside.mkdir()
+    bytecode = outside / 'module.pyc'
+    bytecode.write_bytes(b'outside')
+    try:
+      (self.app / '__pycache__').symlink_to(outside, target_is_directory=True)
+    except OSError:
+      self.skipTest('Directory symlinks unavailable')
+    with self.assertRaisesRegex(BuildConfigError, 'Symlinks/junctions'):
+      self.clean()
+    self.assertEqual(bytecode.read_bytes(), b'outside')
 
 
 class CliTests(unittest.TestCase):

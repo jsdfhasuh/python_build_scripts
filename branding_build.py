@@ -4,6 +4,7 @@ import json
 import os
 import shlex
 import shutil
+import stat
 import sys
 from pathlib import Path
 
@@ -69,6 +70,45 @@ def copyCompatibilityEntrypoints(resolved: ResolvedBuild, context: BuildContext)
     shutil.copy2(source, target)
 
 
+def removeProtocolBytecode(resolved: ResolvedBuild, context: BuildContext) -> None:
+  distRoot = context.distRoot.absolute()
+  appDir = distRoot / resolved.programName
+  rejectLinks(appDir)
+  root = appDir.resolve()
+  if root == distRoot.resolve() or not root.is_relative_to(distRoot.resolve()) or not root.is_dir():
+    raise BuildConfigError(f'Invalid isolated application output: {appDir}')
+  files, directories = [], []
+
+  def scanError(error):
+    raise error
+
+  # Directory data mappings can carry development caches into the frozen output.
+  # Validate the entire tree before deleting only bytecode inside cache directories.
+  for parent, folders, names in os.walk(root, followlinks=False, onerror=scanError):
+    for name in folders + names:
+      path = Path(parent) / name
+      rejectLinks(path)
+      if not path.resolve().is_relative_to(root):
+        raise BuildConfigError(f'Packaged path escapes application output: {path}')
+      if '__pycache__' not in [part.casefold() for part in path.relative_to(root).parts]:
+        continue
+      mode = path.lstat().st_mode
+      if stat.S_ISDIR(mode):
+        directories.append(path)
+      elif stat.S_ISREG(mode) and path.suffix.lower() in ('.pyc', '.pyo'):
+        files.append(path)
+      else:
+        raise BuildConfigError(f'Unexpected file in packaged bytecode cache: {path}')
+  for path in files:
+    rejectLinks(path)
+    path.unlink()
+  for path in sorted(directories, key=lambda item: len(item.parts), reverse=True):
+    rejectLinks(path)
+    path.rmdir()
+  if files or directories:
+    print(f'Removed {len(files)} development bytecode files from isolated release output')
+
+
 def executeBuild(
   resolved: ResolvedBuild, context: BuildContext, sourceRoot: Path, *, clean: bool = True,
 ) -> dict:
@@ -91,6 +131,7 @@ def executeBuild(
   if icon and fileHash(Path(icon)) != resolved.iconSha256:
     raise BuildConfigError('Icon changed during compilation; rebuild before using this output')
   if protocolEnabled(resolved):
+    removeProtocolBytecode(resolved, context)
     runProducer(resolved, context, sourceRoot, 'finalize')
   record = completeRecord(resolved, context, sourceRoot, before)
   receipt = {

@@ -69,7 +69,31 @@ def getRelease(repo: str, tag: str) -> dict | None:
     raise BuildConfigError(f'无法查询 Release：{exc}') from exc
   if result.returncode:
     if '(HTTP 404)' in result.stderr:
-      return None
+      # The tag endpoint can return 404 for an existing Draft. Include drafts
+      # across all pages before treating a tag as available for creation.
+      text = runTool(['gh', 'api', '--paginate', '--slurp',
+                      f'repos/{repo}/releases?per_page=100'])
+      try:
+        pages = json.loads(text)
+      except json.JSONDecodeError as exc:
+        raise BuildConfigError('Invalid Release lookup pagination JSON') from exc
+      if not isinstance(pages, list) or not all(isinstance(page, list) for page in pages):
+        raise BuildConfigError('Invalid Release lookup pagination')
+      matches = []
+      for page in pages:
+        for item in page:
+          if not isinstance(item, dict):
+            raise BuildConfigError('Invalid Release lookup entry')
+          if item.get('tag_name') == tag:
+            matches.append(item)
+      if len(matches) > 1:
+        raise BuildConfigError('Ambiguous Release tag; refusing to choose a Draft')
+      if not matches:
+        return None
+      release = matches[0]
+      if type(release.get('id')) is not int or release['id'] <= 0:
+        raise BuildConfigError('Invalid Release ID in Draft lookup')
+      return release
     raise BuildConfigError(f'无法查询 Release：{result.stderr.strip()}')
   release = parseObject(result.stdout, 'Release')
   if release.get('tag_name') != tag or not isinstance(release.get('id'), int):
