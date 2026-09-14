@@ -19,6 +19,7 @@ from build_records import inputSnapshot
 from build_records import rejectLinks
 from build_records import writeJsonNew
 from console_utils import configureConsole
+from update_protocol_build import protocolEnabled, prepareProtocol, runProducer
 
 
 class CompilerError(BuildConfigError):
@@ -42,6 +43,11 @@ def buildCommands(
       job, clean, str(context.specPath(job.label)), str(context.distRoot),
       str(context.workPath(job.label)),
     )))
+  if protocolEnabled(resolved):
+    sourceRoot = Path(os.environ.get('SOURCE_ROOT') or Path(resolved.config['entry']).parent)
+    for _, command in commands:
+      command[-1:-1] = ['--runtime-hook', str(context.workRoot / 'update_identity_hook.py'),
+                         '--paths', str(sourceRoot)]
   return commands
 
 
@@ -73,6 +79,8 @@ def executeBuild(
   rejectLinks(context.workRoot)
   rejectLinks(context.distRoot)
   context.prepare(resolved)
+  if protocolEnabled(resolved):
+    prepareProtocol(resolved, context, sourceRoot, before['source']['commit'])
   for _, command in commands:
     code = build.run_command(command)
     if code:
@@ -82,6 +90,8 @@ def executeBuild(
   icon = resolved.config.get('icon')
   if icon and fileHash(Path(icon)) != resolved.iconSha256:
     raise BuildConfigError('Icon changed during compilation; rebuild before using this output')
+  if protocolEnabled(resolved):
+    runProducer(resolved, context, sourceRoot, 'finalize')
   record = completeRecord(resolved, context, sourceRoot, before)
   receipt = {
     'schema_version': 1, **resolved.summary(), 'status': 'built-directory',

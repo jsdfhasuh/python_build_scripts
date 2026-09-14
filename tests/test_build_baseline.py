@@ -32,7 +32,7 @@ class DefaultBuildTests(unittest.TestCase):
 
   def test_target_configuration_semantics_are_pinned(self) -> None:
     expected = {
-      'emo-vision-train': '4a7189ac214a997bea9ac2c23830591c2068be4a8b68f79562c0f5f49f2c2de9',
+      'emo-vision-train': 'b1d2c8c49276f7dc2a928156f009c8147aacda5c5e316635025ca8eb2456b0b7',
       'emo-master': 'd36a9dd53f6a6e344ba21c9c2d8307c65fe59c10972c2ee5278d62933c1065c9',
     }
     for target, digest in expected.items():
@@ -55,8 +55,9 @@ class DefaultBuildTests(unittest.TestCase):
     expected += config['extra_args'] + [os.path.normpath('SOURCE_ROOT/main.py')]
     self.assertEqual(main, expected)
     self.assertEqual(updater, [*build.PYINSTALLER_CMD, '--noconfirm', '--clean',
-                              '--name', 'updater', '--onefile',
-                              os.path.normpath('SOURCE_ROOT/updater.py')])
+                              '--name', 'updater', '--onefile', '--noconsole',
+                              *[f'--exclude-module={name}' for name in config['updater']['excludes']],
+                              os.path.normpath('SOURCE_ROOT/updater_gui.py')])
     self.assertNotIn('--distpath', main)
     self.assertNotIn('--workpath', main)
     self.assertNotIn('--onefile', main)

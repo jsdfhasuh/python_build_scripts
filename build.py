@@ -441,6 +441,9 @@ def append_binary_args(cmd: List[str], job: BuildJob, collect_binaries: List[str
             for dll in conda_dlls:
                 cmd.append(f'--add-binary={dll}{os.pathsep}{dest}')
 
+    for runtimeDll in _collect_python_runtime_dlls():
+        cmd.append(f'--add-binary={runtimeDll}{os.pathsep}.')
+
     if not job.collect_python_binary:
         return
 
@@ -451,10 +454,6 @@ def append_binary_args(cmd: List[str], job: BuildJob, collect_binaries: List[str
         cmd.append(f'--add-binary={pythonDll}{os.pathsep}.')
     else:
         print("Warning: python DLL not found; the packaged app may fail to run")
-
-    for runtimeDll in _collect_python_runtime_dlls():
-        cmd.append(f'--add-binary={runtimeDll}{os.pathsep}.')
-
 
 def build_pyinstaller_command(
     job: BuildJob, clean: bool, specpath: str = None,

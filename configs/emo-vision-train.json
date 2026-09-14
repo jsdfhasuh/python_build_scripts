@@ -87,13 +87,15 @@
     "--copy-metadata",
     "kagglesdk"
   ],
+  "update_protocol": 2,
   "updater": {
     "enabled": true,
-    "entry": "${SOURCE_ROOT}/updater.py",
+    "entry": "${SOURCE_ROOT}/updater_gui.py",
     "name": "updater",
     "onefile": true,
-    "console": true,
+    "console": false,
     "hidden_imports": [],
+    "excludes": ["torch", "torchvision", "ultralytics", "cv2", "PyQt5.QtWebEngineWidgets", "PyQt5.QtWebEngineCore"],
     "extra_args": []
   }
 }

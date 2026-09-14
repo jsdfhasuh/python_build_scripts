@@ -487,6 +487,10 @@ def collectArguments(*, yes: bool = False) -> list[str] | None:
     else:
       os.environ['SOURCE_ROOT'] = oldSource
   print('ZIP 解压即用；不会生成安装器。窗口外观由源码读取品牌配置，运行时自动更新未关闭。')
+  if resolved.config.get('update_protocol') == 2:
+    baseTag = prompt('差异包基线 Release tag（留空仅生成完整包）', '')
+    if baseTag:
+      arguments += [f'--delta-base-tag={baseTag}']
   return finishRelease(arguments, resolved, sourcePath, tag, mode, yes)
 
 
@@ -497,14 +501,8 @@ def main(argv: list[str] | None = None) -> int:
   parser.add_argument('--legacy', action='store_true', help='Open the unchanged legacy wizard')
   args = parser.parse_args(argv)
   if args.legacy:
-    from release_wizard_common import LOCAL_STATE_NAME
-    from release_wizard_common import main as legacyMain
-    oldArguments = sys.argv
-    try:
-      sys.argv = [oldArguments[0]] + (['--yes'] if args.yes else [])
-      return legacyMain(fixedTarget='emo-vision-train', localStateName=LOCAL_STATE_NAME)
-    finally:
-      sys.argv = oldArguments
+    print('旧发布入口不支持协议 2；请使用当前向导的六种模式。', file=sys.stderr)
+    return 1
   try:
     arguments = collectArguments(yes=args.yes)
     if arguments is None:

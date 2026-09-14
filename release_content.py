@@ -100,6 +100,25 @@ def listReleases(repo: str) -> list[dict]:
 def readManifest(repo: str, release: dict, manifestName: str = 'manifest.json') -> dict:
   validateFileName(manifestName, 'Manifest name')
   assets = release.get('assets', [])
+  identityName = 'VisionWorkshop-windows-x86_64-release_identity.json'
+  identityAssets = [item for item in assets if isinstance(item, dict) and item.get('name') == identityName]
+  if identityAssets:
+    if len(identityAssets) != 1:
+      raise BuildConfigError('Ambiguous protocol identity asset')
+    asset = identityAssets[0]
+    with tempfile.TemporaryDirectory(prefix='release-identity-') as directory:
+      runTool(['gh', 'release', 'download', release['tag_name'], '--repo', repo,
+               '--pattern', identityName, '--dir', directory])
+      raw = (Path(directory) / identityName).read_bytes()
+    if (len(raw) != asset.get('size') or len(raw) > 65536
+        or 'sha256:' + hashlib.sha256(raw).hexdigest() != asset.get('digest')):
+      raise BuildConfigError('Published identity digest differs from GitHub metadata')
+    identity = parseObject(raw.decode('utf-8'), 'Release identity')
+    if identity.get('release_tag') != release['tag_name'] or identity.get('product_id') != 'training_platform':
+      raise BuildConfigError('Published identity does not match release')
+    source = identity.get('source', {})
+    return {'version': identity.get('version'), 'source_repo': source.get('repository'),
+            'source_commit': source.get('commit')}
   if not any(isinstance(asset, dict) and asset.get('name') == manifestName for asset in assets):
     raise BuildConfigError(f'Release {release["tag_name"]} 没有 {manifestName}')
   with tempfile.TemporaryDirectory(prefix='release-manifest-') as directory:

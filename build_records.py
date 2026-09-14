@@ -17,6 +17,7 @@ from build_config import BuildContext
 from build_config import ResolvedBuild
 from build_config import readJsonObject
 from build_config import validateFileName
+from update_protocol_build import protocolEnabled, verifyProtocol
 
 
 BUILD_ID = re.compile(r'^\d{8}T\d{6}Z-[a-f0-9]{12}$')
@@ -255,6 +256,8 @@ def completeRecord(
     'inputs': before, 'files': files, 'files_sha256': objectHash(files),
     'reusable': reusable, 'windows_launch_test': 'not-run',
   }
+  if protocolEnabled(resolved):
+    record['update_protocol'] = verifyProtocol(resolved, context, sourceRoot)
   writeJsonNew(context.workRoot / 'build-record.json', record)
   return record
 
@@ -294,4 +297,10 @@ def verifyRecord(
   files = validateApplication(resolved, context.distRoot / resolved.programName)
   if files != record.get('files') or objectHash(files) != record.get('files_sha256'):
     raise BuildConfigError('Build artifacts changed; rebuild')
+  if protocolEnabled(resolved):
+    expectedProtocol = record.get('update_protocol')
+    if not isinstance(expectedProtocol, dict) or expectedProtocol.get('protocol_version') != 2:
+      raise BuildConfigError('Old build record has no protocol identity; clean rebuild required')
+    if verifyProtocol(resolved, context, sourceRoot) != expectedProtocol:
+      raise BuildConfigError('Protocol artifacts differ from the original build record')
   return context, record

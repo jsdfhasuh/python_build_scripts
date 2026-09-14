@@ -48,6 +48,8 @@ from release_content import resolveBase
 from release_content import updateBody
 from release_content import validateTitle
 from release_progress import ReleaseProgress
+from update_protocol_build import protocolEnabled, fullAssetName, runProducer, ASSET_PREFIX
+from update_protocol_publish import artifactRecords, publishProtocolAssets
 
 
 ROOT = Path(__file__).resolve().parent
@@ -177,7 +179,7 @@ def validateModes(args: argparse.Namespace) -> None:
   if args.notes_only:
     fields = ('branding_profile', 'program_name', 'icon_path', 'release_asset_name',
               'build_record_path', 'skip_build', 'build_only', 'mandatory', 'notes',
-              'previous_source_ref', 'changelog_all', 'release_title', 'output_directory', 'config')
+              'previous_source_ref', 'changelog_all', 'release_title', 'output_directory', 'config', 'delta_base_tag')
     if any(getattr(args, field) for field in fields) or args.source_ref != 'local':
       raise BuildConfigError('Notes-only cannot change branding, build options or manifest fields')
     if not args.release_body_path or not REPOSITORY.fullmatch(args.release_repo):
@@ -270,6 +272,7 @@ def chooseOutput(
 
 def prepareContent(
   args: argparse.Namespace, resolved: ResolvedBuild, sourceRoot: Path, head: str,
+  *, assetName: str = '',
 ) -> ReleaseContent:
   title = validateTitle(args.release_title or f'{resolved.programName} {args.release_tag}')
   base = resolveBase(sourceRoot, args.previous_source_ref, head) if args.previous_source_ref else ''
@@ -286,7 +289,7 @@ def prepareContent(
       title=title, notes=args.notes or args.release_tag[1:], programName=resolved.programName,
       sourceRepo=resolved.config.get('source_repo', ''), sourceRoot=sourceRoot,
       head=head, base=base, allHistory=args.changelog_all,
-      assetName=resolved.assetName(args.release_tag),
+      assetName=assetName or resolved.assetName(args.release_tag),
       legacyNames=tuple(resolved.legacyProgramNames),
     )
   return ReleaseContent(title, body, head, base)
@@ -338,6 +341,11 @@ def publishAssets(
     verifiedArchive.sha256, verifiedArchive.size,
   ):
     raise BuildConfigError('ZIP changed before publication')
+  if protocolEnabled(resolved):
+    notesPath = context.workRoot / f'release-notes-{uuid.uuid4().hex}.md'
+    notesPath.write_text(content.body, encoding='utf-8')
+    publishProtocolAssets(args, resolved, summary, output, notesPath, content, runChecked, getRelease)
+    return
   url = f'https://github.com/{repo}/releases/download/{quote(args.release_tag, safe="")}/'
   url += quote(summary['asset_name'], safe='')
   manifest = {
@@ -375,12 +383,14 @@ def runRelease(args: argparse.Namespace) -> dict:
       context, record = verifyRecord(Path(args.build_record_path), resolved, sourceRoot)
   else:
     context, record = createBuildContext(resolved), None
+  if protocolEnabled(resolved):
+    assetName = fullAssetName(context)
   output = chooseOutput(args, resolved, context, sourceRoot)
   if args.publish:
     if source.get('dirty') or not source.get('submodules_ready'):
       raise BuildConfigError('Publication requires clean, versioned source and initialized submodules')
     requireNewRelease(args.release_repo or resolved.config['release_repo'], args.release_tag)
-  content = prepareContent(args, resolved, sourceRoot, source['commit'])
+  content = prepareContent(args, resolved, sourceRoot, source['commit'], assetName=assetName)
   preview = {
     **resolved.summary(), 'asset_name': assetName, 'release_tag': args.release_tag,
     'output_directory': str(output), 'source_commit': source.get('commit'),
@@ -443,6 +453,19 @@ def runRelease(args: argparse.Namespace) -> dict:
     'release_title': content.title, 'release_body_sha256': bodyHash(content.body),
     'source_base_ref': content.baseCommit,
   }
+  if protocolEnabled(resolved):
+    runProducer(resolved, context, sourceRoot, 'export', '--output', output)
+    names = [assetName, ASSET_PREFIX + '-release_identity.json', ASSET_PREFIX + '-package_files.json']
+    if args.delta_base_tag:
+      delta = runProducer(resolved, context, sourceRoot, 'delta', '--output', output,
+                          '--base-tag', args.delta_base_tag)
+      if delta.get('verified_target_sha256') != record['update_protocol']['files_sha256']:
+        raise BuildConfigError('Delta reconstruction verification is missing or targets another build')
+      summary['delta_reconstruction_sha256'] = delta['verified_target_sha256']
+      names.extend([delta['zip_name'], delta['zip_name'][:-4] + '_descriptor.json'])
+    summary['protocol_asset_names'] = names
+    summary['protocol_assets'] = artifactRecords([output / name for name in names])
+    summary['update_protocol'] = record['update_protocol']
   # A failure leaves a valid local ZIP, but never a summary falsely marked as published.
   summaryPath = output / 'build-summary.json'
   writeJsonNew(summaryPath, summary)
@@ -478,6 +501,7 @@ def makeParser() -> argparse.ArgumentParser:
   parser.add_argument('--release-asset-name')
   parser.add_argument('--output-directory')
   parser.add_argument('--build-record-path')
+  parser.add_argument('--delta-base-tag', default='')
   parser.add_argument('--skip-build', action='store_true')
   parser.add_argument('--dry-run', action='store_true')
   parser.add_argument('--build-only', action='store_true')
