@@ -10,6 +10,7 @@ on:
       - 'profiles/**'
       - 'tests/**'
       - '.github/workflows/visionworkshop-*.yml'
+      - '.github/workflows/release-windows.yml'
   workflow_dispatch:
 
 permissions:

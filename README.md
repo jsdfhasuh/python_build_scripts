@@ -64,11 +64,17 @@ PowerShell `scripts/publish-local-release.ps1` 根据参数选择新入口或原
 |---|---|
 | `VisionWorkshop portable ZIP` | 新的 VisionWorkshop 手动/可复用构建入口，默认不发布。 |
 | `VisionWorkshop portable tests` | Linux/Windows 单元测试和 Windows 小项目真实打包验收。 |
-| `Release Windows Build` | 原有工作流，保留旧目标和安装包行为，不接收新外观参数。 |
+| `Release Windows Build` | Vision Train 复用新版 Python 流程、保持原始外观；Master 保留旧目标和安装包行为。 |
 
 新工作流的 `source_ref` 必须明确指定。跨仓复用时必须传 `packager_ref`，不能把源码仓的
-SHA 当作打包仓版本。ICO 必须在 runner 可读取的位置；Actions artifact 只上传 ZIP 和脱敏
-摘要，不上传私有构建记录。功能分支中的手动入口是否已在界面可见，以 GitHub 实际状态为准。
+SHA 当作打包仓版本。ICO 必须在 runner 可读取的位置；Actions artifact 上传经清单和哈希
+验证的公开协议资产及摘要，不上传私有构建记录。功能分支中的手动入口是否已在界面可见，
+以 GitHub 实际状态为准。
+
+Vision Train 的网页默认值、基线选择和正式发布步骤见
+[Actions 发布操作说明](docs/actions-emo-vision-train.md)。版本留空读取源码版本；基线默认
+`auto`，首次发布仅完整包。旧网页入口 `publish_release=auto` 对 Vision Train 表示只构建，
+对 Master 保持原来的发布行为；两个工作流的可复用调用仍默认不发布。
 
 ## 测试
 

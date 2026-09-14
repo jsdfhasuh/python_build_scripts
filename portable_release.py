@@ -27,6 +27,7 @@ from build_config import createBuildContext
 from build_config import resolveBuildConfig
 from build_config import validateFileName
 from build_records import CHUNK
+from build_records import fileHash
 from build_records import gitState
 from build_records import gitCommit
 from build_records import objectHash
@@ -174,12 +175,19 @@ def verifyArchiveContents(
 
 
 def validateModes(args: argparse.Namespace) -> None:
+  if args.delta_base_lock and not args.delta_base_tag:
+    raise BuildConfigError('A frozen delta baseline requires --delta-base-tag')
+  if args.delta_base_lock and not re.fullmatch(r'[0-9a-f]{64}', args.delta_base_lock_sha256):
+    raise BuildConfigError('A frozen delta baseline requires its preparation SHA-256')
+  if args.delta_base_lock_sha256 and not args.delta_base_lock:
+    raise BuildConfigError('A baseline lock SHA-256 requires a baseline lock')
   if args.build_only and args.publish:
     raise BuildConfigError('--build-only and --publish cannot be combined')
   if args.notes_only:
     fields = ('branding_profile', 'program_name', 'icon_path', 'release_asset_name',
               'build_record_path', 'skip_build', 'build_only', 'mandatory', 'notes',
-              'previous_source_ref', 'changelog_all', 'release_title', 'output_directory', 'config', 'delta_base_tag')
+              'previous_source_ref', 'changelog_all', 'release_title', 'output_directory', 'config',
+              'delta_base_tag', 'delta_base_lock', 'delta_base_lock_sha256')
     if any(getattr(args, field) for field in fields) or args.source_ref != 'local':
       raise BuildConfigError('Notes-only cannot change branding, build options or manifest fields')
     if not args.release_body_path or not REPOSITORY.fullmatch(args.release_repo):
@@ -372,6 +380,29 @@ def publishAssets(
                 '--repo', repo, '--title', content.title, '--notes-file', str(notesPath)])
 
 
+def runDeltaProducer(
+  args: argparse.Namespace, resolved: ResolvedBuild, context: BuildContext,
+  sourceRoot: Path, output: Path,
+) -> dict:
+  baseArguments = ['--base-tag', args.delta_base_tag]
+  expectedBaseHash = ''
+  if args.delta_base_lock:
+    from actions_release import verifyBaselineLock
+    lockPath = Path(args.delta_base_lock)
+    if fileHash(lockPath) != args.delta_base_lock_sha256:
+      raise BuildConfigError('Frozen baseline lock changed during the build')
+    lock = json.loads(lockPath.read_text(encoding='utf-8'))
+    if (lock['tag'] != args.delta_base_tag
+        or lock['repository'] != (args.release_repo or resolved.config['release_repo'])):
+      raise BuildConfigError('Frozen baseline does not match the release request')
+    baseArguments = ['--base-files', str(verifyBaselineLock(lockPath))]
+    expectedBaseHash = lock['assets'][lock['files_name']]['digest'].removeprefix('sha256:')
+  delta = runProducer(resolved, context, sourceRoot, 'delta', '--output', output, *baseArguments)
+  if expectedBaseHash and delta.get('base_files_sha256') != expectedBaseHash:
+    raise BuildConfigError('Delta producer used a different baseline from the frozen request')
+  return delta
+
+
 def runRelease(args: argparse.Namespace) -> dict:
   validateModes(args)
   if args.notes_only:
@@ -457,8 +488,7 @@ def runRelease(args: argparse.Namespace) -> dict:
     runProducer(resolved, context, sourceRoot, 'export', '--output', output)
     names = [assetName, ASSET_PREFIX + '-release_identity.json', ASSET_PREFIX + '-package_files.json']
     if args.delta_base_tag:
-      delta = runProducer(resolved, context, sourceRoot, 'delta', '--output', output,
-                          '--base-tag', args.delta_base_tag)
+      delta = runDeltaProducer(args, resolved, context, sourceRoot, output)
       if delta.get('verified_target_sha256') != record['update_protocol']['files_sha256']:
         raise BuildConfigError('Delta reconstruction verification is missing or targets another build')
       summary['delta_reconstruction_sha256'] = delta['verified_target_sha256']
@@ -502,6 +532,8 @@ def makeParser() -> argparse.ArgumentParser:
   parser.add_argument('--output-directory')
   parser.add_argument('--build-record-path')
   parser.add_argument('--delta-base-tag', default='')
+  parser.add_argument('--delta-base-lock', default='')
+  parser.add_argument('--delta-base-lock-sha256', default='')
   parser.add_argument('--skip-build', action='store_true')
   parser.add_argument('--dry-run', action='store_true')
   parser.add_argument('--build-only', action='store_true')
@@ -528,7 +560,7 @@ def main(argv: list[str] | None = None) -> int:
   try:
     args = makeParser().parse_args(argv)
     # Resolve user CLI paths before adopting the legacy packager working directory.
-    for name in ('source_root', 'config', 'build_record_path', 'release_body_path'):
+    for name in ('source_root', 'config', 'build_record_path', 'release_body_path', 'delta_base_lock'):
       value = getattr(args, name)
       if value:
         setattr(args, name, str(Path(value).expanduser().absolute()))

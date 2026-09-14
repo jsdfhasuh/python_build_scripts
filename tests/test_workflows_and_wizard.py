@@ -397,9 +397,10 @@ class WorkflowTests(unittest.TestCase):
     data, _ = self.load('visionworkshop-portable.yml')
     upload = next(step['with'] for step in data['jobs']['build']['steps']
                   if step.get('uses', '').startswith('actions/upload-artifact'))
-    self.assertEqual(upload['path'].splitlines(), [
-      'packager/release-output/ci/*.zip', 'packager/release-output/ci/build-summary.json',
-    ])
+    self.assertEqual(upload['path'], '${{ runner.temp }}/vision-train-public/')
+    stage = next(step for step in data['jobs']['build']['steps']
+                 if step.get('name') == 'Verify and stage public protocol assets')
+    self.assertIn('actions_release.py stage', stage['run'])
 
   def test_both_workflows_use_read_only_default_token(self) -> None:
     for name in ('visionworkshop-portable.yml', 'visionworkshop-tests.yml'):

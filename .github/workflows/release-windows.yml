@@ -11,7 +11,6 @@ on:
       source_ref:
         description: Source branch, tag, or commit
         required: true
-        default: codex/yolo-pose-custom-ai-labeling
         type: string
       previous_source_ref:
         description: Optional source base ref for release notes
@@ -19,8 +18,8 @@ on:
         default: ''
         type: string
       release_tag:
-        description: Release tag to create or update, for example v1.2.3
-        required: true
+        description: Release tag (Vision Train may leave blank to read source version)
+        required: false
         type: string
       release_repo:
         description: GitHub repo to publish releases to, for example owner/repo
@@ -33,9 +32,34 @@ on:
         default: ''
         type: string
       publish_release:
-        description: Publish the built assets to the selected GitHub Release
+        description: Publish assets - auto builds Vision Train only, publishes other targets
         required: true
-        default: true
+        default: auto
+        type: choice
+        options: [auto, 'false', 'true']
+      packager_ref:
+        description: Vision Train packager revision (blank uses the selected workflow SHA)
+        default: ''
+        type: string
+      delta_base_tag:
+        description: Vision Train baseline - auto, none, or an older official Release tag
+        default: auto
+        type: string
+      release_title:
+        description: Optional Vision Train release title
+        default: ''
+        type: string
+      notes:
+        description: Optional Vision Train short release description
+        default: ''
+        type: string
+      mandatory:
+        description: Vision Train mandatory update metadata
+        default: false
+        type: boolean
+      changelog_all:
+        description: Vision Train notes from all source history
+        default: false
         type: boolean
   workflow_call:
     inputs:
@@ -50,7 +74,8 @@ on:
         default: ''
         type: string
       release_tag:
-        required: true
+        required: false
+        default: ''
         type: string
       release_repo:
         required: false
@@ -64,6 +89,24 @@ on:
         required: false
         default: false
         type: boolean
+      packager_ref:
+        default: ''
+        type: string
+      delta_base_tag:
+        default: auto
+        type: string
+      release_title:
+        default: ''
+        type: string
+      notes:
+        default: ''
+        type: string
+      mandatory:
+        default: false
+        type: boolean
+      changelog_all:
+        default: false
+        type: boolean
     secrets:
       SOURCE_REPO_TOKEN:
         required: false
@@ -72,13 +115,36 @@ on:
     outputs:
       artifact_name:
         description: Name of the uploaded Windows release artifact
-        value: ${{ jobs.build.outputs.artifact_name }}
+        value: ${{ jobs.vision_train.outputs.artifact_name || jobs.build.outputs.artifact_name }}
 
 permissions:
   contents: write
 
 jobs:
+  vision_train:
+    if: inputs.target == 'emo-vision-train'
+    uses: ./.github/workflows/visionworkshop-portable.yml
+    permissions:
+      contents: read
+    with:
+      source_ref: ${{ inputs.source_ref }}
+      release_tag: ${{ inputs.release_tag }}
+      branding_profile: ''
+      packager_ref: ${{ inputs.packager_ref }}
+      publish_release: ${{ inputs.publish_release == true || inputs.publish_release == 'true' }}
+      release_repo: ${{ inputs.release_repo }}
+      delta_base_tag: ${{ inputs.delta_base_tag }}
+      previous_source_ref: ${{ inputs.previous_source_ref }}
+      release_title: ${{ inputs.release_title }}
+      notes: ${{ inputs.notes }}
+      mandatory: ${{ inputs.mandatory }}
+      release_body_path: ${{ inputs.release_body_path }}
+      changelog_all: ${{ inputs.changelog_all }}
+    secrets:
+      SOURCE_REPO_TOKEN: ${{ secrets.SOURCE_REPO_TOKEN }}
+      RELEASE_REPO_TOKEN: ${{ secrets.RELEASE_REPO_TOKEN }}
   build:
+    if: inputs.target != 'emo-vision-train'
     name: Build ${{ inputs.target }} for Windows
     runs-on: windows-latest
     outputs:
@@ -240,7 +306,7 @@ jobs:
             OutputDirectory = $outputDirectory
           }
 
-          if ($env:PUBLISH_RELEASE_INPUT -ne 'true') {
+          if ($env:PUBLISH_RELEASE_INPUT -eq 'false') {
             $publishArgs['BuildOnly'] = $true
           }
           $previousSourceRef = $env:PREVIOUS_SOURCE_REF_INPUT.Trim()
