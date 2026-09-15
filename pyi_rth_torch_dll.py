@@ -12,11 +12,14 @@ candidates = [
     os.path.join(base, '_internal', 'torch', 'lib'),
 ]
 
-log_file = os.path.join(os.path.dirname(sys.executable), 'torch_dll_hook.log')
 def _log(msg):
+    # Frozen startup must not create untracked files inside the installation.
+    if os.environ.get('PYI_TORCH_DLL_DEBUG') != '1':
+        return
     try:
-        with open(log_file, 'a', encoding='utf-8') as f:
-            f.write(msg + '\n')
+        stream = getattr(sys, 'stderr', None)
+        if stream is not None:
+            print('[torch-dll] ' + msg, file=stream)
     except Exception:
         pass
 
