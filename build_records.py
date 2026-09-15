@@ -188,6 +188,7 @@ def inputSnapshot(
   packagerFiles = sorted(resolved.packagerRoot.glob('*.py'))
   packagerFiles += sorted((resolved.packagerRoot / 'scripts').glob('*.py'))
   packagerFiles += sorted((resolved.packagerRoot / 'scripts').glob('*.ps1'))
+  packagerFiles += sorted((resolved.packagerRoot / 'ci').glob('*.json'))
   packagerDigest = {}
   for path in packagerFiles:
     rejectLinks(path)

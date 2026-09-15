@@ -185,7 +185,9 @@ jobs:
         with:
           python-version: ${{ steps.config.outputs.python_version }}
           cache: pip
-          cache-dependency-path: source/requirements.txt
+          cache-dependency-path: |
+            source/requirements.txt
+            packager/ci/vision-train-runtime.json
       - name: Install ICO validator
         run: python -m pip install Pillow
       - name: Preflight before heavy dependencies
@@ -201,20 +203,14 @@ jobs:
             --state (Join-Path $env:RUNNER_TEMP 'vision-train-release') `
             --output (Join-Path $env:GITHUB_WORKSPACE 'packager/release-output/ci')
           if ($LASTEXITCODE -ne 0) { throw 'Portable preflight failed' }
-      - name: Install unchanged source and CI dependencies
+      - name: Install verified Vision Train GPU dependencies
         shell: pwsh
-        working-directory: source
+        working-directory: packager
         run: |
-          python -m pip install -r requirements.txt
-          if ($LASTEXITCODE -ne 0) { throw 'Source dependencies failed' }
-          $config = Get-Content ../packager/configs/emo-vision-train.json -Raw | ConvertFrom-Json
-          $packages = @($config.ci_extra_packages)
-          if ($packages.Count) {
-            python -m pip install @packages
-            if ($LASTEXITCODE -ne 0) { throw 'Configured CI dependencies failed' }
-          }
-          python -c 'import PyInstaller'
-          if ($LASTEXITCODE -ne 0) { throw 'The source build environment must include PyInstaller' }
+          python -m pip install packaging==25.0
+          if ($LASTEXITCODE -ne 0) { throw 'Dependency parser installation failed' }
+          python -X utf8 vision_train_runtime.py install --source-root ../source
+          if ($LASTEXITCODE -ne 0) { throw 'GPU runtime dependency installation failed' }
       - name: Build through the shared portable entry
         shell: pwsh
         working-directory: packager

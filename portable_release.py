@@ -51,6 +51,8 @@ from release_content import validateTitle
 from release_progress import ReleaseProgress
 from update_protocol_build import protocolEnabled, fullAssetName, runProducer, ASSET_PREFIX
 from update_protocol_publish import artifactRecords, publishProtocolAssets
+from vision_train_runtime import validateEnvironment
+from vision_train_runtime import validatePackage
 
 
 ROOT = Path(__file__).resolve().parent
@@ -486,12 +488,18 @@ def runRelease(args: argparse.Namespace) -> dict:
       for job, command in buildCommands(resolved, context):
         print(f'{job.label}: {subprocess.list2cmdline(command)}')
     return preview
+  if args.verify_vision_train_runtime:
+    if resolved.target != 'emo-vision-train':
+      raise BuildConfigError('Vision Train runtime validation cannot be used for another target')
+    validateEnvironment(sourceRoot)
   if record is None:
     with ReleaseProgress('编译应用、更新器并记录构建输入和产物'):
       record = executeBuild(resolved, context, sourceRoot)
   if record['inputs']['source'] != source:
     raise BuildConfigError('Source changed after preflight; rebuild with the requested checkout')
   appDir = context.distRoot / resolved.programName
+  runtimeCheck = (validatePackage(appDir, resolved.programName)
+                  if args.verify_vision_train_runtime else None)
   output.mkdir(parents=True, exist_ok=True)
   temporary = output / f'.{uuid.uuid4().hex}.zip'
   assetPath = output / assetName
@@ -542,6 +550,8 @@ def runRelease(args: argparse.Namespace) -> dict:
     summary['protocol_asset_names'] = names
     summary['protocol_assets'] = artifactRecords([output / name for name in names])
     summary['update_protocol'] = record['update_protocol']
+  if runtimeCheck is not None:
+    summary['runtime_validation'] = runtimeCheck
   # A failure leaves a valid local ZIP, but never a summary falsely marked as published.
   summaryPath = output / 'build-summary.json'
   writeJsonNew(summaryPath, summary)
@@ -583,6 +593,8 @@ def makeParser() -> argparse.ArgumentParser:
   parser.add_argument('--skip-build', action='store_true')
   parser.add_argument('--dry-run', action='store_true')
   parser.add_argument('--build-only', action='store_true')
+  parser.add_argument('--verify-vision-train-runtime', action='store_true',
+                      help='Check CI GPU dependencies and packaged EXE modules/DLLs before release')
   parser.add_argument('--publish', action='store_true')
   parser.add_argument('--notes-only', action='store_true')
   parser.add_argument('--release-repo', default='')

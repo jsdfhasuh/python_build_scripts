@@ -345,7 +345,7 @@ def executeRequest(path: Path, *, dryRun: bool = False) -> None:
       raise BuildConfigError('Frozen baseline lock changed')
     verifyBaselineLock(lockPath)
   command = [sys.executable, '-X', 'utf8', str(ROOT / 'scripts/publish_visionworkshop.py'),
-             *request['arguments']]
+             *request['arguments'], '--verify-vision-train-runtime']
   if dryRun:
     command.append('--dry-run')
   if request.get('publish') and not os.environ.get('RELEASE_REPO_TOKEN'):

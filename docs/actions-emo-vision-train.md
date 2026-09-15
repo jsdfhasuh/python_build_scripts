@@ -6,8 +6,9 @@
 `emo-vision-train`。这个分支复用 `VisionWorkshop portable ZIP` 工作流，并直接使用共享
 Python 发布入口，不再经过旧 PowerShell 发布逻辑。Master 的构建和安装包流程不变。
 
-两个入口保留各自外观默认值：旧入口使用原始名称和图标；portable 入口使用
-`profiles/visionworkshop.json`，必须有可用的生产 ICO，不能用测试图标代替。
+两个入口的 Vision Train 构建均使用 `profiles/visionworkshop.json`，生成
+`VisionWorkshop.exe`、品牌更新器、图标和运行时品牌资源，并保留旧名称兼容入口。
+必须有可用的生产 ICO，不能用测试图标代替。portable 入口仍可显式选择其他配置。
 
 | 参数 | 默认值和用途 |
 |---|---|
@@ -83,6 +84,32 @@ Actions 公开资产暂存步骤在共享发布入口成功返回后执行；发
 不能将其缺失视为远端没有 Draft。
 
 ## 令牌与验证
+
+### CI GPU 依赖检查
+
+Vision Train 使用 `ci/vision-train-runtime.json` 的独立 CI 依赖配置。源码依赖文件、
+目标 JSON、现有运行时 hook 和 Master 安装流程不变。CI 在临时目录合并源码依赖、
+目标补充依赖与以下明确覆盖，然后由 pip 一次解析，失败就停止：
+
+- Torch 2.5.1、TorchVision 0.20.1、TorchAudio 2.5.1 使用官方 cu121 构建。
+- 补齐 Polars、Anomalib、Kornia、Lightning、Timm 和视频依赖。
+- Kaggle 固定 2.2.4，KaggleSDK 覆盖为 0.1.37，避免旧 0.1.31 缺少 API 类型。
+- platformdirs 覆盖为 4.10.0，满足 Anomalib；imagecodecs 固定 2025.3.30，
+  保留源码 NumPy <= 1.26.4 约束，不升级到 NumPy 2。
+- 最后重装相同版本的 ONNX Runtime GPU 与 OpenCV contrib 二进制包，防止共享
+  导入路径被 CPU/非 contrib 包覆盖；随后必须通过 `pip check`。
+
+Actions 的共享入口强制传入 `--verify-vision-train-runtime`：编译前验证 GPU 构建版本、
+关键功能导入和 Git 中自带模型；编译后、压缩和任何发布前读取主 EXE 的 PYZ 模块表，
+验证 Polars 原生扩展、CUDA/cuDNN 文件及 PE 导入依赖。缺模块或缺 DLL 即失败。
+运行时配置也计入构建输入指纹，公开摘要记录检查结果。
+
+这些检查不要求 runner 有显卡，不以 `torch.cuda.is_available()` 为通过条件。
+它们不代表实际 GUI、GPU 训练、硬件或更新验收；摘要明确记录 GPU 执行为 `not-run`。
+`yolo11n.pt`、`yolo11s.pt`、`yolo26n.pt` 不在源码 Git 模型清单中，不从开发机补入包。
+
+已发布的旧版本不会被此修改修复或覆盖。先以 `publish_release=false` 构建新包并验收，
+再使用新的源码版本/tag 发布；不要覆盖已有 v1.0.24 资产。
 
 私有源码读取配置 `SOURCE_REPO_TOKEN`；发布仓库查询优先使用 `RELEASE_REPO_TOKEN`，
 未配置时回退到只读 `github.token`，因此仅构建公开发布仓库的产物不要求发布令牌。

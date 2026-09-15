@@ -127,6 +127,44 @@ class PortableTests(unittest.TestCase):
     self.assertNotIn(str(self.root), json.dumps(summary))
     self.assertTrue(readJsonObject(self.recordPath())['reusable'])
 
+  def test_runtime_environment_failure_prevents_compilation_and_publication(self) -> None:
+    with patch('portable_release.validateEnvironment', side_effect=BuildConfigError('CPU torch')), \
+         patch('portable_release.validatePackage') as package, \
+         patch('portable_release.publishAssets') as publish:
+      with self.assertRaisesRegex(BuildConfigError, 'CPU torch'):
+        self.runLocal('--build-only', '--verify-vision-train-runtime')
+      self.compiler.assert_not_called()
+      self.compressor.assert_not_called()
+      package.assert_not_called()
+      publish.assert_not_called()
+
+  def test_runtime_package_failure_prevents_compression_and_publication(self) -> None:
+    with patch('portable_release.validateEnvironment'), \
+         patch('portable_release.validatePackage', side_effect=BuildConfigError('missing DLL')), \
+         patch('portable_release.publishAssets') as publish:
+      with self.assertRaisesRegex(BuildConfigError, 'missing DLL'):
+        self.runLocal('--build-only', '--verify-vision-train-runtime')
+      self.assertTrue(self.compiler.called)
+      self.compressor.assert_not_called()
+      publish.assert_not_called()
+
+  def test_runtime_validation_summary_does_not_claim_gpu_execution(self) -> None:
+    report = {'status': 'passed', 'gpu_execution': 'not-run'}
+    with patch('portable_release.validateEnvironment') as environment, \
+         patch('portable_release.validatePackage', return_value=report) as package:
+      summary = self.runLocal('--build-only', '--verify-vision-train-runtime')
+    environment.assert_called_once_with(self.source)
+    self.assertEqual(package.call_args.args[1], 'VisionWorkshop')
+    self.assertEqual(summary['runtime_validation'], report)
+
+  def test_runtime_dry_run_does_not_import_heavy_dependencies(self) -> None:
+    with patch('portable_release.validateEnvironment') as environment, \
+         patch('portable_release.validatePackage') as package:
+      self.runLocal('--dry-run', '--verify-vision-train-runtime')
+    environment.assert_not_called()
+    package.assert_not_called()
+    self.compiler.assert_not_called()
+
   def test_preview_is_read_only(self) -> None:
     before = sorted(str(p) for p in self.packager.rglob('*'))
     self.runLocal('--dry-run')

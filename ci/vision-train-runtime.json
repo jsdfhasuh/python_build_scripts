@@ -1,0 +1,53 @@
+{
+  "python": "3.11",
+  "cuda": "12.1",
+  "torch_index": "https://download.pytorch.org/whl/cu121",
+  "torch_packages": [
+    "torch==2.5.1+cu121",
+    "torchvision==0.20.1+cu121",
+    "torchaudio==2.5.1+cu121"
+  ],
+  "overrides": {
+    "platformdirs": "platformdirs==4.10.0",
+    "kagglesdk": "kagglesdk==0.1.37"
+  },
+  "binary_owners": [
+    "onnxruntime-gpu==1.23.2",
+    "opencv-contrib-python-headless==4.11.0.86"
+  ],
+  "packages": [
+    "anomalib==2.5.1",
+    "kornia==0.8.3",
+    "lightning==2.6.5",
+    "pytorch-lightning==2.6.5",
+    "torchmetrics==1.9.0",
+    "timm==1.0.27",
+    "polars==1.37.1",
+    "av==18.0.0",
+    "kaggle==2.2.4",
+    "imagecodecs==2025.3.30"
+  ],
+  "modules": [
+    "torch", "torchvision", "polars", "_polars_runtime_32",
+    "anomalib", "kornia", "lightning", "lightning_fabric",
+    "timm", "sklearn", "skimage", "av", "kaggle.api.kaggle_api_extended"
+  ],
+  "imports": [
+    "from anomalib.data import Folder, PredictDataset",
+    "from anomalib.engine import Engine",
+    "from anomalib.models import Patchcore",
+    "from anomalib.models.components import TimmFeatureExtractor",
+    "from PyQt5 import QtCore, QtWidgets, QtWebEngineWidgets",
+    "from kagglesdk.competitions.types.competition_api_service import ApiGetSubmissionLimitsRequest"
+  ],
+  "torch_dlls": [
+    "torch_cuda.dll", "c10_cuda.dll", "cudart64_12.dll",
+    "cublas64_12.dll", "cublasLt64_12.dll", "cudnn64_9.dll",
+    "cudnn_adv64_9.dll", "cudnn_cnn64_9.dll", "cudnn_graph64_9.dll",
+    "cudnn_ops64_9.dll", "cudnn_engines_precompiled64_9.dll",
+    "cudnn_engines_runtime_compiled64_9.dll", "cudnn_heuristic64_9.dll",
+    "cufft64_11.dll", "curand64_10.dll", "cusolver64_11.dll",
+    "cusparse64_12.dll", "nvrtc64_120_0.dll", "nvJitLink_120_0.dll"
+  ],
+  "models": ["edge_sam_encoder.onnx", "edge_sam_decoder.onnx", "yolo11n-pose.pt"]
+}

@@ -129,7 +129,7 @@ jobs:
     with:
       source_ref: ${{ inputs.source_ref }}
       release_tag: ${{ inputs.release_tag }}
-      branding_profile: ''
+      branding_profile: profiles/visionworkshop.json
       packager_ref: ${{ inputs.packager_ref }}
       publish_release: ${{ inputs.publish_release == true || inputs.publish_release == 'true' }}
       release_repo: ${{ inputs.release_repo }}

@@ -354,7 +354,7 @@ class WorkflowTests(unittest.TestCase):
     self.assertEqual(train['if'], "inputs.target == 'emo-vision-train'")
     self.assertEqual(master['if'], "inputs.target != 'emo-vision-train'")
     self.assertEqual(train['uses'], './.github/workflows/visionworkshop-portable.yml')
-    self.assertEqual(train['with']['branding_profile'], '')
+    self.assertEqual(train['with']['branding_profile'], 'profiles/visionworkshop.json')
     self.assertEqual(events['workflow_dispatch']['inputs']['publish_release']['default'], 'auto')
     self.assertIs(events['workflow_call']['inputs']['publish_release']['default'], False)
     steps = master['steps']
@@ -363,6 +363,17 @@ class WorkflowTests(unittest.TestCase):
     self.assertIn('.\\scripts\\publish-local-release.ps1 @publishArgs', buildStep['run'])
     self.assertIn("$env:PUBLISH_RELEASE_INPUT -eq 'false'", buildStep['run'])
     self.assertEqual(steps[-1]['with']['path'], 'packager/release-output/*')
+
+  def test_ci_uses_runtime_installer_and_profile_cache_key(self):
+    data, _ = self.load('visionworkshop-portable.yml')
+    steps = data['jobs']['build']['steps']
+    installer = next(step for step in steps if step.get('name') ==
+                     'Install verified Vision Train GPU dependencies')
+    self.assertIn('vision_train_runtime.py install', installer['run'])
+    self.assertIn('$LASTEXITCODE', installer['run'])
+    self.assertNotIn('pip install @packages', installer['run'])
+    pythonStep = next(step for step in steps if 'setup-python' in step.get('uses', ''))
+    self.assertIn('ci/vision-train-runtime.json', pythonStep['with']['cache-dependency-path'])
 
   def test_shared_preparation_and_execution_use_frozen_state(self):
     data, _ = self.load('visionworkshop-portable.yml')
@@ -409,6 +420,7 @@ class ExecutionTests(unittest.TestCase):
       preview, build = [call.args[0] for call in run.call_args_list]
       self.assertEqual(preview, build + ['--dry-run'])
       self.assertIn('--notes=a b', build)
+      self.assertIn('--verify-vision-train-runtime', build)
       self.assertTrue(any(arg.endswith('publish_visionworkshop.py') for arg in build))
       with patch.object(ci.content, 'resolveCommit', return_value='b' * 40), \
            patch.object(ci.subprocess, 'run') as run:

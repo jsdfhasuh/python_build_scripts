@@ -74,6 +74,20 @@ class InputDiagnosticTests(unittest.TestCase):
       self.assertNotIn(before['declared_inputs'][str(resources.resolve())], str(error.exception))
       self.assertFalse((context.workRoot / 'build-record.json').exists())
 
+  def test_runtime_profile_changes_are_included_in_packager_fingerprint(self):
+    with tempfile.TemporaryDirectory() as directory:
+      root = Path(directory)
+      source, packager = root / 'source', root / 'packager'
+      config, _, _ = writeProject(source)
+      profile = packager / 'ci/vision-train-runtime.json'
+      profile.parent.mkdir(parents=True)
+      profile.write_text('{"cuda": "12.1"}')
+      resolved = resolveBuildConfig(config, packagerRoot=packager)
+      before = inputSnapshot(resolved, source)
+      profile.write_text('{"cuda": "12.4"}')
+      after = inputSnapshot(resolved, source)
+      self.assertNotEqual(before['packager_code_sha256'], after['packager_code_sha256'])
+
   def test_tool_change_is_identified_and_rejected(self):
     with tempfile.TemporaryDirectory() as directory:
       root = Path(directory)

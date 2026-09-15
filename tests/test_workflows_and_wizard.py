@@ -422,7 +422,7 @@ class WorkflowTests(unittest.TestCase):
     data, _ = self.load('visionworkshop-portable.yml')
     names = [step.get('name') for step in data['jobs']['build']['steps']]
     self.assertLess(names.index('Preflight before heavy dependencies'),
-                    names.index('Install unchanged source and CI dependencies'))
+                    names.index('Install verified Vision Train GPU dependencies'))
 
   def test_unit_workflow_has_no_production_source_or_release(self) -> None:
     text = (ROOT / '.github/workflows/visionworkshop-tests.yml').read_text()

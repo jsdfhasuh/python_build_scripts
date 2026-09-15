@@ -9,6 +9,7 @@ on:
       - 'scripts/**'
       - 'profiles/**'
       - 'configs/**'
+      - 'ci/**'
       - 'assets/**'
       - 'tests/**'
       - '.github/workflows/visionworkshop-*.yml'
