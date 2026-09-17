@@ -121,6 +121,7 @@ class DeltaReleaseIntegrationTests(unittest.TestCase):
   def compile(self, *args, **kwargs):
     record = branding_build.executeBuild(*args, **kwargs)
     record['update_protocol'] = {'protocol_version': 3, 'files_sha256': record['files_sha256']}
+    self.fixture.recordPath().write_text(json.dumps(record), encoding='utf-8')
     return record
 
   def produce(self, resolved, context, sourceRoot, action, *arguments):
@@ -136,11 +137,25 @@ class DeltaReleaseIntegrationTests(unittest.TestCase):
       del result['zip_asset_name']
     return result
 
-  def runRelease(self):
+  def runRelease(self, *, publish=False):
     with patch.object(portable_release, 'protocolEnabled', return_value=True), \
          patch.object(portable_release, 'executeBuild', side_effect=self.compile), \
          patch.object(portable_release, 'runProducer', side_effect=self.produce):
-      return self.fixture.runLocal('--build-only', '--delta-base-tag=v1.0.0')
+      return self.fixture.runLocal(
+        '--publish' if publish else '--build-only', '--delta-base-tag=v1.0.0',
+        '--program-name=emo-vision-train', '--changelog-all')
+
+  def test_publication_without_acceptance_keeps_not_run_in_summary(self):
+    with patch.object(portable_release, 'requireNewRelease'), \
+         patch.object(portable_release, 'runChecked', return_value=''), \
+         patch.object(portable_release, 'publishProtocolAssets') as upload:
+      summary = self.runRelease(publish=True)
+    upload.assert_called_once()
+    self.assertTrue(summary['published'])
+    self.assertEqual(summary['update_acceptance']['status'], 'not-run')
+    saved = json.loads(next(self.fixture.packager.rglob('build-summary.json')).read_text())
+    self.assertEqual(saved, summary)
+    self.assertIn('acceptance is not certified', self.fixture.log.getvalue())
 
   def test_real_wire_fields_flow_through_summary_and_public_staging(self):
     with patch.object(portable_release, 'publishAssets') as publish:

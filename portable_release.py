@@ -346,7 +346,8 @@ def publishAssets(
   with ReleaseProgress('发布前复查源码、工具和构建目录'):
     _, record = verifyRecord(context.workRoot / 'build-record.json', resolved, sourceRoot)
   if protocolEnabled(resolved):
-    verifyAcceptance(context.workRoot, record['update_protocol'])
+    if verifyAcceptance(context.workRoot, record['update_protocol']) != summary['update_acceptance']:
+      raise BuildConfigError('Acceptance report changed before publication')
   if (verifiedArchive.programName != resolved.programName
       or verifiedArchive.filesSha256 != record['files_sha256']
       or verifiedArchive.filesSha256 != summary['files_sha256']
@@ -553,7 +554,10 @@ def runRelease(args: argparse.Namespace) -> dict:
   }
   if protocolEnabled(resolved):
     runProducer(resolved, context, sourceRoot, 'export', '--output', output)
-    summary['update_acceptance'] = 'not-verified; separate product and power-loss report required for publication'
+    summary['update_acceptance'] = verifyAcceptance(context.workRoot, record['update_protocol'])
+    if summary['update_acceptance']['status'] != 'passed':
+      print('Acceptance: ' + summary['update_acceptance']['status']
+            + '; publication is allowed, but product/update/power-loss acceptance is not certified.')
     names = [assetName, ASSET_PREFIX + '-release_identity.json', ASSET_PREFIX + '-package_files.json']
     if args.delta_base_tag:
       delta = runDeltaProducer(args, resolved, context, sourceRoot, output)

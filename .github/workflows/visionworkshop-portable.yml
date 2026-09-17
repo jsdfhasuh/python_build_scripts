@@ -28,7 +28,7 @@ on:
         default: ''
         type: string
       publish_release:
-        description: Explicit publication; renamed updater builds are blocked
+        description: Explicitly publish verified package assets; product acceptance is recorded separately
         default: false
         type: boolean
       release_repo:

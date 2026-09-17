@@ -73,8 +73,9 @@ class RequestTests(unittest.TestCase):
     patch.object(ci.content, 'resolveCommit', return_value='a' * 40).start()
     self.history = patch.object(ci, 'listOfficialReleases', return_value=[]).start()
     self.execute = patch.object(ci, 'executeRequest').start()
+    self.resolved = Mock(programName='emo-vision-train', config={})
     patch('portable_release.resolveRequest',
-          return_value=(Mock(programName='emo-vision-train'), None, None, None)).start()
+          return_value=(self.resolved, None, None, None)).start()
     patch.dict(os.environ, {'GITHUB_STEP_SUMMARY': ''}).start()
 
   def prepare(self):
@@ -129,6 +130,31 @@ class RequestTests(unittest.TestCase):
       result = self.prepare()
     self.assertFalse(result['publish'])
     self.history.assert_called_once()
+
+  def test_protocol3_publish_is_allowed_without_product_acceptance(self):
+    self.resolved.config['update_protocol'] = 3
+    self.inputs['publish_release'] = True
+    with patch.dict(os.environ, {'RELEASE_REPO_TOKEN': 'fixture-token'}):
+      result = self.prepare()
+    self.assertTrue(result['publish'])
+    self.assertIn('--publish', result['arguments'])
+    self.assertEqual(result['expected_asset_count'], 3)
+    self.history.assert_called_once()
+    self.assertEqual(self.execute.call_args.kwargs, {'dryRun': True})
+    self.assertTrue((self.root / 'state' / 'request.json').exists())
+
+  def test_protocol3_build_only_keeps_document_flags_and_public_assets(self):
+    self.resolved.config['update_protocol'] = 3
+    self.inputs.update({'publish_release': False, 'release_title': 'Title',
+                        'notes': 'Some notes', 'changelog_all': True})
+    with patch.dict(os.environ, {'RELEASE_REPO_TOKEN': ''}):
+      result = self.prepare()
+    for arg in ('--build-only', '--release-title=Title', '--notes=Some notes'):
+      self.assertIn(arg, result['arguments'])
+    self.assertNotIn('--publish', result['arguments'])
+    self.assertFalse(result['publish'])
+    self.assertEqual(result['expected_asset_count'], 3)
+    self.assertEqual(self.execute.call_args.kwargs, {'dryRun': True})
 
   def test_mandatory_fails_before_history_or_compilation(self):
     self.inputs['mandatory'] = True

@@ -9,7 +9,7 @@ from build_config import BuildConfigError
 from build_records import fileHash, scanFiles
 from path_boundary import ioPath
 from portable_release import compressArchive, verifyArchive
-from update_acceptance import REQUIRED_CHECKS, verifyAcceptance
+from update_acceptance import ACCEPTANCE_CHECKS, verifyAcceptance
 
 
 class AcceptanceTests(unittest.TestCase):
@@ -23,19 +23,39 @@ class AcceptanceTests(unittest.TestCase):
     self.evidence.write_text('fixture evidence; no real acceptance claimed')
     self.report = {'schema_version': 1, 'protocol': self.protocol,
       'checks': {name: {'status': 'passed', 'evidence': [
-        {'path': 'evidence.txt', 'sha256': fileHash(self.evidence)}]} for name in REQUIRED_CHECKS}}
+        {'path': 'evidence.txt', 'sha256': fileHash(self.evidence)}]} for name in ACCEPTANCE_CHECKS}}
 
   def writeReport(self):
     (self.root / 'update-acceptance.json').write_text(json.dumps(self.report))
 
-  def test_missing_report_blocks_publication(self):
-    with self.assertRaises(BuildConfigError):
-      verifyAcceptance(self.root, self.protocol)
+  def test_missing_report_is_not_run_and_does_not_block(self):
+    result = verifyAcceptance(self.root, self.protocol)
+    self.assertEqual(result['status'], 'not-run')
+    self.assertEqual(set(result['checks'].values()), {'not-run'})
 
   def test_power_loss_not_run_cannot_be_replaced_by_process_tests(self):
     self.report['checks']['power_loss_recovery']['status'] = 'not-run'
     self.writeReport()
-    with self.assertRaisesRegex(BuildConfigError, 'power_loss_recovery'):
+    result = verifyAcceptance(self.root, self.protocol)
+    self.assertEqual(result['status'], 'not-verified')
+    self.assertEqual(result['checks']['power_loss_recovery'], 'not-run')
+
+  def test_failed_and_missing_checks_are_recorded_without_blocking(self):
+    self.report['checks'] = {'power_loss_recovery': {'status': 'failed', 'evidence': []}}
+    self.writeReport()
+    result = verifyAcceptance(self.root, self.protocol)
+    self.assertEqual(result['status'], 'failed')
+    self.assertEqual(result['checks']['two_successive_updates'], 'not-run')
+
+  def test_passed_check_still_requires_evidence(self):
+    self.report['checks']['power_loss_recovery']['evidence'] = []
+    self.writeReport()
+    with self.assertRaisesRegex(BuildConfigError, 'requires evidence'):
+      verifyAcceptance(self.root, self.protocol)
+
+  def test_malformed_report_is_not_treated_as_missing(self):
+    (self.root / 'update-acceptance.json').write_text('{broken')
+    with self.assertRaisesRegex(BuildConfigError, 'Cannot read acceptance'):
       verifyAcceptance(self.root, self.protocol)
 
   def test_report_is_bound_to_build_and_evidence(self):

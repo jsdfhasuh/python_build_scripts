@@ -32,7 +32,7 @@ on:
         default: ''
         type: string
       publish_release:
-        description: Publish assets - auto builds Vision Train only, publishes other targets
+        description: Publish assets - true publishes; auto builds Vision Train only and publishes other targets
         required: true
         default: auto
         type: choice
