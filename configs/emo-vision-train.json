@@ -6,7 +6,7 @@
   "ci_extra_packages": [
     "torchvision==0.20.1",
     "onnxruntime-gpu==1.23.2",
-    "kagglesdk==0.1.31"
+    "kagglesdk==0.1.37"
   ],
   "entry": "${SOURCE_ROOT}/main.py",
   "name": "VisionWorkshop",

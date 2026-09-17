@@ -226,7 +226,7 @@ def resolveRequest(args: argparse.Namespace) -> tuple[ResolvedBuild, Path, str, 
     iconPath=args.icon_path, releaseAssetName=args.release_asset_name,
   )
   if protocolEnabled(resolved) and args.mandatory:
-    raise BuildConfigError('Protocol 2 does not support --mandatory; leave it disabled')
+    raise BuildConfigError('Protocol 3 does not support --mandatory; leave it disabled')
   versionFile = resolved.config.get('source_version_file')
   if versionFile:
     versionPath = Path(versionFile)
