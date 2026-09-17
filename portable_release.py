@@ -53,6 +53,7 @@ from update_protocol_build import protocolEnabled, fullAssetName, runProducer, A
 from update_protocol_publish import artifactRecords, publishProtocolAssets
 from update_acceptance import verifyAcceptance
 from path_boundary import ioPath
+from path_boundary import logicalPath
 from vision_train_runtime import validateEnvironment
 from vision_train_runtime import validatePackage
 
@@ -98,14 +99,19 @@ def runChecked(arguments: list[str], *, cwd: Path | None = None) -> str:
 
 
 def compressArchive(appDir: Path, destination: Path) -> str:
+  workingDirectory = logicalPath(appDir.parent)
   sevenZip = shutil.which('7z')
+  # Chocolatey/.NET shims reject extended current directories. Keep subprocess
+  # cwd logical; deeply nested Windows roots use the extended-path Python writer.
+  if os.name == 'nt' and len(str(workingDirectory).encode('utf-16-le')) // 2 >= 248:
+    sevenZip = None
   if sevenZip:
     for threads in (2, 1):
       # ZIP member names must round-trip independently of the Windows code page.
       result = subprocess.run([
         sevenZip, 'a', '-tzip', '-mm=LZMA', '-mx=9', '-md=64m', f'-mmt={threads}', '-mcu=on',
         str(ioPath(destination)), f'.{os.sep}{appDir.name}',
-      ], cwd=ioPath(appDir.parent), check=False)
+      ], cwd=workingDirectory, check=False)
       if result.returncode == 0:
         return 'zip/lzma'
       ioPath(destination).unlink(missing_ok=True)
