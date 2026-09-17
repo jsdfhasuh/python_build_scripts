@@ -51,6 +51,8 @@ from release_content import validateTitle
 from release_progress import ReleaseProgress
 from update_protocol_build import protocolEnabled, fullAssetName, runProducer, ASSET_PREFIX
 from update_protocol_publish import artifactRecords, publishProtocolAssets
+from update_acceptance import verifyAcceptance
+from path_boundary import ioPath
 from vision_train_runtime import validateEnvironment
 from vision_train_runtime import validatePackage
 
@@ -71,14 +73,14 @@ class VerifiedArchive:
 
 def hashArchive(path: Path, label: str) -> tuple[str, int]:
   rejectLinks(path)
-  before = path.stat()
+  before = ioPath(path).stat()
   digest = hashlib.sha256()
   with ReleaseProgress(label, totalBytes=before.st_size) as progress:
-    with path.open('rb') as stream:
+    with ioPath(path).open('rb') as stream:
       for chunk in iter(lambda: stream.read(CHUNK), b''):
         digest.update(chunk)
         progress.advance(byteCount=len(chunk))
-    after = path.stat()
+    after = ioPath(path).stat()
     if ((before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns, before.st_ctime_ns)
         != (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns, after.st_ctime_ns)):
       raise BuildConfigError('ZIP changed while hashing')
@@ -102,23 +104,22 @@ def compressArchive(appDir: Path, destination: Path) -> str:
       # ZIP member names must round-trip independently of the Windows code page.
       result = subprocess.run([
         sevenZip, 'a', '-tzip', '-mm=LZMA', '-mx=9', '-md=64m', f'-mmt={threads}', '-mcu=on',
-        str(destination), f'.{os.sep}{appDir.name}',
-      ], cwd=appDir.parent, check=False)
+        str(ioPath(destination)), f'.{os.sep}{appDir.name}',
+      ], cwd=ioPath(appDir.parent), check=False)
       if result.returncode == 0:
         return 'zip/lzma'
-      destination.unlink(missing_ok=True)
+      ioPath(destination).unlink(missing_ok=True)
       if result.returncode == 8 and threads == 2:
         print('7-Zip memory allocation failed; retrying with one thread.')
         continue
       raise BuildConfigError(f'7-Zip failed with exit code {result.returncode}')
-  shell = shutil.which('pwsh') or shutil.which('powershell')
-  if not shell:
-    raise BuildConfigError('Archive creation requires 7z or PowerShell Compress-Archive')
-  runChecked([
-    shell, '-NoProfile', '-NonInteractive', '-File',
-    str(ROOT / 'scripts/compress-portable-archive.ps1'),
-    '-DistDir', str(appDir), '-AssetPath', str(destination),
-  ])
+  # The Python fallback uses extended paths and ZIP64; Windows PowerShell 5's
+  # Compress-Archive can skip hidden files and fail on long source paths.
+  from build_records import scanFiles
+  files = scanFiles(appDir)
+  with zipfile.ZipFile(ioPath(destination), 'x', zipfile.ZIP_DEFLATED, allowZip64=True) as archive:
+    for relative in files:
+      archive.write(ioPath(appDir / relative), appDir.name + '/' + relative)
   return 'zip/deflate'
 
 
@@ -139,7 +140,7 @@ def verifyArchiveContents(
 ) -> None:
   seen = set()
   files = {}
-  with zipfile.ZipFile(path) as archive:
+  with zipfile.ZipFile(ioPath(path)) as archive:
     for member in archive.infolist():
       text = member.filename
       parts = PurePosixPath(text).parts
@@ -338,6 +339,8 @@ def publishAssets(
   resolved.assertPublicationAllowed()
   with ReleaseProgress('发布前复查源码、工具和构建目录'):
     _, record = verifyRecord(context.workRoot / 'build-record.json', resolved, sourceRoot)
+  if protocolEnabled(resolved):
+    verifyAcceptance(context.workRoot, record['update_protocol'])
   if (verifiedArchive.programName != resolved.programName
       or verifiedArchive.filesSha256 != record['files_sha256']
       or verifiedArchive.filesSha256 != summary['files_sha256']
@@ -412,9 +415,12 @@ def validateDeltaAssets(
 ) -> list[str]:
   if not isinstance(delta, dict):
     raise BuildConfigError('Delta producer must return a JSON object')
+  if any(type(delta.get(key)) is not int or delta[key] != 3
+         for key in ('update_protocol_min', 'update_protocol_max')):
+    raise BuildConfigError('Delta producer must use only protocol 3; cross-protocol deltas are rejected')
   if (delta.get('verified_target_sha256') != filesSha256
       or delta.get('target_files_sha256') != filesSha256):
-    raise BuildConfigError('Delta reconstruction verification is missing or targets another build')
+    raise BuildConfigError('Delta payload verification is missing or targets another build')
   baseId = delta.get('from_build_id')
   if (not isinstance(baseId, str)
       or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_-]{0,127}', baseId)
@@ -498,15 +504,16 @@ def runRelease(args: argparse.Namespace) -> dict:
   if record['inputs']['source'] != source:
     raise BuildConfigError('Source changed after preflight; rebuild with the requested checkout')
   appDir = context.distRoot / resolved.programName
-  runtimeCheck = (validatePackage(appDir, resolved.programName)
+  runtimeCheck = (validatePackage(appDir / 'app' if protocolEnabled(resolved) else appDir,
+                                  'VisionWorkshopApp' if protocolEnabled(resolved) else resolved.programName)
                   if args.verify_vision_train_runtime else None)
-  output.mkdir(parents=True, exist_ok=True)
+  ioPath(output).mkdir(parents=True, exist_ok=True)
   temporary = output / f'.{uuid.uuid4().hex}.zip'
   assetPath = output / assetName
   try:
     with ReleaseProgress('压缩 ZIP'):
       compression = compressArchive(appDir, temporary)
-    if not temporary.is_file() or not 0 < temporary.stat().st_size <= MAX_ASSET_BYTES:
+    if not ioPath(temporary).is_file() or not 0 < ioPath(temporary).stat().st_size <= MAX_ASSET_BYTES:
       raise BuildConfigError('ZIP is missing, empty or exceeds the existing release size limit')
     verifiedArchive = verifyArchive(temporary, resolved.programName, record['files'])
     # Publishing performs this full input/artifact recheck once, immediately before upload.
@@ -518,9 +525,9 @@ def runRelease(args: argparse.Namespace) -> dict:
         verifiedArchive.sha256, verifiedArchive.size,
       ):
         raise BuildConfigError('ZIP changed before finalization')
-    temporary.rename(assetPath)
+    ioPath(temporary).rename(ioPath(assetPath))
   finally:
-    temporary.unlink(missing_ok=True)
+    ioPath(temporary).unlink(missing_ok=True)
   summary = {
     'schema_version': 1, 'target': resolved.target, 'program_name': resolved.programName,
     'release_tag': args.release_tag, 'asset_name': assetName,
@@ -540,6 +547,7 @@ def runRelease(args: argparse.Namespace) -> dict:
   }
   if protocolEnabled(resolved):
     runProducer(resolved, context, sourceRoot, 'export', '--output', output)
+    summary['update_acceptance'] = 'not-verified; separate product and power-loss report required for publication'
     names = [assetName, ASSET_PREFIX + '-release_identity.json', ASSET_PREFIX + '-package_files.json']
     if args.delta_base_tag:
       delta = runDeltaProducer(args, resolved, context, sourceRoot, output)

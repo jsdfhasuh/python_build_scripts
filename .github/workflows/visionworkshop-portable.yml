@@ -52,7 +52,7 @@ on:
         default: ''
         type: string
       mandatory:
-        description: Unsupported by protocol 2 - must remain false
+        description: Unsupported by protocol 3 - must remain false
         default: false
         type: boolean
       release_body_path:

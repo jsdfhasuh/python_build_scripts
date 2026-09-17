@@ -16,7 +16,7 @@ class ProtocolBuildVersionTests(unittest.TestCase):
     self.root = Path(temporary.name)
     self.resolved = SimpleNamespace(config={'updater': {'name': 'VisionWorkshopUpdater'}},
                                     programName='VisionWorkshop')
-    self.context = SimpleNamespace(buildId='fixture')
+    self.context = SimpleNamespace(buildId='fixture', distRoot=self.root / 'dist')
     environment = patch.dict(os.environ, {'RELEASE_TAG': 'v1.0.23'})
     environment.start()
     self.addCleanup(environment.stop)

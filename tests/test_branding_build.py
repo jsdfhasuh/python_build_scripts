@@ -105,7 +105,11 @@ class CommandIntegrationTests(unittest.TestCase):
 
   def test_protocol_caches_are_removed_before_finalize_and_record(self) -> None:
     config = json.loads(self.config.read_text(encoding='utf-8'))
-    config['update_protocol'] = 2
+    config['update_protocol'] = 3
+    config['name'] = 'VisionWorkshop'
+    config['updater']['name'] = 'VisionWorkshopUpdater'
+    (self.root / 'launcher.py').parent.mkdir(exist_ok=True)
+    (self.root / 'launcher.py').write_text('pass')
     self.config.write_text(json.dumps(config), encoding='utf-8')
     events = []
 
@@ -196,7 +200,7 @@ class ProtocolBytecodeTests(unittest.TestCase):
     self.root = Path(temporary.name).resolve()
     self.context = SimpleNamespace(distRoot=self.root / 'dist')
     self.resolved = SimpleNamespace(programName='Application')
-    self.app = self.context.distRoot / self.resolved.programName
+    self.app = self.context.distRoot / self.resolved.programName / 'app'
     self.app.mkdir(parents=True)
 
   def write(self, relative):

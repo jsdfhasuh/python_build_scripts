@@ -22,7 +22,7 @@ def writeDelta(output: Path, buildId: str, filesSha256: str) -> dict:
   result = {
     'schema_version': 1, 'product_id': 'training_platform', 'platform': 'windows',
     'architecture': 'x86_64',
-    'update_protocol_min': 2, 'update_protocol_max': 2,
+    'update_protocol_min': 3, 'update_protocol_max': 3,
     'from_build_id': 'baseline', 'to_build_id': buildId,
     'base_files_sha256': 'a' * 64, 'target_files_sha256': filesSha256,
     'zip_asset_name': name, 'zip_size': len(payload),
@@ -49,6 +49,11 @@ class DeltaValidationTests(unittest.TestCase):
     self.assertNotIn('zip_name', self.delta)
     self.assertEqual(self.validate(), [self.delta['zip_asset_name'],
                                      self.delta['zip_asset_name'][:-4] + '_descriptor.json'])
+
+  def test_protocol_two_and_mixed_ranges_are_rejected(self):
+    for low, high in ((2, 2), (2, 3), (3, 4), (3.0, 3)):
+      with self.subTest(low=low, high=high), self.assertRaisesRegex(BuildConfigError, 'protocol 3'):
+        self.validate({**self.delta, 'update_protocol_min': low, 'update_protocol_max': high})
 
   def test_missing_legacy_or_unsafe_name_is_actionable(self):
     for name in (None, '../outside.zip', 'C:\\outside.zip', 'other-delta.zip'):
@@ -115,7 +120,7 @@ class DeltaReleaseIntegrationTests(unittest.TestCase):
 
   def compile(self, *args, **kwargs):
     record = branding_build.executeBuild(*args, **kwargs)
-    record['update_protocol'] = {'protocol_version': 2, 'files_sha256': record['files_sha256']}
+    record['update_protocol'] = {'protocol_version': 3, 'files_sha256': record['files_sha256']}
     return record
 
   def produce(self, resolved, context, sourceRoot, action, *arguments):

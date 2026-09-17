@@ -43,7 +43,8 @@ class RuntimeBrandingTests(unittest.TestCase):
     self.assertIn(f'{self.icon}:.', main.add_data)
     self.assertEqual(updater.add_data, [])
     self.assertEqual(resolved.programName, 'emo-vision-train')
-    resolved.assertPublicationAllowed()
+    with self.assertRaisesRegex(BuildConfigError, 'protocol 3'):
+      resolved.assertPublicationAllowed()
     self.assertEqual(resolved.summary()['runtime_branding']['display_name'], 'VisionWorkshop')
     self.assertEqual(self.config.read_bytes(), before)
 

@@ -282,10 +282,10 @@ class ResolvedBuild:
 
   @property
   def updateCompatibility(self) -> str:
+    if self.target == 'emo-vision-train' and self.config.get('update_protocol') == 3:
+      return 'protocol-3-launcher-layout'
     if not self.renamed:
       return 'unchanged-name-not-retested'
-    if self.programName == 'VisionWorkshop' and self.originalName in self.legacyProgramNames:
-      return 'legacy-launcher-contract'
     return 'unverified'
 
   @property
@@ -302,8 +302,14 @@ class ResolvedBuild:
     return result
 
   def assertPublicationAllowed(self) -> None:
-    if (self.renamed and (self.config.get('updater') or {}).get('enabled')
-        and self.updateCompatibility != 'legacy-launcher-contract'):
+    if self.target == 'emo-vision-train':
+      if (self.config.get('update_protocol') != 3 or self.programName != 'VisionWorkshop'
+          or self.legacyProgramNames or self.config.get('layout_version') != 1
+          or self.config.get('launcher_min_capability') != 1
+          or (self.config.get('updater') or {}).get('name') != 'VisionWorkshopUpdater'):
+        raise BuildConfigError('VisionWorkshop updater compatibility is unverified: protocol 3 and fixed launcher/app layout required')
+      return
+    if self.renamed and (self.config.get('updater') or {}).get('enabled'):
       raise BuildConfigError(
         'EXE rename has unverified updater compatibility. Build locally only; do not '
         'publish to an existing update channel. Changing a repo, tag or manifest is '
@@ -416,25 +422,14 @@ def resolveBuildConfig(
       addRuntimeBranding(updater, brandingPath)
       updater['icon'] = cfg.get('icon')
 
-  if 'legacy_program_names' in overlay:
-    names = overlay['legacy_program_names']
-    if not isinstance(names, list) or not names:
-      raise BuildConfigError('legacy_program_names must be a non-empty list')
-    names = [validateProgramName(name) for name in names]
-    if cfg['name'] != 'VisionWorkshop':
-      raise BuildConfigError('Legacy launchers currently support only VisionWorkshop')
-    if originalName not in names:
-      raise BuildConfigError('Legacy launchers must include the original program name')
-    if len({name.casefold() for name in names}) != len(names):
-      raise BuildConfigError('Duplicate legacy program names')
-    reserved = {cfg['name'].casefold(), updater.get('name', 'updater').casefold(), 'updater'}
-    if any(name.casefold() in reserved for name in names):
-      raise BuildConfigError('Legacy launcher collides with main/updater executable')
-    launcher = root / 'legacy_launcher.py'
-    if not launcher.is_file():
-      raise BuildConfigError(f'Legacy launcher source is missing: {launcher}')
-    cfg['legacy_program_names'] = names
-    cfg['legacy_launcher_entry'] = str(launcher)
+  if 'legacy_program_names' in overlay or cfg.get('legacy_program_names'):
+    raise BuildConfigError('Executable aliases are unsupported; use the protocol-3 launcher layout')
+
+  if target == 'emo-vision-train' and cfg.get('update_protocol') == 3:
+    if cfg['name'] != 'VisionWorkshop' or cfg.get('legacy_program_names'):
+      raise BuildConfigError('Protocol 3 has one fixed VisionWorkshop launcher and no aliases')
+    if updater.get('name') != 'VisionWorkshopUpdater':
+      raise BuildConfigError('Protocol 3 requires VisionWorkshopUpdater')
 
   # Asset templates are intentionally not expanded by os.path.expandvars.
   assetTemplate = requireText(

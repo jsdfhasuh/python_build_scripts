@@ -17,6 +17,7 @@ from build_config import BuildContext
 from build_config import ResolvedBuild
 from build_config import readJsonObject
 from build_config import validateFileName
+from path_boundary import ioPath, logicalPath
 from update_protocol_build import protocolEnabled, verifyProtocol
 
 
@@ -26,7 +27,7 @@ CHUNK = 1024 * 1024
 
 def fileHash(path: Path) -> str:
   digest = hashlib.sha256()
-  with path.open('rb') as stream:
+  with ioPath(path).open('rb') as stream:
     for chunk in iter(lambda: stream.read(CHUNK), b''):
       digest.update(chunk)
   return digest.hexdigest()
@@ -41,22 +42,24 @@ def objectHash(value: object) -> str:
 def rejectLinks(path: Path) -> None:
   for component in (path, *path.parents):
     try:
-      attributes = getattr(component.lstat(), 'st_file_attributes', 0)
+      attributes = getattr(ioPath(component).lstat(), 'st_file_attributes', 0)
     except FileNotFoundError:
       attributes = 0
-    if (attributes & getattr(stat, 'FILE_ATTRIBUTE_REPARSE_POINT', 1024) or component.is_symlink()
-        or getattr(component, 'is_junction', lambda: False)()):
+    if (attributes & getattr(stat, 'FILE_ATTRIBUTE_REPARSE_POINT', 1024) or ioPath(component).is_symlink()
+        or getattr(ioPath(component), 'is_junction', lambda: False)()):
       raise BuildConfigError(f'Symlinks/junctions are not permitted in build inputs/outputs: {path}')
 
 
 def scanFiles(root: Path) -> dict[str, dict]:
   rejectLinks(root)
-  if not root.is_dir():
+  if not ioPath(root).is_dir():
     raise BuildConfigError(f'Application/resource directory is missing: {root}')
   files = {}
   folded = set()
-  for directory, directories, names in os.walk(root, followlinks=False):
-    base = Path(directory)
+  def scanError(error):
+    raise error
+  for directory, directories, names in os.walk(ioPath(root), followlinks=False, onerror=scanError):
+    base = logicalPath(directory)
     for name in directories + names:
       path = base / name
       rejectLinks(path)
@@ -67,11 +70,11 @@ def scanFiles(root: Path) -> dict[str, dict]:
       folded.add(key.casefold())
     for name in sorted(names):
       path = base / name
-      if not path.is_file():
+      if not ioPath(path).is_file():
         raise BuildConfigError(f'Not a regular file: {path}')
-      before = path.stat()
+      before = ioPath(path).stat()
       digest = fileHash(path)
-      after = path.stat()
+      after = ioPath(path).stat()
       if (before.st_size, before.st_mtime_ns) != (after.st_size, after.st_mtime_ns):
         raise BuildConfigError(f'File changed while hashing: {path}')
       files[path.relative_to(root).as_posix()] = {'sha256': digest, 'size': after.st_size}
@@ -142,8 +145,8 @@ def inputSnapshot(
 ) -> dict:
   import build
   paths = {Path(job.entry) for job in build.create_build_jobs(resolved.config)}
-  if resolved.legacyProgramNames:
-    paths.add(Path(resolved.config['legacy_launcher_entry']))
+  if protocolEnabled(resolved):
+    paths.add(sourceRoot / 'launcher.py')
   versionFile = resolved.config.get('source_version_file')
   if versionFile:
     versionPath = Path(versionFile)
@@ -215,7 +218,7 @@ def writeJsonNew(path: Path, data: dict) -> None:
     raise BuildConfigError(f'Refusing to overwrite an existing output: {path}')
   temporary = path.with_name(f'.{path.name}.{uuid.uuid4().hex}.tmp')
   try:
-    with temporary.open('x', encoding='utf-8') as stream:
+    with ioPath(temporary).open('x', encoding='utf-8') as stream:
       json.dump(data, stream, ensure_ascii=False, sort_keys=True, indent=2)
       stream.write('\n')
       stream.flush()
@@ -224,29 +227,36 @@ def writeJsonNew(path: Path, data: dict) -> None:
     if os.name == 'nt':
       os.rename(temporary, path)
     else:
-      os.link(temporary, path)
+      os.link(ioPath(temporary), ioPath(path))
   finally:
-    temporary.unlink(missing_ok=True)
+    ioPath(temporary).unlink(missing_ok=True)
 
 
 def validateApplication(resolved: ResolvedBuild, appDir: Path) -> dict:
   files = scanFiles(appDir)
-  required = [f'{resolved.programName}.exe']
-  if (resolved.config.get('updater') or {}).get('enabled'):
-    required.append('updater.exe')
-    required.append(f'{resolved.config["updater"].get("name", "updater")}.exe')
-  required.extend(f'{name}.exe' for name in resolved.legacyProgramNames)
-  for name in required:
-    if name not in files or files[name]['size'] == 0:
-      raise BuildConfigError(f'Expected executable missing or empty: {appDir / name}')
-  if (resolved.config.get('updater') or {}).get('enabled'):
-    namedUpdater = f'{resolved.config["updater"].get("name", "updater")}.exe'
-    if files[namedUpdater] != files['updater.exe']:
-      raise BuildConfigError('Named updater and legacy updater.exe must contain identical bytes')
-  if resolved.legacyProgramNames:
-    expected = files[f'{resolved.legacyProgramNames[0]}.exe']
-    if any(files[f'{name}.exe'] != expected for name in resolved.legacyProgramNames):
-      raise BuildConfigError('Legacy launchers must contain identical bytes')
+  if protocolEnabled(resolved):
+    required = ['VisionWorkshop.exe', 'app/VisionWorkshopApp.exe', 'app/VisionWorkshopUpdater.exe',
+                'app/release_identity.json', 'app/package_files.json']
+    for name in required:
+      if name not in files or files[name]['size'] == 0:
+        raise BuildConfigError(f'Protocol-3 required artifact missing: {name}')
+    for name in files:
+      if name != 'VisionWorkshop.exe' and not name.startswith('app/'):
+        raise BuildConfigError(f'File outside protocol-3 application layout: {name}')
+      if Path(name).name.casefold() in ('updater.exe', 'training_platform.exe', 'emo-vision-train.exe'):
+        raise BuildConfigError(f'Obsolete executable alias in protocol-3 build: {name}')
+  else:
+    required = [f'{resolved.programName}.exe']
+    if (resolved.config.get('updater') or {}).get('enabled'):
+      required.append('updater.exe')
+      required.append(f'{resolved.config["updater"].get("name", "updater")}.exe')
+    for name in required:
+      if name not in files or files[name]['size'] == 0:
+        raise BuildConfigError(f'Expected executable missing or empty: {appDir / name}')
+    if (resolved.config.get('updater') or {}).get('enabled'):
+      namedUpdater = f'{resolved.config["updater"].get("name", "updater")}.exe'
+      if files[namedUpdater] != files['updater.exe']:
+        raise BuildConfigError('Named updater and legacy updater.exe must contain identical bytes')
   for name in files:
     if (Path(name).name in ('effective-config.json', 'build-record.json', 'build-result.json',
                            'input-snapshot-before.json', 'input-changes.json')
@@ -351,7 +361,7 @@ def verifyRecord(
     raise BuildConfigError('Build artifacts changed; rebuild')
   if protocolEnabled(resolved):
     expectedProtocol = record.get('update_protocol')
-    if not isinstance(expectedProtocol, dict) or expectedProtocol.get('protocol_version') != 2:
+    if not isinstance(expectedProtocol, dict) or expectedProtocol.get('protocol_version') != 3:
       raise BuildConfigError('Old build record has no protocol identity; clean rebuild required')
     if verifyProtocol(resolved, context, sourceRoot) != expectedProtocol:
       raise BuildConfigError('Protocol artifacts differ from the original build record')

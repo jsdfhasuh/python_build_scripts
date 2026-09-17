@@ -31,7 +31,10 @@ class WizardTests(unittest.TestCase):
     self.source = self.root / 'source'
     self.config, self.icon, profile = writeProject(self.source)
     (self.root / 'configs').mkdir()
-    (self.root / 'configs/emo-vision-train.json').write_bytes(self.config.read_bytes())
+    configuration = json.loads(self.config.read_text())
+    configuration.update(update_protocol=3, layout_version=1, launcher_min_capability=1, name='VisionWorkshop')
+    configuration['updater']['name'] = 'VisionWorkshopUpdater'
+    (self.root / 'configs/emo-vision-train.json').write_text(json.dumps(configuration))
     (self.root / 'profiles').mkdir()
     (self.root / 'profiles/visionworkshop.json').write_bytes(profile.read_bytes())
     self.stack = contextlib.ExitStack()
@@ -44,6 +47,9 @@ class WizardTests(unittest.TestCase):
     self.documents = self.stack.enter_context(patch.object(wizard, 'collectReleaseDocument',
                                                           return_value=None))
     self.stack.enter_context(patch.object(wizard, 'gitCommit', return_value='a' * 40))
+    originalPrompt = wizard.prompt
+    self.stack.enter_context(patch.object(wizard, 'prompt', side_effect=
+      lambda message, *args, **kwargs: '' if message.startswith('差异包基线') else originalPrompt(message, *args, **kwargs)))
 
   def collect(self, replies: list[str], *, yes: bool = False):
     with patch('builtins.input', side_effect=replies):
@@ -233,8 +239,8 @@ class WizardTests(unittest.TestCase):
       wizard.collectArguments(yes=True)
 
   def test_yes_does_not_bypass_update_guard(self) -> None:
-    with self.assertRaisesRegex(BuildConfigError, 'unverified'):
-      self.collect(['3', '2', str(self.source), 'v1.2.3', '', ''], yes=True)
+    with self.assertRaisesRegex(BuildConfigError, 'fixed VisionWorkshop'):
+      self.collect(['3', '2', str(self.source), 'v1.2.3', 'UnsafeName', ''], yes=True)
 
   def test_yes_only_skips_final_confirmation(self) -> None:
     args = self.collect(['1', '1', str(self.source), 'v1.2.3'], yes=True)
@@ -249,12 +255,10 @@ class WizardTests(unittest.TestCase):
     self.assertIn('--dry-run', args)
     self.assertNotIn('--publish', args)
 
-  def test_custom_name_icon_and_asset_template_reach_shared_entry(self) -> None:
-    args = self.collect(['1', '3', str(self.source), 'v1.2.3', 'Vision Workshop',
-                         str(self.icon), '${PROGRAM_NAME}-${RELEASE_TAG}.zip', 'y'])
-    self.assertIn('--program-name=Vision Workshop', args)
-    self.assertIn(f'--icon-path={self.icon}', args)
-    self.assertIn('--release-asset-name=${PROGRAM_NAME}-${RELEASE_TAG}.zip', args)
+  def test_custom_executable_name_requires_fixed_layout(self) -> None:
+    with self.assertRaisesRegex(BuildConfigError, 'fixed VisionWorkshop'):
+      self.collect(['1', '3', str(self.source), 'v1.2.3', 'Vision Workshop',
+                    str(self.icon), '${PROGRAM_NAME}-${RELEASE_TAG}.zip', 'y'])
 
   def test_publication_fields_and_frozen_markdown_reach_shared_entry(self) -> None:
     self.configureReleaseRepo()
@@ -268,7 +272,7 @@ class WizardTests(unittest.TestCase):
                            'Short update summary', 'y', '2', str(path), 'y'])
     self.assertIn('--publish', args)
     self.assertIn('--release-repo=fixture/releases', args)
-    self.assertIn('--release-title=emo-vision-train v1.0.20', args)
+    self.assertIn('--release-title=VisionWorkshop v1.0.20', args)
     self.assertIn('--notes=Short update summary', args)
     self.assertIn('--mandatory', args)
     self.assertIn('--expected-source-commit=' + 'a' * 40, args)

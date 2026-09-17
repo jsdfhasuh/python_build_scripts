@@ -32,7 +32,7 @@ class DefaultBuildTests(unittest.TestCase):
 
   def test_target_configuration_semantics_are_pinned(self) -> None:
     expected = {
-      'emo-vision-train': 'b42b3af53ee47be356b2686c7db444d1f311b4d74344b58693accc04544ec9bf',
+      'emo-vision-train': '8020b868d6bea1d1faad842196540db04743d4afba28e8dbc6d445c8ecd0b0ce',
       'emo-master': 'd36a9dd53f6a6e344ba21c9c2d8307c65fe59c10972c2ee5278d62933c1065c9',
     }
     for target, digest in expected.items():
@@ -46,7 +46,7 @@ class DefaultBuildTests(unittest.TestCase):
     commands = build.build_job_commands(config, clean=True)
     self.assertEqual([job.label for job, _ in commands], ['main', 'updater'])
     main, updater = (command for _, command in commands)
-    expected = [*build.PYINSTALLER_CMD, '--noconfirm', '--clean', '--name', 'emo-vision-train']
+    expected = [*build.PYINSTALLER_CMD, '--noconfirm', '--clean', '--name', 'VisionWorkshop']
     expected += [f'--add-data={item}' for item in build.normalize_add_data(config['add_data'])]
     expected += [f'--hidden-import={item}' for item in config['hidden_imports']]
     expected += ['--runtime-hook', 'torch-hook.py', '--noupx',
@@ -55,7 +55,7 @@ class DefaultBuildTests(unittest.TestCase):
     expected += config['extra_args'] + [os.path.normpath('SOURCE_ROOT/main.py')]
     self.assertEqual(main, expected)
     self.assertEqual(updater, [*build.PYINSTALLER_CMD, '--noconfirm', '--clean',
-                              '--name', 'updater', '--onefile', '--noconsole',
+                              '--name', 'VisionWorkshopUpdater', '--onefile', '--noconsole',
                               *[f'--exclude-module={name}' for name in config['updater']['excludes']],
                               os.path.normpath('SOURCE_ROOT/updater_gui.py')])
     self.assertNotIn('--distpath', main)
@@ -84,7 +84,7 @@ class DefaultBuildTests(unittest.TestCase):
 
   def test_default_loader_does_not_read_profile(self) -> None:
     config = self.config('emo-vision-train')
-    self.assertEqual(config['name'], 'emo-vision-train')
+    self.assertEqual(config['name'], 'VisionWorkshop')
     self.assertIsNone(config['icon'])
     self.assertNotIn('installer', config)
 

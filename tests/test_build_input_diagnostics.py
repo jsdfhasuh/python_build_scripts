@@ -27,7 +27,7 @@ class InputDiagnosticTests(unittest.TestCase):
         '--source-root', directory, '--release-tag', 'v1.0.0', '--mandatory', '--publish',
       ])
       with patch('portable_release.resolveBuildConfig',
-                 return_value=SimpleNamespace(config={'update_protocol': 2})), \
+                 return_value=SimpleNamespace(config={'update_protocol': 3})), \
            patch('portable_release.gitState') as state, \
            patch('portable_release.runChecked') as run, patch.dict(os.environ):
         with self.assertRaisesRegex(BuildConfigError, 'does not support --mandatory'):

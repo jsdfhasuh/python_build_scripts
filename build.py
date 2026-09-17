@@ -591,6 +591,10 @@ def main() -> int:
                 clean=args.clean, dryRun=args.dry_run, specpath=args.specpath,
             )
         cfg = load_config(args.config)
+        if cfg.get('update_protocol') == 3:
+            from branding_build import runBrandedBuild
+            return runBrandedBuild(Path(args.config), clean=args.clean,
+                                   dryRun=args.dry_run, specpath=args.specpath)
         job_commands = build_job_commands(
             cfg, clean=args.clean, specpath=args.specpath
         )

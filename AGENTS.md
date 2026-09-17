@@ -61,7 +61,7 @@ For local validation of external source targets, set `SOURCE_ROOT` first. Exampl
 - `build.py` supports directory-only branding; the shared portable CLI adds ZIP and build records.
 - Select a profile explicitly. Never write overlays back to target JSON or silently reuse dist.
 - Private build records are not public artifacts. Verify configuration, source, tools and files.
-- Reject EXE-renaming publication with unverified updater compatibility. Runtime updates are NOT disabled.
+- VisionWorkshop requires protocol 3, the fixed launcher/app layout and build-bound acceptance evidence before publication. Runtime updates are NOT disabled.
 - The production ICO is not included. Test fixture icons are not product branding assets.
 - Keep configs, existing runtime hooks, installer code and dependency versions unchanged.
 - Original PowerShell publisher is preserved verbatim as `publish-local-release-legacy.ps1`.

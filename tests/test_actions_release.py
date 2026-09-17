@@ -5,7 +5,7 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import Mock, MagicMock
 from unittest.mock import patch
 
 import actions_release as ci
@@ -453,17 +453,19 @@ class ValidatorTests(unittest.TestCase):
               'files_name': ci.FILES_NAME, 'full_name': fullName, 'assets': {fullName: {}}}
       lockPath = root / 'lock.json'
       lockPath.write_text(json.dumps(lock), encoding='utf-8')
-      contract, package = Mock(), Mock()
+      contract, package, payload, storage = Mock(), Mock(), MagicMock(), Mock()
+      storage.read_bytes.side_effect = lambda path, maximum: path.read_bytes()
+      payload.PayloadArchive.return_value.__enter__.return_value.payload = {}
       contract.Identity.parse.return_value.release_tag = 'v1.0.0'
       contract.Asset.parse.return_value.name = fullName
       with patch.object(sys, 'path', list(sys.path)), \
-           patch.dict(sys.modules, {'update_contract': contract, 'update_package': package}), \
+           patch.dict(sys.modules, {'update_contract': contract, 'update_package': package, 'update_payload': payload, 'update_storage': storage}), \
            patch.object(sys, 'argv', ['validate', f'--source-root={root}', f'--lock={lockPath}']), \
            patch.object(validator.subprocess, 'run',
                         return_value=Mock(returncode=0, stdout='--base-files')):
         self.assertEqual(validator.main(), 0)
       contract.Manifest.parse.return_value.bind_identity.assert_called_once()
-      package.prepare_candidate.assert_called_once()
+      payload.PayloadArchive.assert_called_once()
 
 
 if __name__ == '__main__':

@@ -4,6 +4,7 @@ import hashlib
 import json
 
 from build_config import BuildConfigError
+from path_boundary import ioPath
 from update_protocol_build import ASSET_PREFIX, RELEASE_REPO
 
 
@@ -12,7 +13,7 @@ def artifactRecords(paths):
   for path in paths:
     digest = hashlib.sha256()
     size = 0
-    with path.open('rb') as stream:
+    with ioPath(path).open('rb') as stream:
       while chunk := stream.read(1024 * 1024):
         size += len(chunk)
         digest.update(chunk)
@@ -42,7 +43,7 @@ def verifyUploaded(run, repo, release, expected, *, draft):
 def publishProtocolAssets(args, resolved, summary, output, notesPath, content, run, getRelease):
   repo = args.release_repo or resolved.config['release_repo']
   if repo != RELEASE_REPO:
-    raise BuildConfigError('Protocol-2 publication repository is fixed')
+    raise BuildConfigError('Protocol-3 publication repository is fixed')
   names = summary.get('protocol_asset_names')
   if not isinstance(names, list) or len(names) not in (3, 5):
     raise BuildConfigError('Missing protocol assets')

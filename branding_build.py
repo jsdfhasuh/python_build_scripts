@@ -1,6 +1,7 @@
 """Build a branded application directory and retain verifiable local provenance."""
 
 import json
+import copy
 import os
 import shlex
 import shutil
@@ -21,6 +22,7 @@ from build_records import inputSnapshot
 from build_records import rejectLinks
 from build_records import writeJsonNew
 from console_utils import configureConsole
+from path_boundary import ioPath, logicalPath
 from update_protocol_build import protocolEnabled, prepareProtocol, runProducer
 
 
@@ -33,36 +35,38 @@ class CompilerError(BuildConfigError):
 def buildCommands(
   resolved: ResolvedBuild, context: BuildContext, *, clean: bool = True,
 ) -> list[tuple[build.BuildJob, list[str]]]:
-  commands = build.build_job_commands(resolved.config, clean=clean, context=context)
-  if resolved.legacyProgramNames:
-    job = build.BuildJob(
-      label='legacy-launcher', entry=resolved.config['legacy_launcher_entry'],
-      name=resolved.legacyProgramNames[0], onefile=True, console=False,
-      icon=resolved.config.get('icon'), collect_conda_runtime_dlls=False,
-      enable_torch_runtime=False,
-    )
-    commands.append((job, build.build_pyinstaller_command(
-      job, clean, str(context.specPath(job.label)), str(context.distRoot),
-      str(context.workPath(job.label)),
-    )))
+  configuration = copy.deepcopy(resolved.config)
+  if protocolEnabled(resolved):
+    configuration['name'] = 'VisionWorkshopApp'
+  commands = build.build_job_commands(configuration, clean=clean, context=context)
   if protocolEnabled(resolved):
     sourceRoot = Path(os.environ.get('SOURCE_ROOT') or Path(resolved.config['entry']).parent)
     for _, command in commands:
       command[-1:-1] = ['--runtime-hook', str(context.workRoot / 'update_identity_hook.py'),
                          '--paths', str(sourceRoot)]
+    job = build.BuildJob(label='launcher', entry=str(sourceRoot / 'launcher.py'),
+      name='VisionWorkshop', onefile=True, console=False, icon=resolved.config.get('icon'),
+      collect_conda_runtime_dlls=False, enable_torch_runtime=False)
+    command = build.build_pyinstaller_command(job, clean, str(context.specPath(job.label)),
+      str(context.distRoot), str(context.workPath(job.label)))
+    command[-1:-1] = ['--paths', str(sourceRoot)]
+    commands.insert(0, (job, command))
+    # PyInstaller joins these roots to bundled paths with stdlib file APIs.
+    # Preserve the extended prefix through COLLECT when Windows policy is off.
+    for _, command in commands:
+      for option in ('--distpath', '--workpath', '--specpath'):
+        index = command.index(option) + 1
+        command[index] = str(ioPath(command[index]))
   return commands
 
 
-def copyCompatibilityEntrypoints(resolved: ResolvedBuild, context: BuildContext) -> None:
+def copyNamedUpdater(resolved: ResolvedBuild, context: BuildContext) -> None:
   appDir = context.distRoot / resolved.programName
   updater = resolved.config.get('updater') or {}
   copies = []
   if updater.get('enabled') and updater.get('name', 'updater') != 'updater':
     name = f'{updater["name"]}.exe'
     copies.append((context.distRoot / name, appDir / name))
-  if resolved.legacyProgramNames:
-    source = context.distRoot / f'{resolved.legacyProgramNames[0]}.exe'
-    copies.extend((source, appDir / f'{name}.exe') for name in resolved.legacyProgramNames)
   for source, target in copies:
     rejectLinks(source)
     rejectLinks(target)
@@ -73,7 +77,7 @@ def copyCompatibilityEntrypoints(resolved: ResolvedBuild, context: BuildContext)
 
 def removeProtocolBytecode(resolved: ResolvedBuild, context: BuildContext) -> None:
   distRoot = context.distRoot.absolute()
-  appDir = distRoot / resolved.programName
+  appDir = distRoot / resolved.programName / 'app'
   rejectLinks(appDir)
   root = appDir.resolve()
   if root == distRoot.resolve() or not root.is_relative_to(distRoot.resolve()) or not root.is_dir():
@@ -85,15 +89,15 @@ def removeProtocolBytecode(resolved: ResolvedBuild, context: BuildContext) -> No
 
   # Directory data mappings can carry development caches into the frozen output.
   # Validate the entire tree before deleting only bytecode inside cache directories.
-  for parent, folders, names in os.walk(root, followlinks=False, onerror=scanError):
+  for parent, folders, names in os.walk(ioPath(root), followlinks=False, onerror=scanError):
     for name in folders + names:
-      path = Path(parent) / name
+      path = logicalPath(parent) / name
       rejectLinks(path)
       if not path.resolve().is_relative_to(root):
         raise BuildConfigError(f'Packaged path escapes application output: {path}')
       if '__pycache__' not in [part.casefold() for part in path.relative_to(root).parts]:
         continue
-      mode = path.lstat().st_mode
+      mode = ioPath(path).lstat().st_mode
       if stat.S_ISDIR(mode):
         directories.append(path)
       elif stat.S_ISREG(mode) and path.suffix.lower() in ('.pyc', '.pyo'):
@@ -102,10 +106,10 @@ def removeProtocolBytecode(resolved: ResolvedBuild, context: BuildContext) -> No
         raise BuildConfigError(f'Unexpected file in packaged bytecode cache: {path}')
   for path in files:
     rejectLinks(path)
-    path.unlink()
+    ioPath(path).unlink()
   for path in sorted(directories, key=lambda item: len(item.parts), reverse=True):
     rejectLinks(path)
-    path.rmdir()
+    ioPath(path).rmdir()
   if files or directories:
     print(f'Removed {len(files)} development bytecode files from isolated release output')
 
@@ -125,13 +129,24 @@ def executeBuild(
   writeJsonNew(context.workRoot / 'input-snapshot-before.json',
                {'snapshot': before, 'details': beforeDetails})
   if protocolEnabled(resolved):
+    launcherJob, launcherCommand = commands.pop(0)
+    code = build.run_command(launcherCommand)
+    if code:
+      raise CompilerError(code)
     prepareProtocol(resolved, context, sourceRoot, before['source']['commit'])
   for _, command in commands:
     code = build.run_command(command)
     if code:
       raise CompilerError(code)
-  build.copy_updater_to_app_dir(resolved.config, context.distRoot)
-  copyCompatibilityEntrypoints(resolved, context)
+  if protocolEnabled(resolved):
+    packageRoot = context.distRoot / 'VisionWorkshop'
+    ioPath(packageRoot).mkdir()
+    ioPath(context.distRoot / 'VisionWorkshopApp').rename(ioPath(packageRoot / 'app'))
+    shutil.copy2(ioPath(context.distRoot / 'VisionWorkshopUpdater.exe'), ioPath(packageRoot / 'app' / 'VisionWorkshopUpdater.exe'))
+    shutil.copy2(ioPath(context.distRoot / 'VisionWorkshop.exe'), ioPath(packageRoot / 'VisionWorkshop.exe'))
+  else:
+    build.copy_updater_to_app_dir(resolved.config, context.distRoot)
+    copyNamedUpdater(resolved, context)
   icon = resolved.config.get('icon')
   if icon and fileHash(Path(icon)) != resolved.iconSha256:
     raise BuildConfigError('Icon changed during compilation; rebuild before using this output')

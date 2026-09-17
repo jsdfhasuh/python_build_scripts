@@ -225,7 +225,8 @@ class ConfigTests(unittest.TestCase):
 
   def test_icon_only_does_not_trigger_rename_check(self) -> None:
     result = self.resolve(iconPath=str(self.icon))
-    result.assertPublicationAllowed()
+    with self.assertRaisesRegex(BuildConfigError, 'protocol 3'):
+      result.assertPublicationAllowed()
     self.assertFalse(result.renamed)
 
   def test_fingerprint_changes_with_icon_bytes_same_path(self) -> None:

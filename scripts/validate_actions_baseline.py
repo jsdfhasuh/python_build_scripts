@@ -4,7 +4,6 @@ import argparse
 import json
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 
@@ -23,24 +22,28 @@ def main() -> int:
   from update_contract import Asset
   from update_contract import Identity
   from update_contract import Manifest
-  from update_package import prepare_candidate
+  from update_package import _transfer
+  from update_payload import PayloadArchive
+  from update_storage import read_bytes
 
   lock = json.loads(args.lock.read_text(encoding='utf-8'))
   directory = Path(lock['directory'])
   identityName = 'VisionWorkshop-windows-x86_64-release_identity.json'
-  identityBytes = (directory / identityName).read_bytes()
+  identityBytes = read_bytes(directory / identityName, 65536)
   identity = Identity.parse(identityBytes)
   metadata = json.loads(identityBytes)
   if (identity.release_tag != lock['tag']
       or metadata.get('source', {}).get('repository') != lock['source_repository']):
     raise ValueError('Baseline identity does not match the selected release/source repository')
-  manifest = Manifest.parse((directory / lock['files_name']).read_bytes())
+  manifest = Manifest.parse(read_bytes(directory / lock['files_name'], 32 * 1024**2))
   manifest.bind_identity(identity)
   asset = Asset.parse(lock['assets'][lock['full_name']])
-  # The source consumer validates both archive inventory and every extracted file.
-  with tempfile.TemporaryDirectory(prefix='baseline-verification-', dir=directory) as temporary:
-    prepare_candidate(directory / asset.name, Path(temporary) / 'candidate',
-                      asset, manifest, identity)
+  # Validate the frozen baseline through the same protocol-3 archive consumer,
+  # streaming all payload hashes without constructing a complete candidate copy.
+  with PayloadArchive(directory / asset.name, asset, manifest, manifest, identity) as package:
+    for path, member in package.payload.items():
+      with package.archive.open(member) as stream:
+        _transfer(stream, expected=manifest.files[path])
   return 0
 
 

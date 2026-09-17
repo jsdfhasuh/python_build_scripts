@@ -258,7 +258,7 @@ def prepareRequest(inputs: dict, source: Path, state: Path, output: Path) -> dic
   tag = sourceVersion(config, source, inputs.get('release_tag', '').strip())
   repo = inputs.get('release_repo', '').strip() or config['release_repo']
   if repo != RELEASE_REPO:
-    raise BuildConfigError('Protocol-2 publication repository is fixed')
+    raise BuildConfigError('Protocol-3 publication repository is fixed')
   publishing = booleanInput(inputs, 'publish_release')
   if publishing and not os.environ.get('RELEASE_REPO_TOKEN'):
     raise BuildConfigError('Publication requires an explicit RELEASE_REPO_TOKEN')

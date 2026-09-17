@@ -54,7 +54,7 @@ on:
         default: ''
         type: string
       mandatory:
-        description: Unsupported by Vision Train protocol 2 - must remain false
+        description: Unsupported by Vision Train protocol 3 - must remain false
         default: false
         type: boolean
       changelog_all:

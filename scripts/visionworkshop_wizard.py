@@ -446,7 +446,7 @@ def collectArguments(*, yes: bool = False) -> list[str] | None:
   if appearance == '2':
     kwargs['profilePath'] = str(ROOT / 'profiles/visionworkshop.json')
     arguments += [f'--branding-profile={kwargs["profilePath"]}']
-    name = prompt('程序文件名，不含 .exe（留空使用 VisionWorkshop 及旧名兼容入口）')
+    name = prompt('程序文件名，不含 .exe（留空使用 VisionWorkshop 固定启动入口）')
     if name:
       kwargs['programName'] = name
       arguments += [f'--program-name={name}']
@@ -479,15 +479,16 @@ def collectArguments(*, yes: bool = False) -> list[str] | None:
   try:
     os.environ['SOURCE_ROOT'] = str(sourcePath)
     resolved = resolveBuildConfig(ROOT / 'configs/emo-vision-train.json', **kwargs)
-    if mode in ('3', '5'):
-      resolved.assertPublicationAllowed()
+    if resolved.config.get('update_protocol') != 3:
+      raise BuildConfigError('专用向导只支持协议 3；旧构建必须重新构建完整包')
+    resolved.assertPublicationAllowed()
   finally:
     if oldSource is None:
       os.environ.pop('SOURCE_ROOT', None)
     else:
       os.environ['SOURCE_ROOT'] = oldSource
   print('ZIP 解压即用；不会生成安装器。窗口外观由源码读取品牌配置，运行时自动更新未关闭。')
-  if resolved.config.get('update_protocol') == 2:
+  if resolved.config.get('update_protocol') == 3:
     baseTag = prompt('差异包基线 Release tag（留空仅生成完整包）', '')
     if baseTag:
       arguments += [f'--delta-base-tag={baseTag}']
@@ -501,7 +502,7 @@ def main(argv: list[str] | None = None) -> int:
   parser.add_argument('--legacy', action='store_true', help='Open the unchanged legacy wizard')
   args = parser.parse_args(argv)
   if args.legacy:
-    print('旧发布入口不支持协议 2；请使用当前向导的六种模式。', file=sys.stderr)
+    print('旧发布入口不支持协议 3；请使用当前向导的六种模式。', file=sys.stderr)
     return 1
   try:
     arguments = collectArguments(yes=args.yes)

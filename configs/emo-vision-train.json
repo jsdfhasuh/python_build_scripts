@@ -9,7 +9,7 @@
     "kagglesdk==0.1.31"
   ],
   "entry": "${SOURCE_ROOT}/main.py",
-  "name": "emo-vision-train",
+  "name": "VisionWorkshop",
   "onefile": false,
   "console": true,
   "icon": null,
@@ -62,7 +62,10 @@
     "termcolor"
   ],
   "excludes": [],
-  "collect_binaries": ["torch", "torchvision"],
+  "collect_binaries": [
+    "torch",
+    "torchvision"
+  ],
   "extra_args": [
     "--copy-metadata",
     "torch",
@@ -91,15 +94,24 @@
     "--copy-metadata",
     "kagglesdk"
   ],
-  "update_protocol": 2,
+  "update_protocol": 3,
   "updater": {
     "enabled": true,
     "entry": "${SOURCE_ROOT}/updater_gui.py",
-    "name": "updater",
+    "name": "VisionWorkshopUpdater",
     "onefile": true,
     "console": false,
     "hidden_imports": [],
-    "excludes": ["torch", "torchvision", "ultralytics", "cv2", "PyQt5.QtWebEngineWidgets", "PyQt5.QtWebEngineCore"],
+    "excludes": [
+      "torch",
+      "torchvision",
+      "ultralytics",
+      "cv2",
+      "PyQt5.QtWebEngineWidgets",
+      "PyQt5.QtWebEngineCore"
+    ],
     "extra_args": []
-  }
+  },
+  "launcher_min_capability": 1,
+  "layout_version": 1
 }

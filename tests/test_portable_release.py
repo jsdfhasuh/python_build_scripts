@@ -17,6 +17,7 @@ from branding_fixtures import makeIco
 from branding_fixtures import writeProject
 from build_config import BuildConfigError
 from build_config import resolveBuildConfig
+from build_config import ResolvedBuild
 from build_records import fileHash
 from build_records import gitState
 from build_records import objectHash
@@ -76,6 +77,13 @@ class PortableTests(unittest.TestCase):
     self.compiler = self.stack.enter_context(patch('build.run_command', side_effect=self.compile))
     self.compressor = self.stack.enter_context(patch('portable_release.compressArchive',
                                                    side_effect=self.compress))
+    # These are generic publisher mutation/receipt tests using fake non-protocol
+    # binaries. Protocol-3 admission and artifacts have dedicated layout tests.
+    originalGate = ResolvedBuild.assertPublicationAllowed
+    def fixtureGate(resolved):
+      if resolved.renamed:
+        return originalGate(resolved)
+    self.stack.enter_context(patch.object(ResolvedBuild, 'assertPublicationAllowed', fixtureGate))
     self.stack.enter_context(patch('build._find_python_dll', return_value=None))
     self.stack.enter_context(patch('build._collect_python_runtime_dlls', return_value=[]))
 

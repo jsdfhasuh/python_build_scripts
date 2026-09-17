@@ -10,6 +10,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from path_boundary import ioPath
 
 from build_config import BuildConfigError
 from build_environment import pythonChildEnvironment
@@ -98,7 +99,7 @@ def validateTorch(version: str, cuda: str | None, profile: dict) -> None:
 
 def requireFiles(root: Path, names: list[str]) -> None:
   missing = [name for name in names
-             if not (root / name).is_file() or (root / name).stat().st_size == 0]
+             if not ioPath(root / name).is_file() or ioPath(root / name).stat().st_size == 0]
   if missing:
     raise BuildConfigError('Missing runtime files: ' + ', '.join(missing))
 
@@ -133,7 +134,7 @@ def validateEnvironment(source: Path) -> None:
 
 def readTorchVersion(path: Path) -> tuple[str, str | None]:
   values = {}
-  for node in ast.parse(path.read_text(encoding='utf-8')).body:
+  for node in ast.parse(ioPath(path).read_text(encoding='utf-8')).body:
     targets = node.targets if isinstance(node, ast.Assign) else []
     if isinstance(node, ast.AnnAssign):
       targets = [node.target]
@@ -146,7 +147,7 @@ def readTorchVersion(path: Path) -> tuple[str, str | None]:
 def readPackagedModules(executable: Path) -> set[str]:
   from PyInstaller.archive.readers import CArchiveReader
 
-  archive = CArchiveReader(str(executable))
+  archive = CArchiveReader(str(ioPath(executable)))
   return set(archive.open_embedded_archive('PYZ.pyz').toc)
 
 
@@ -159,7 +160,7 @@ def validateModules(modules: set[str], required: list[str]) -> None:
 def readDllImports(path: Path) -> list[str]:
   import pefile
 
-  with pefile.PE(str(path), fast_load=True) as image:
+  with pefile.PE(str(ioPath(path)), fast_load=True) as image:
     image.parse_data_directories(directories=[
       pefile.DIRECTORY_ENTRY['IMAGE_DIRECTORY_ENTRY_IMPORT'],
       pefile.DIRECTORY_ENTRY['IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT'],
@@ -170,7 +171,7 @@ def readDllImports(path: Path) -> list[str]:
 
 
 def validateCudaDependencies(internal: Path) -> None:
-  libraries = list((internal / 'torch/lib').glob('*.dll'))
+  libraries = list(ioPath(internal / 'torch/lib').glob('*.dll'))
   libraries.append(internal / 'onnxruntime/capi/onnxruntime_providers_cuda.dll')
   available = {path.name.lower() for path in libraries if path.is_file()}
   # nvcuda.dll belongs to the NVIDIA driver, not the distributable CUDA runtime.
@@ -190,7 +191,7 @@ def validatePackage(appDir: Path, programName: str) -> dict:
   requireFiles(internal / 'torch/lib', profile['torch_dlls'])
   requireFiles(internal / 'static/models', profile['models'])
   validateModules(readPackagedModules(appDir / f'{programName}.exe'), profile['modules'])
-  if not list((internal / '_polars_runtime_32').glob('*.pyd')):
+  if not list(ioPath(internal / '_polars_runtime_32').glob('*.pyd')):
     raise BuildConfigError('Missing packaged Polars native extension')
   validateCudaDependencies(internal)
   return {'status': 'passed', 'torch': version, 'cuda': cuda,
