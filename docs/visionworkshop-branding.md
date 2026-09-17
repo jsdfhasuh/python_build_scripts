@@ -88,6 +88,15 @@ ZIP 优先用 7-Zip；内存分配失败时只重试为单线程。无 7-Zip 时
 
 ## 验证
 
+### PatchCore 离线资源
+
+`configs/emo-vision-train.json` 的 `prepare_source_assets` 指定源码仓库中的
+`scripts/prepare_patchcore_weights.py`。实际构建在输入快照和编译之前，用向导当前的
+Python 执行该脚本；下载或校验失败会立即中止构建。源码仓库负责固定权重版本、校验
+SHA-256 并写入 `static/models`，现有 `static:static` 映射将其带入安装包。
+请使用包含此脚本的应用源码版本。预览、notes-only、显式记录重归档不运行准备脚本。
+重归档仍按原构建记录校验输入和产物，不补写旧包中的权重。
+
 外部仓库：`python -m unittest discover -s tests -v`。
 应用仓库：`python scripts/verify_update_windows.py` 干净编译测试应用与真实更新器，执行连续更新及
 主程序入口缺失时的独立恢复。`--reuse-build` 必须指向完全匹配当前运行时代码的明确构建。

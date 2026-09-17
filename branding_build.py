@@ -6,6 +6,7 @@ import os
 import shlex
 import shutil
 import stat
+import subprocess
 import sys
 from pathlib import Path
 
@@ -30,6 +31,24 @@ class CompilerError(BuildConfigError):
   def __init__(self, returncode: int) -> None:
     self.returncode = returncode
     super().__init__(f'Compiler failed with exit code {returncode}; no success record written')
+
+
+def prepareSourceAssets(resolved: ResolvedBuild, sourceRoot: Path) -> None:
+  script = resolved.config.get('prepare_source_assets')
+  if not script:
+    return
+  if not isinstance(script, str) or Path(script).is_absolute():
+    raise BuildConfigError('prepare_source_assets must be a source-relative Python script')
+  path = sourceRoot / script
+  rejectLinks(path)
+  if not path.resolve().is_relative_to(sourceRoot.resolve()) or not path.is_file():
+    raise BuildConfigError(f'Asset preparation script is missing or outside SourceRoot: {path}')
+  if path.suffix != '.py':
+    raise BuildConfigError('Asset preparation script must be a Python file')
+  print(f'Preparing bundled source assets: {path}', flush=True)
+  result = subprocess.run([sys.executable, '-B', str(path)], cwd=sourceRoot, check=False)
+  if result.returncode:
+    raise BuildConfigError(f'Asset preparation failed with exit code {result.returncode}')
 
 
 def buildCommands(
@@ -120,6 +139,7 @@ def executeBuild(
 ) -> dict:
   if sys.platform != 'win32':
     raise BuildConfigError('Actual VisionWorkshop EXE builds require Windows; use --dry-run here')
+  prepareSourceAssets(resolved, sourceRoot)
   commands = buildCommands(resolved, context, clean=clean)
   beforeDetails = {}
   before = inputSnapshot(resolved, sourceRoot, details=beforeDetails)

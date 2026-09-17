@@ -62,9 +62,14 @@ class CommandIntegrationTests(unittest.TestCase):
     self.assertEqual(commands[1][0].name, 'updater')
 
   def test_dry_run_does_not_create_outputs_or_run_commands(self) -> None:
+    config = json.loads(self.config.read_text(encoding='utf-8'))
+    config['prepare_source_assets'] = 'not-run-during-preview.py'
+    self.config.write_text(json.dumps(config), encoding='utf-8')
     before = set(self.root.iterdir())
-    with patch('build.run_command') as execute, patch('build.copy_updater_to_app_dir') as copy:
+    with patch('build.run_command') as execute, patch('build.copy_updater_to_app_dir') as copy, \
+         patch('branding_build.prepareSourceAssets') as prepare:
       self.assertEqual(self.runBuild(dryRun=True), 0)
+      prepare.assert_not_called()
       execute.assert_not_called()
       copy.assert_not_called()
     self.assertEqual(set(self.root.iterdir()), before)
