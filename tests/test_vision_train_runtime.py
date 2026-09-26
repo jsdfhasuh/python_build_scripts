@@ -121,6 +121,8 @@ class PackageTests(unittest.TestCase):
       self.write('torch/lib/' + name)
     for name in self.profile['models']:
       self.write('static/models/' + name)
+    for name in runtime.KAGGLE_SOURCE_FILES:
+      self.write(name)
     stack = contextlib.ExitStack()
     self.addCleanup(stack.close)
     self.readModules = stack.enter_context(patch.object(
@@ -163,6 +165,14 @@ class PackageTests(unittest.TestCase):
     (self.internal / 'static/models/edge_sam_encoder.onnx').unlink()
     with self.assertRaisesRegex(BuildConfigError, 'edge_sam_encoder.onnx'):
       runtime.validatePackage(self.app, 'VisionWorkshop')
+
+  def test_builder_source_must_exist_as_data_even_when_imports_are_available(self):
+    for name in runtime.KAGGLE_SOURCE_FILES:
+      with self.subTest(name=name):
+        (self.internal / name).unlink()
+        with self.assertRaisesRegex(BuildConfigError, 'Missing'):
+          runtime.validatePackage(self.app, 'VisionWorkshop')
+        self.write(name)
 
   def test_pe_dependency_check_finds_unlisted_cuda_dependency(self):
     self.readImports.return_value = ['cudnn_new64_9.dll']

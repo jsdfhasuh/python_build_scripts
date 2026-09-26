@@ -19,6 +19,18 @@ from build_environment import pythonChildEnvironment
 ROOT = Path(__file__).resolve().parent
 PROFILE = ROOT / 'ci/vision-train-runtime.json'
 
+# Frozen builders read these source bytes; PYZ imports cannot replace data files.
+KAGGLE_SOURCE_FILES = [
+  'kaggle_func/job_builder.py', 'kaggle_func/build_errors.py',
+  'kaggle_func/runtime_builder.py', 'kaggle_func/runtime_bootstrap.py',
+  'kaggle_func/runtime/__init__.py', 'kaggle_func/runtime/config.py',
+  'kaggle_func/runtime/yolo_train.py', 'kaggle_func/runtime/patchcore_train.py',
+  'kaggle_func/templates/kaggle_yolo_train.py.tpl',
+  'kaggle_func/templates/kaggle_patchcore_train.py.tpl',
+  'anomaly_func/environment.py', 'anomaly_func/score_contract.py',
+  'anomaly_func/training_progress.py',
+]
+
 
 def loadProfile() -> dict:
   return json.loads(PROFILE.read_text(encoding='utf-8'))
@@ -190,12 +202,14 @@ def validatePackage(appDir: Path, programName: str) -> dict:
   validateTorch(version, cuda, profile)
   requireFiles(internal / 'torch/lib', profile['torch_dlls'])
   requireFiles(internal / 'static/models', profile['models'])
+  requireFiles(internal, KAGGLE_SOURCE_FILES)
   validateModules(readPackagedModules(appDir / f'{programName}.exe'), profile['modules'])
   if not list(ioPath(internal / '_polars_runtime_32').glob('*.pyd')):
     raise BuildConfigError('Missing packaged Polars native extension')
   validateCudaDependencies(internal)
   return {'status': 'passed', 'torch': version, 'cuda': cuda,
-          'required_modules': profile['modules'], 'gpu_execution': 'not-run'}
+          'required_modules': profile['modules'], 'required_source_data': KAGGLE_SOURCE_FILES,
+          'gpu_execution': 'not-run'}
 
 
 def main() -> int:

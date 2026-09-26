@@ -23,6 +23,14 @@
     "${SOURCE_ROOT}/tool.py:.",
     "${SOURCE_ROOT}/static:static",
     "${SOURCE_ROOT}/kaggle_func/templates:kaggle_func\\templates",
+    "${SOURCE_ROOT}/kaggle_func/job_builder.py:kaggle_func",
+    "${SOURCE_ROOT}/kaggle_func/build_errors.py:kaggle_func",
+    "${SOURCE_ROOT}/kaggle_func/runtime_builder.py:kaggle_func",
+    "${SOURCE_ROOT}/kaggle_func/runtime_bootstrap.py:kaggle_func",
+    "${SOURCE_ROOT}/kaggle_func/runtime/__init__.py:kaggle_func\\runtime",
+    "${SOURCE_ROOT}/kaggle_func/runtime/config.py:kaggle_func\\runtime",
+    "${SOURCE_ROOT}/kaggle_func/runtime/yolo_train.py:kaggle_func\\runtime",
+    "${SOURCE_ROOT}/kaggle_func/runtime/patchcore_train.py:kaggle_func\\runtime",
     "${SOURCE_ROOT}/X-AnyLabeling/anylabeling:X-AnyLabeling\\anylabeling"
   ],
   "hidden_imports": [
