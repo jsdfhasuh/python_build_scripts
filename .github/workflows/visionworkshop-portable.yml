@@ -264,3 +264,15 @@ jobs:
             source/build/updater-v3-verification/**/*.png
             packager/release-output/ci/build-summary.json
           if-no-files-found: warn
+      - name: Retain exact unpublished protocol assets after a failed gate
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visionworkshop-unpublished-assets-${{ github.run_id }}
+          path: |
+            packager/release-output/ci/VisionWorkshop*.zip
+            packager/release-output/ci/VisionWorkshop*.json
+            packager/release-output/ci/build-summary.json
+          compression-level: 0
+          retention-days: 14
+          if-no-files-found: warn
