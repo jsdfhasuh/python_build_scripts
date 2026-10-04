@@ -64,7 +64,8 @@ For local validation of external source targets, set `SOURCE_ROOT` first. Exampl
 - VisionWorkshop requires protocol 3 and the fixed launcher/app layout. Product and power-loss acceptance is advisory: missing or incomplete evidence must not block building or publication, and must never be reported as passed. Supplied reports still require exact build identity and evidence hashes. Runtime updates are NOT disabled.
 - The production ICO is not included. Test fixture icons are not product branding assets.
 - Keep configs, existing runtime hooks, installer code and dependency versions unchanged.
-- Original PowerShell publisher is preserved verbatim as `publish-local-release-legacy.ps1`.
+- The PowerShell publisher remains `publish-local-release-legacy.ps1`; Emo Master publication
+  adds fail-closed source/tag/asset guards. Other legacy targets retain their existing behavior.
   The public wrapper routes only portable requests; master and old defaults keep their old logic.
 - New workflows are `visionworkshop-portable.yml` and `visionworkshop-tests.yml`.
   Cross-repository callers must supply packager_ref; do not infer it from a source-repository SHA.

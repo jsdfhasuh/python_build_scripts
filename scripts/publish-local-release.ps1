@@ -68,8 +68,8 @@ if ($hasPortableArgument -or ($Target -eq 'emo-vision-train' -and $BuildOnly)) {
   return
 }
 
-# The old publisher is retained byte-for-byte under a new filename in this directory.
-# Its PSScriptRoot, existing parameter defaults and installer behavior are unchanged.
+# The legacy publisher retains parameter defaults and installer behavior.
+# Emo Master publication additionally enforces source, tag and asset provenance.
 if ($PSBoundParameters.ContainsKey('PythonExecutable')) {
   throw 'PythonExecutable applies to the new portable branding path only'
 }

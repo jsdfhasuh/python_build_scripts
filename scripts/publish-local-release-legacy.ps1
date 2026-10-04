@@ -519,6 +519,94 @@ function Test-GhReleaseExists {
   return $LASTEXITCODE -eq 0
 }
 
+function Invoke-GhJson {
+  param([Parameter(Mandatory = $true)][string[]]$Arguments)
+
+  $output = & gh @Arguments
+  if ($LASTEXITCODE -ne 0) {
+    throw "Unable to verify GitHub release provenance: gh $($Arguments -join ' ')"
+  }
+  return ($output | Out-String | ConvertFrom-Json)
+}
+
+function Assert-MasterPublicationSource {
+  param(
+    [string]$SourceRootPath,
+    [string]$SourceRepoName,
+    [string]$ReleaseRepoName,
+    [string]$SourceCommit,
+    [string]$RequestedSourceRef,
+    [switch]$ReuseBuild
+  )
+
+  if ($ReleaseRepoName -ine $SourceRepoName) {
+    throw 'Emo Master publication requires release_repo to equal source_repo. Use BuildOnly for a separate release repository.'
+  }
+  if ($ReuseBuild) {
+    throw 'Emo Master publication cannot use SkipBuild: existing dist has no verified build provenance. Use BuildOnly or rebuild.'
+  }
+  $currentCommit = Invoke-SourceGit -SourceRootPath $SourceRootPath -Arguments @('rev-parse', 'HEAD')
+  if ($currentCommit -ne $SourceCommit) {
+    throw 'Source HEAD changed during packaging; refusing publication.'
+  }
+  $dirty = Invoke-SourceGit -SourceRootPath $SourceRootPath -Arguments @('status', '--porcelain', '--untracked-files=all')
+  if ($dirty) {
+    throw 'Emo Master publication requires a clean source checkout, including untracked files. Use BuildOnly for local validation.'
+  }
+  if ($RequestedSourceRef -and $RequestedSourceRef -ne 'local') {
+    $requestedCommit = Invoke-SourceGit -SourceRootPath $SourceRootPath -Arguments @('rev-parse', '--verify', "$RequestedSourceRef^{commit}")
+    if ($requestedCommit -ne $SourceCommit) {
+      throw 'SourceRef does not resolve to the source HEAD being packaged.'
+    }
+  }
+  $remoteCommit = Invoke-GhJson -Arguments @('api', "repos/$SourceRepoName/commits/$SourceCommit")
+  if ($remoteCommit.sha -ne $SourceCommit) {
+    throw 'Built source commit could not be verified in source_repo.'
+  }
+}
+
+function Assert-MasterReleaseTag {
+  param([string]$ReleaseRepoName, [string]$VersionTag, [string]$SourceCommit)
+
+  $encodedTag = [System.Uri]::EscapeDataString($VersionTag)
+  # matching-refs returns [] for an absent tag; authentication/network failures must not mean absent.
+  $refs = @(Invoke-GhJson -Arguments @('api', "repos/$ReleaseRepoName/git/matching-refs/tags/$encodedTag"))
+  $matchingRefs = @($refs | Where-Object { $_.ref -ceq "refs/tags/$VersionTag" })
+  if ($matchingRefs.Count -eq 0) { return $false }
+  if ($matchingRefs.Count -ne 1) { throw 'Ambiguous remote release tag.' }
+  $object = $matchingRefs[0].object
+  $depth = 0
+  while ($object.type -eq 'tag') {
+    if ($depth -ge 16) { throw 'Remote annotated tag nesting is too deep.' }
+    $tagObject = Invoke-GhJson -Arguments @('api', "repos/$ReleaseRepoName/git/tags/$($object.sha)")
+    $object = $tagObject.object
+    $depth += 1
+  }
+  if ($object.type -ne 'commit' -or $object.sha -ne $SourceCommit) {
+    throw "Release tag $VersionTag does not point to built source commit $SourceCommit. Choose a new release version; existing tags are never moved."
+  }
+  return $true
+}
+
+function Test-MasterReleaseExists {
+  param([string]$ReleaseRepoName, [string]$VersionTag)
+
+  # A bounded list may miss an old release, but create then fails safely without overwriting it.
+  $releases = @(Invoke-GhJson -Arguments @('release', 'list', '--repo', $ReleaseRepoName, '--limit', '1000', '--json', 'tagName'))
+  return @($releases | Where-Object { $_.tagName -ceq $VersionTag }).Count -gt 0
+}
+
+function Assert-MasterReleaseAssetsAvailable {
+  param([string]$ReleaseRepoName, [string]$VersionTag, [string[]]$AssetNames)
+
+  $release = Invoke-GhJson -Arguments @('release', 'view', $VersionTag, '--repo', $ReleaseRepoName, '--json', 'assets')
+  foreach ($asset in @($release.assets)) {
+    if ($AssetNames -contains $asset.name) {
+      throw "Release asset already exists: $($asset.name). Refusing replacement; choose a new release version."
+    }
+  }
+}
+
 function Set-GhReleaseNotes {
   param(
     [Parameter(Mandatory = $true)][string]$ReleaseRepoName,
@@ -637,6 +725,17 @@ if ($resolvedReleaseRepo -notmatch '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$') {
 $sourceCommit = Invoke-SourceGit `
   -SourceRootPath $sourceRootPath.Path `
   -Arguments @('rev-parse', 'HEAD')
+$guardMasterPublication = $Target -eq 'emo-master' -and -not $BuildOnly
+if ($guardMasterPublication) {
+  Assert-MasterPublicationSource -SourceRootPath $sourceRootPath.Path `
+    -SourceRepoName $config.source_repo -ReleaseRepoName $resolvedReleaseRepo `
+    -SourceCommit $sourceCommit -RequestedSourceRef $SourceRef -ReuseBuild:$SkipBuild
+  $masterTagExists = Assert-MasterReleaseTag -ReleaseRepoName $resolvedReleaseRepo `
+    -VersionTag $ReleaseTag -SourceCommit $sourceCommit
+  if ($NotesOnly -and -not $masterTagExists) {
+    throw 'NotesOnly requires a preexisting release tag matching source HEAD.'
+  }
+}
 $resolvedSourceRef = Get-ResolvedSourceRef `
   -SourceRootPath $sourceRootPath.Path `
   -RequestedSourceRef $SourceRef `
@@ -678,6 +777,11 @@ try {
       throw "Release does not exist for notes-only update: $resolvedReleaseRepo $ReleaseTag"
     }
 
+    if ($guardMasterPublication) {
+      $masterTagExists = Assert-MasterReleaseTag -ReleaseRepoName $resolvedReleaseRepo `
+        -VersionTag $ReleaseTag -SourceCommit $sourceCommit
+      if (-not $masterTagExists) { throw 'Release tag disappeared before notes update.' }
+    }
     Set-GhReleaseNotes `
       -ReleaseRepoName $resolvedReleaseRepo `
       -VersionTag $ReleaseTag `
@@ -814,7 +918,19 @@ try {
     return
   }
 
-  $releaseExists = Test-GhReleaseExists -ReleaseRepoName $resolvedReleaseRepo -VersionTag $ReleaseTag
+  if ($guardMasterPublication) {
+    Assert-MasterPublicationSource -SourceRootPath $sourceRootPath.Path `
+      -SourceRepoName $config.source_repo -ReleaseRepoName $resolvedReleaseRepo `
+      -SourceCommit $sourceCommit -RequestedSourceRef $SourceRef
+    $masterTagExists = Assert-MasterReleaseTag -ReleaseRepoName $resolvedReleaseRepo `
+      -VersionTag $ReleaseTag -SourceCommit $sourceCommit
+    $releaseExists = Test-MasterReleaseExists -ReleaseRepoName $resolvedReleaseRepo -VersionTag $ReleaseTag
+    if ($releaseExists -and -not $masterTagExists) {
+      throw 'Existing release has no verifiable matching source tag.'
+    }
+  } else {
+    $releaseExists = Test-GhReleaseExists -ReleaseRepoName $resolvedReleaseRepo -VersionTag $ReleaseTag
+  }
   $releaseAssetPaths = @($assetPath)
   if ($installerEnabled) {
     $releaseAssetPaths += $setupPath
@@ -822,8 +938,15 @@ try {
   $releaseAssetPaths += $manifestPath
 
   if ($releaseExists) {
+    $uploadOptions = @('--clobber')
+    if ($guardMasterPublication) {
+      $uploadOptions = @()
+      $assetNames = @($releaseAssetPaths | ForEach-Object { Split-Path -Leaf $_ })
+      Assert-MasterReleaseAssetsAvailable -ReleaseRepoName $resolvedReleaseRepo `
+        -VersionTag $ReleaseTag -AssetNames $assetNames
+    }
     foreach ($releaseAssetPath in $releaseAssetPaths) {
-      gh release upload $ReleaseTag $releaseAssetPath --repo $resolvedReleaseRepo --clobber
+      gh release upload $ReleaseTag $releaseAssetPath --repo $resolvedReleaseRepo @uploadOptions
       if ($LASTEXITCODE -ne 0) {
         $failedAssetName = Split-Path -Leaf $releaseAssetPath
         throw "Failed to upload $failedAssetName to $resolvedReleaseRepo release $ReleaseTag"
@@ -834,7 +957,12 @@ try {
       -VersionTag $ReleaseTag `
       -NotesPath $releaseNotesPath
   } else {
-    gh release create $ReleaseTag @releaseAssetPaths `
+    $createOptions = @()
+    if ($guardMasterPublication) {
+      $createOptions = @('--target', $sourceCommit)
+      if ($masterTagExists) { $createOptions += '--verify-tag' }
+    }
+    gh release create $ReleaseTag @releaseAssetPaths @createOptions `
       --repo $resolvedReleaseRepo `
       --title $ReleaseTag `
       --notes-file $releaseNotesPath
