@@ -1,340 +1,68 @@
-name: Release Windows Build
+name: Retest published Windows updater (no build or release)
 
 on:
   workflow_dispatch:
-    inputs:
-      target:
-        description: Build target config name
-        required: true
-        default: emo-vision-train
-        type: string
-      source_ref:
-        description: Source branch, tag, or commit
-        required: true
-        type: string
-      previous_source_ref:
-        description: Optional source base ref for release notes
-        required: false
-        default: ''
-        type: string
-      release_tag:
-        description: Release tag (Vision Train may leave blank to read source version)
-        required: false
-        type: string
-      release_repo:
-        description: GitHub repo to publish releases to, for example owner/repo
-        required: false
-        default: ''
-        type: string
-      release_body_path:
-        description: Optional Markdown file in the packager repo
-        required: false
-        default: ''
-        type: string
-      publish_release:
-        description: Publish assets - true publishes; auto builds Vision Train only and publishes other targets
-        required: true
-        default: auto
-        type: choice
-        options: [auto, 'false', 'true']
-      packager_ref:
-        description: Vision Train packager revision (blank uses the selected workflow SHA)
-        default: ''
-        type: string
-      delta_base_tag:
-        description: Vision Train baseline - auto, none, or an older official Release tag
-        default: auto
-        type: string
-      release_title:
-        description: Optional Vision Train release title
-        default: ''
-        type: string
-      notes:
-        description: Optional Vision Train short release description
-        default: ''
-        type: string
-      mandatory:
-        description: Unsupported by Vision Train protocol 3 - must remain false
-        default: false
-        type: boolean
-      changelog_all:
-        description: Vision Train notes from all source history
-        default: false
-        type: boolean
-  workflow_call:
-    inputs:
-      target:
-        required: true
-        type: string
-      source_ref:
-        required: true
-        type: string
-      previous_source_ref:
-        required: false
-        default: ''
-        type: string
-      release_tag:
-        required: false
-        default: ''
-        type: string
-      release_repo:
-        required: false
-        default: ''
-        type: string
-      release_body_path:
-        required: false
-        default: ''
-        type: string
-      publish_release:
-        required: false
-        default: false
-        type: boolean
-      packager_ref:
-        default: ''
-        type: string
-      delta_base_tag:
-        default: auto
-        type: string
-      release_title:
-        default: ''
-        type: string
-      notes:
-        default: ''
-        type: string
-      mandatory:
-        default: false
-        type: boolean
-      changelog_all:
-        default: false
-        type: boolean
-    secrets:
-      SOURCE_REPO_TOKEN:
-        required: false
-      RELEASE_REPO_TOKEN:
-        required: false
-    outputs:
-      artifact_name:
-        description: Name of the uploaded Windows release artifact
-        value: ${{ jobs.vision_train.outputs.artifact_name || jobs.build.outputs.artifact_name }}
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: published-windows-retest-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  vision_train:
-    if: inputs.target == 'emo-vision-train'
-    uses: ./.github/workflows/visionworkshop-portable.yml
-    permissions:
-      contents: read
-    with:
-      source_ref: ${{ inputs.source_ref }}
-      release_tag: ${{ inputs.release_tag }}
-      branding_profile: profiles/visionworkshop.json
-      packager_ref: ${{ inputs.packager_ref }}
-      publish_release: ${{ inputs.publish_release == true || inputs.publish_release == 'true' }}
-      release_repo: ${{ inputs.release_repo }}
-      delta_base_tag: ${{ inputs.delta_base_tag }}
-      previous_source_ref: ${{ inputs.previous_source_ref }}
-      release_title: ${{ inputs.release_title }}
-      notes: ${{ inputs.notes }}
-      mandatory: ${{ inputs.mandatory }}
-      release_body_path: ${{ inputs.release_body_path }}
-      changelog_all: ${{ inputs.changelog_all }}
-    secrets:
-      SOURCE_REPO_TOKEN: ${{ secrets.SOURCE_REPO_TOKEN }}
-      RELEASE_REPO_TOKEN: ${{ secrets.RELEASE_REPO_TOKEN }}
-  build:
-    if: inputs.target != 'emo-vision-train'
-    name: Build ${{ inputs.target }} for Windows
+  retest-published-assets:
     runs-on: windows-latest
-    outputs:
-      artifact_name: ${{ steps.artifact.outputs.name }}
-
+    timeout-minutes: 60
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      PYTHONIOENCODING: utf-8
     steps:
-      - name: Checkout packager
+      - name: Read this exact test commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          path: retest-runner
+          persist-credentials: false
+      - name: Read immutable packager baseline
         uses: actions/checkout@v7
         with:
           repository: jsdfhasuh/python_build_scripts
-          ref: master
+          ref: cc548366fc8e574ba3eb66398bf17dba9311a800
           path: packager
-
-      - name: Load target config
-        id: config
-        shell: pwsh
-        working-directory: packager
-        env:
-          TARGET: ${{ inputs.target }}
-          RELEASE_TAG: ${{ inputs.release_tag }}
-          RELEASE_REPO_INPUT: ${{ inputs.release_repo }}
-        run: |
-          if ($env:TARGET -notmatch '^[A-Za-z0-9_.-]+$') {
-            throw "Invalid target name: $env:TARGET"
-          }
-          if ($env:RELEASE_TAG -notmatch '^v[0-9]+(\.[0-9]+){1,3}([-.][A-Za-z0-9._-]+)?$') {
-            throw "release_tag must look like v1.2.3, got: $env:RELEASE_TAG"
-          }
-
-          $configPath = Join-Path 'configs' "$env:TARGET.json"
-          if (-not (Test-Path -LiteralPath $configPath)) {
-            throw "Target config not found: $configPath"
-          }
-
-          $config = Get-Content -LiteralPath $configPath -Raw | ConvertFrom-Json
-          foreach ($field in @('source_repo', 'python_version', 'release_asset_name', 'name')) {
-            if (-not $config.$field) {
-              throw "Missing required config field: $field"
-            }
-          }
-
-          $releaseRepo = $env:RELEASE_REPO_INPUT.Trim()
-          if (-not $releaseRepo -and $config.PSObject.Properties.Name -contains 'release_repo') {
-            $releaseRepo = [string]$config.release_repo
-            $releaseRepo = $releaseRepo.Trim()
-          }
-          if (-not $releaseRepo) {
-            $releaseRepo = $env:GITHUB_REPOSITORY
-          }
-          if ($releaseRepo -notmatch '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$') {
-            throw "release_repo must look like owner/repo, got: $releaseRepo"
-          }
-
-          $ciExtraPackages = @()
-          if ($config.PSObject.Properties.Name -contains 'ci_extra_packages') {
-            if ($null -ne $config.ci_extra_packages -and $config.ci_extra_packages -isnot [array]) {
-              throw 'ci_extra_packages must be a list'
-            }
-            $ciExtraPackages = @($config.ci_extra_packages)
-          }
-
-          $installerEnabled = $false
-          $innoVersion = ''
-          if ($config.PSObject.Properties.Name -contains 'installer' -and $config.installer) {
-            $installerEnabled = [bool]$config.installer.enabled
-            if ($installerEnabled) {
-              $innoVersion = [string]$config.installer.compiler_version
-            }
-          }
-
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "source_repo=$($config.source_repo)"
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "python_version=$($config.python_version)"
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "release_repo=$releaseRepo"
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "ci_extra_packages=$($ciExtraPackages -join ' ')"
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "installer_enabled=$($installerEnabled.ToString().ToLowerInvariant())"
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "inno_version=$innoVersion"
-
-      - name: Checkout source
+          persist-credentials: false
+      - name: Read exact published product source
         uses: actions/checkout@v7
         with:
-          repository: ${{ steps.config.outputs.source_repo }}
-          ref: ${{ inputs.source_ref }}
+          repository: jsdfhasuh/emo-vision-train
+          ref: 014626e0dbbb8f7f90d08e9a2c9776606bc77025
           path: source
           token: ${{ secrets.SOURCE_REPO_TOKEN || github.token }}
-          submodules: recursive
-          fetch-depth: 0
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
+          persist-credentials: false
+      - uses: actions/setup-python@v6
         with:
-          python-version: ${{ steps.config.outputs.python_version }}
-          cache: pip
-          cache-dependency-path: source/requirements.txt
-
-      - name: Install source dependencies
-        shell: pwsh
-        working-directory: source
-        env:
-          CI_EXTRA_PACKAGES: ${{ steps.config.outputs.ci_extra_packages }}
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt
-          if ($env:CI_EXTRA_PACKAGES.Trim()) {
-            $packages = $env:CI_EXTRA_PACKAGES -split ' '
-            python -m pip install @packages
-          }
-
-      - name: Install pinned Inno Setup
-        if: steps.config.outputs.installer_enabled == 'true'
+          python-version: '3.11'
+      - name: Install test-only helpers (no product build dependencies)
+        run: python -m pip install requests==2.32.5 psutil==7.1.0 packaging==25.0 PyYAML==6.0.3
+      - name: Validate retest helpers and safety constraints
         shell: pwsh
         env:
-          INNO_VERSION: ${{ steps.config.outputs.inno_version }}
+          RETEST_SOURCE_ROOT: ${{ github.workspace }}/source
         run: |
-          $versionSlug = $env:INNO_VERSION.Replace('.', '_')
-          $downloadUrl = "https://github.com/jrsoftware/issrc/releases/download/is-$versionSlug/innosetup-$env:INNO_VERSION.exe"
-          $installerPath = Join-Path $env:RUNNER_TEMP "innosetup-$env:INNO_VERSION.exe"
-          $installDir = Join-Path $env:RUNNER_TEMP "InnoSetup-$versionSlug"
-          Invoke-WebRequest -Uri $downloadUrl -OutFile $installerPath
-          $signature = Get-AuthenticodeSignature -LiteralPath $installerPath
-          if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch 'Pyrsys B\.V\.') {
-            throw "Invalid Inno Setup Authenticode signature: $($signature.Status) $($signature.SignerCertificate.Subject)"
-          }
-          $process = Start-Process `
-            -FilePath $installerPath `
-            -ArgumentList @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/SP-', "/DIR=$installDir") `
-            -WindowStyle Hidden `
-            -Wait `
-            -PassThru
-          if ($process.ExitCode -ne 0) {
-            throw "Inno Setup installation failed with exit code $($process.ExitCode)"
-          }
-          $isccPath = Join-Path $installDir 'ISCC.exe'
-          if (-not (Test-Path -LiteralPath $isccPath -PathType Leaf)) {
-            throw "ISCC.exe was not installed: $isccPath"
-          }
-          Add-Content -Path $env:GITHUB_ENV -Value "ISCC_PATH=$isccPath"
-
-      - name: Build Windows artifacts
+          python -m unittest discover -s retest-runner/scripts/published-retest -p test_retest_helpers.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'Retest helper checks failed' }
+      - name: Run real released Windows updater against public exact bytes
+        timeout-minutes: 52
         shell: pwsh
-        working-directory: packager
-        env:
-          GH_TOKEN: ${{ secrets.RELEASE_REPO_TOKEN || github.token }}
-          TARGET_INPUT: ${{ inputs.target }}
-          RELEASE_TAG_INPUT: ${{ inputs.release_tag }}
-          RELEASE_REPO_INPUT: ${{ steps.config.outputs.release_repo }}
-          SOURCE_REF_INPUT: ${{ inputs.source_ref }}
-          PREVIOUS_SOURCE_REF_INPUT: ${{ inputs.previous_source_ref }}
-          RELEASE_BODY_PATH_INPUT: ${{ inputs.release_body_path }}
-          PUBLISH_RELEASE_INPUT: ${{ inputs.publish_release }}
         run: |
-          $sourceRoot = Join-Path $env:GITHUB_WORKSPACE 'source'
-          $outputDirectory = Join-Path $env:GITHUB_WORKSPACE 'packager\release-output'
-          $publishArgs = @{
-            Target = $env:TARGET_INPUT
-            ReleaseTag = $env:RELEASE_TAG_INPUT
-            ReleaseRepo = $env:RELEASE_REPO_INPUT
-            SourceRoot = $sourceRoot
-            SourceRef = $env:SOURCE_REF_INPUT
-            OutputDirectory = $outputDirectory
-          }
-
-          if ($env:PUBLISH_RELEASE_INPUT -eq 'false') {
-            $publishArgs['BuildOnly'] = $true
-          }
-          $previousSourceRef = $env:PREVIOUS_SOURCE_REF_INPUT.Trim()
-          if ($previousSourceRef) {
-            $publishArgs['PreviousSourceRef'] = $previousSourceRef
-          }
-          $releaseBodyPath = $env:RELEASE_BODY_PATH_INPUT.Trim()
-          if ($releaseBodyPath) {
-            if (-not [System.IO.Path]::IsPathRooted($releaseBodyPath)) {
-              $releaseBodyPath = Join-Path $env:GITHUB_WORKSPACE "packager\$releaseBodyPath"
-            }
-            $publishArgs['ReleaseBodyPath'] = $releaseBodyPath
-          }
-
-          .\scripts\publish-local-release.ps1 @publishArgs
-
-      - name: Set artifact name
-        id: artifact
-        shell: pwsh
-        env:
-          TARGET_INPUT: ${{ inputs.target }}
-          RELEASE_TAG_INPUT: ${{ inputs.release_tag }}
-        run: |
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "name=windows-release-$env:TARGET_INPUT-$env:RELEASE_TAG_INPUT"
-
-      - name: Upload Windows artifacts
+          python -B -X utf8 retest-runner/scripts/published-retest/retest_published_windows.py --source-root source --packager-root packager --work "$env:RUNNER_TEMP/published-update-retest-${{ github.run_id }}-${{ github.run_attempt }}"
+          if ($LASTEXITCODE -ne 0) { throw 'Published Windows retest failed; see sanitized report' }
+      - name: Save only allowlisted sanitized evidence, including failures
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ steps.artifact.outputs.name }}
-          path: packager/release-output/*
-          if-no-files-found: error
+          name: published-windows-retest-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/published-update-retest-${{ github.run_id }}-${{ github.run_attempt }}/retest-report.json
+          if-no-files-found: warn
+          retention-days: 14
+          include-hidden-files: false
