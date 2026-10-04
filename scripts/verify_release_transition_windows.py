@@ -124,7 +124,7 @@ def extract_baseline(archive_path, work, snapshot):
     with PayloadArchive(archive_path, snapshot.full_asset, snapshot.manifest,
                         snapshot.manifest, snapshot.identity):
         with zipfile.ZipFile(archive_path) as archive:
-            archive.extractall(work)
+            archive.extractall(io_path(work))
     install = work / 'VisionWorkshop'
     verify_directory(install / 'app', snapshot.manifest, snapshot.identity)
     return install
@@ -313,7 +313,7 @@ def main():
     sys.path.insert(0, str(args.source_root))
     global Asset, ASSET_PREFIX, CONFIG_DEFAULTS, Identity, Manifest, DeltaDescriptor, canonical_json
     global GitHubReleaseProvider, ReleaseSnapshot, PayloadArchive, FileTransaction, InstallationRegistry
-    global file_record, file_identity, verify_directory, inspect_installation, asset_path
+    global file_record, file_identity, verify_directory, inspect_installation, asset_path, io_path
     global create_request, launch_session, current_process, ProcessHandle, atomic_json
     global command_message, read_startup_trace
     from update_contract import Asset, ASSET_PREFIX, CONFIG_DEFAULTS, Identity, Manifest, DeltaDescriptor, canonical_json
@@ -322,7 +322,7 @@ def main():
     from update_file_transaction import FileTransaction
     from update_installation import InstallationRegistry
     from update_package import file_record, verify_directory, inspect_installation
-    from update_filesystem import file_identity
+    from update_filesystem import file_identity, io_path
     from update_download import asset_path, download_asset
     from update_session import create_request, launch_session, provenance
     from update_process import current_process, ProcessHandle
@@ -360,6 +360,14 @@ def main():
                       baseline_download=('reused CI-downloaded public ZIP; anonymous metadata recheck and full SHA-256 verified'
                                          if args.baseline_lock else
                                          'anonymous production GitHubReleaseProvider + download_asset SHA-256 verified'))
+        changed_bytes = sum(record.size for name, record in target.manifest.files.items()
+                            if base.manifest.files.get(name) != record)
+        required_free = (sum(record.size for record in base.manifest.files.values())
+                         + 2 * changed_bytes + target.selected_asset.size + 1024**3)
+        free = shutil.disk_usage(args.work).free
+        report.update(required_free_bytes_estimate=required_free, observed_free_bytes=free)
+        check(free >= required_free, 'Insufficient isolated Windows acceptance disk space: '
+              f'need approximately {required_free} bytes, have {free}')
         install = extract_baseline(archive, args.work, base)
         registry = InstallationRegistry(install)
         with registry.gate():
