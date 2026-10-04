@@ -11,7 +11,6 @@ on:
       source_ref:
         description: Source branch, tag, or commit
         required: true
-        default: codex/yolo-pose-custom-ai-labeling
         type: string
       previous_source_ref:
         description: Optional source base ref for release notes
@@ -19,8 +18,8 @@ on:
         default: ''
         type: string
       release_tag:
-        description: Release tag to create or update, for example v1.2.3
-        required: true
+        description: Release tag (Vision Train may leave blank to read source version)
+        required: false
         type: string
       release_repo:
         description: GitHub repo to publish releases to, for example owner/repo
@@ -33,9 +32,34 @@ on:
         default: ''
         type: string
       publish_release:
-        description: Publish the built assets to the selected GitHub Release
+        description: Publish assets - true publishes; auto builds Vision Train only and publishes other targets
         required: true
-        default: true
+        default: auto
+        type: choice
+        options: [auto, 'false', 'true']
+      packager_ref:
+        description: Packager revision (blank uses the selected workflow SHA; required across repositories)
+        default: ''
+        type: string
+      delta_base_tag:
+        description: Vision Train baseline - auto, none, or an older official Release tag
+        default: auto
+        type: string
+      release_title:
+        description: Optional Vision Train release title
+        default: ''
+        type: string
+      notes:
+        description: Optional Vision Train short release description
+        default: ''
+        type: string
+      mandatory:
+        description: Unsupported by Vision Train protocol 3 - must remain false
+        default: false
+        type: boolean
+      changelog_all:
+        description: Vision Train notes from all source history
+        default: false
         type: boolean
   workflow_call:
     inputs:
@@ -50,7 +74,8 @@ on:
         default: ''
         type: string
       release_tag:
-        required: true
+        required: false
+        default: ''
         type: string
       release_repo:
         required: false
@@ -64,6 +89,24 @@ on:
         required: false
         default: false
         type: boolean
+      packager_ref:
+        default: ''
+        type: string
+      delta_base_tag:
+        default: auto
+        type: string
+      release_title:
+        default: ''
+        type: string
+      notes:
+        default: ''
+        type: string
+      mandatory:
+        default: false
+        type: boolean
+      changelog_all:
+        default: false
+        type: boolean
     secrets:
       SOURCE_REPO_TOKEN:
         required: false
@@ -72,25 +115,68 @@ on:
     outputs:
       artifact_name:
         description: Name of the uploaded Windows release artifact
-        value: ${{ jobs.build.outputs.artifact_name }}
+        value: ${{ jobs.vision_train.outputs.artifact_name || jobs.build.outputs.artifact_name }}
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
+  vision_train:
+    if: inputs.target == 'emo-vision-train'
+    uses: ./.github/workflows/visionworkshop-portable.yml
+    permissions:
+      contents: read
+    with:
+      source_ref: ${{ inputs.source_ref }}
+      release_tag: ${{ inputs.release_tag }}
+      branding_profile: profiles/visionworkshop.json
+      packager_ref: ${{ inputs.packager_ref }}
+      publish_release: ${{ inputs.publish_release == true || inputs.publish_release == 'true' }}
+      release_repo: ${{ inputs.release_repo }}
+      delta_base_tag: ${{ inputs.delta_base_tag }}
+      previous_source_ref: ${{ inputs.previous_source_ref }}
+      release_title: ${{ inputs.release_title }}
+      notes: ${{ inputs.notes }}
+      mandatory: ${{ inputs.mandatory }}
+      release_body_path: ${{ inputs.release_body_path }}
+      changelog_all: ${{ inputs.changelog_all }}
+    secrets:
+      SOURCE_REPO_TOKEN: ${{ secrets.SOURCE_REPO_TOKEN }}
+      RELEASE_REPO_TOKEN: ${{ secrets.RELEASE_REPO_TOKEN }}
   build:
+    if: inputs.target != 'emo-vision-train'
     name: Build ${{ inputs.target }} for Windows
     runs-on: windows-latest
+    permissions:
+      contents: write
     outputs:
       artifact_name: ${{ steps.artifact.outputs.name }}
 
     steps:
+      - name: Select the packager revision
+        id: revision
+        shell: pwsh
+        env:
+          REQUESTED_REF: ${{ inputs.packager_ref }}
+          CALLER_REPOSITORY: ${{ github.repository }}
+          CALLER_SHA: ${{ github.sha }}
+        run: |
+          $ref = $env:REQUESTED_REF
+          if (-not $ref) {
+            if ($env:CALLER_REPOSITORY -ne 'jsdfhasuh/python_build_scripts') {
+              throw 'Cross-repository callers must supply packager_ref explicitly'
+            }
+            $ref = $env:CALLER_SHA
+          }
+          if ($ref -match '[\r\n]' -or $ref.StartsWith('-')) { throw 'Invalid packager_ref' }
+          Add-Content $env:GITHUB_OUTPUT "ref=$ref"
       - name: Checkout packager
         uses: actions/checkout@v7
         with:
           repository: jsdfhasuh/python_build_scripts
-          ref: master
+          ref: ${{ steps.revision.outputs.ref }}
           path: packager
+          persist-credentials: false
 
       - name: Load target config
         id: config
@@ -98,9 +184,13 @@ jobs:
         working-directory: packager
         env:
           TARGET: ${{ inputs.target }}
+          SOURCE_REF: ${{ inputs.source_ref }}
           RELEASE_TAG: ${{ inputs.release_tag }}
           RELEASE_REPO_INPUT: ${{ inputs.release_repo }}
         run: |
+          if ([string]::IsNullOrWhiteSpace($env:SOURCE_REF) -or $env:SOURCE_REF -match '[\r\n]' -or $env:SOURCE_REF.StartsWith('-')) {
+            throw 'source_ref must be an explicit branch, tag, or commit'
+          }
           if ($env:TARGET -notmatch '^[A-Za-z0-9_.-]+$') {
             throw "Invalid target name: $env:TARGET"
           }
@@ -118,6 +208,13 @@ jobs:
             if (-not $config.$field) {
               throw "Missing required config field: $field"
             }
+          }
+
+          if ($config.source_repo -notmatch '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$') {
+            throw 'Invalid source repository in target configuration'
+          }
+          if ($config.python_version -notmatch '^\d+\.\d+(\.\d+)?$') {
+            throw 'Invalid Python version in target configuration'
           }
 
           $releaseRepo = $env:RELEASE_REPO_INPUT.Trim()
@@ -165,6 +262,7 @@ jobs:
           token: ${{ secrets.SOURCE_REPO_TOKEN || github.token }}
           submodules: recursive
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -240,7 +338,7 @@ jobs:
             OutputDirectory = $outputDirectory
           }
 
-          if ($env:PUBLISH_RELEASE_INPUT -ne 'true') {
+          if ($env:PUBLISH_RELEASE_INPUT -eq 'false') {
             $publishArgs['BuildOnly'] = $true
           }
           $previousSourceRef = $env:PREVIOUS_SOURCE_REF_INPUT.Trim()

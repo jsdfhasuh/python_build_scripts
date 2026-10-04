@@ -1,0 +1,95 @@
+name: Diagnose Windows updater fixtures (no product build or release)
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: Exact source branch, tag, or commit containing the updater fixture tests
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      PYTHONIOENCODING: utf-8
+    steps:
+      - name: Read the selected diagnostic revision
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          path: packager
+          persist-credentials: false
+      - name: Validate source selection and target metadata
+        id: config
+        shell: pwsh
+        env:
+          SOURCE_REF: ${{ inputs.source_ref }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:SOURCE_REF) -or $env:SOURCE_REF -match '[\r\n]' -or $env:SOURCE_REF.StartsWith('-')) {
+            throw 'source_ref must be an explicit branch, tag, or commit'
+          }
+          $config = Get-Content packager/configs/emo-vision-train.json -Raw | ConvertFrom-Json
+          if ($config.source_repo -notmatch '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$') {
+            throw 'Invalid source repository in target configuration'
+          }
+          if ($config.python_version -notmatch '^\d+\.\d+(\.\d+)?$') { throw 'Invalid Python version' }
+          Add-Content $env:GITHUB_OUTPUT "source_repo=$($config.source_repo)"
+          Add-Content $env:GITHUB_OUTPUT "python_version=$($config.python_version)"
+      - name: Read the requested source revision
+        uses: actions/checkout@v7
+        with:
+          repository: ${{ steps.config.outputs.source_repo }}
+          ref: ${{ inputs.source_ref }}
+          path: source
+          token: ${{ secrets.SOURCE_REPO_TOKEN || github.token }}
+          submodules: false
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ steps.config.outputs.python_version }}
+      - name: Install fixture-only dependencies
+        run: python -m pip install Pillow PyYAML pytest requests psutil packaging pyinstaller==6.22.2 pefile PyQt5
+      - name: Record exact revisions and diagnostic scope
+        shell: pwsh
+        run: |
+          $packager = git -C packager rev-parse HEAD
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot identify packager revision' }
+          $source = git -C source rev-parse HEAD
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot identify source revision' }
+          Add-Content $env:GITHUB_STEP_SUMMARY "Packager SHA: $packager"
+          Add-Content $env:GITHUB_STEP_SUMMARY "Source SHA: $source"
+          Add-Content $env:GITHUB_STEP_SUMMARY 'Isolated updater fixtures only. Product GUI, GPU, hardware and published cross-version acceptance are not certified.'
+      - name: Packaging unit and integration tests
+        working-directory: packager
+        run: python -m unittest discover -s tests -v
+      - name: Windows updater contract and transaction tests
+        working-directory: source
+        run: python -m pytest tests/test_update_contract.py tests/test_update_file_transaction.py tests/test_update_v3_runtime.py tests/test_update_v3_recovery.py tests/test_update_launch.py tests/test_update_runtime.py tests/test_update_release.py tests/test_update_real_io.py -q
+      - name: Real Windows frozen updater fixture handoff and recovery
+        working-directory: source
+        run: python -X utf8 scripts/verify_update_windows.py
+      - name: Verify tracked source files stayed unchanged
+        if: always()
+        shell: pwsh
+        run: |
+          if (Test-Path source/.git) {
+            git -C source diff --exit-code HEAD --
+            if ($LASTEXITCODE -ne 0) { throw 'Diagnostic modified tracked source files' }
+          }
+      - name: Save fixture evidence only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: updater-fixture-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            source/build/updater-v3-verification/**/verification.json
+            source/build/updater-v3-verification/**/*.png
+          if-no-files-found: warn
+          retention-days: 14
+          include-hidden-files: false

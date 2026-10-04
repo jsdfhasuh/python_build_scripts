@@ -1,0 +1,60 @@
+name: Diagnose published baseline startup writes
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          path: packager
+          persist-credentials: false
+      - uses: actions/checkout@v7
+        with:
+          repository: jsdfhasuh/emo-vision-train
+          ref: f06663a5f8c258e7f32d56d7d538655b1aeb04bd
+          path: source
+          submodules: false
+          fetch-depth: 1
+          persist-credentials: false
+          token: ${{ secrets.SOURCE_REPO_TOKEN || github.token }}
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: Install diagnostic dependencies only
+        run: python -m pip install requests psutil
+      - name: Diagnose exact baseline with split profile
+        shell: pwsh
+        run: |
+          python -X utf8 packager/scripts/diagnose_baseline_startup_windows.py `
+            --source-root "$env:GITHUB_WORKSPACE/source" `
+            --work "$env:RUNNER_TEMP/baseline-startup-split" `
+            --profile-layout original-harness `
+            --expected-source-commit f06663a5f8c258e7f32d56d7d538655b1aeb04bd `
+            --baseline-tag v1.0.28
+          if ($LASTEXITCODE -ne 0) { throw 'Baseline startup diagnostic failed before complete evidence' }
+      - name: Compare a fresh native Windows profile
+        shell: pwsh
+        run: |
+          $zip = @(Get-ChildItem "$env:RUNNER_TEMP/baseline-startup-split/download/*.zip")
+          if ($zip.Count -ne 1) { throw 'Expected exactly one verified cached public baseline ZIP' }
+          python -X utf8 packager/scripts/diagnose_baseline_startup_windows.py `
+            --source-root "$env:GITHUB_WORKSPACE/source" `
+            --work "$env:RUNNER_TEMP/baseline-startup-native" `
+            --profile-layout windows-profile `
+            --baseline-archive "$($zip[0].FullName)" `
+            --expected-source-commit f06663a5f8c258e7f32d56d7d538655b1aeb04bd `
+            --baseline-tag v1.0.28
+          if ($LASTEXITCODE -ne 0) { throw 'Native-profile baseline diagnostic failed' }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: baseline-startup-path-evidence-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/baseline-startup-split/startup-diagnostic.json
+            ${{ runner.temp }}/baseline-startup-native/startup-diagnostic.json
+          if-no-files-found: error
