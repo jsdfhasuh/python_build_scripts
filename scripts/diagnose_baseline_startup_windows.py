@@ -45,6 +45,8 @@ def main():
     parser.add_argument('--source-root', type=Path, required=True)
     parser.add_argument('--work', type=Path, required=True)
     parser.add_argument('--baseline-lock', type=Path)
+    parser.add_argument('--baseline-zip', '--baseline-archive', dest='baseline_archive', type=Path)
+    parser.add_argument('--profile-layout', choices=('original-harness', 'windows-profile', 'split', 'native'), default='original-harness')
     parser.add_argument('--baseline-tag', default='v1.0.28')
     parser.add_argument('--expected-source-commit', required=True)
     args = parser.parse_args()
@@ -78,7 +80,8 @@ def main():
     spec.loader.exec_module(helpers)
     work.mkdir(parents=True)
     report = {'status': 'running', 'scope': 'actual public baseline startup path-only diagnostic',
-              'source_commit': commit, 'baseline_tag': args.baseline_tag, 'snapshots': []}
+              'source_commit': commit, 'baseline_tag': args.baseline_tag,
+              'profile_layout': args.profile_layout, 'snapshots': []}
     try:
         with GitHubReleaseProvider(token='') as provider:
             base = provider.exact_release(args.baseline_tag)
@@ -92,6 +95,11 @@ def main():
                 actual = file_record(archive)
                 helpers.check((actual.size, actual.sha256) == (base.full_asset.size, base.full_asset.digest),
                               'Baseline ZIP bytes changed')
+            elif args.baseline_archive:
+                archive = args.baseline_archive.resolve()
+                actual = file_record(archive)
+                helpers.check((actual.size, actual.sha256) == (base.full_asset.size, base.full_asset.digest),
+                              'Reused public baseline archive bytes mismatch')
             else:
                 archive = download_asset(provider, base.full_asset, work / 'download')
         report.update(baseline_build_id=base.identity.build_id, baseline_sha256=base.full_asset.digest)
@@ -110,6 +118,16 @@ def main():
         inspect_installation(app, base.manifest, base.identity)
         before = inventory(app)
         env = helpers.environment(work)
+        if args.profile_layout in ('native', 'windows-profile'):
+            profile = work / 'userdata' / 'windows-profile'
+            values = {'USERPROFILE': profile, 'HOME': profile,
+                      'APPDATA': profile / 'AppData/Roaming',
+                      'LOCALAPPDATA': profile / 'AppData/Local',
+                      'TEMP': profile / 'AppData/Local/Temp',
+                      'TMP': profile / 'AppData/Local/Temp'}
+            for key, path in values.items():
+                path.mkdir(parents=True, exist_ok=True)
+                env[key] = str(path)
         helpers.spawn_frozen([install / 'VisionWorkshop.exe'], install, env)
         expected_image = os.path.normcase(str(app / 'VisionWorkshopApp.exe'))
         started = time.monotonic()
