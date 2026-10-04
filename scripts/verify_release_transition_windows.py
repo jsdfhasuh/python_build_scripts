@@ -69,8 +69,13 @@ def environment(work):
             env.pop(key)
         elif key.upper().startswith(('PYTHON', 'CONDA', 'VIRTUAL_ENV')):
             env.pop(key)
-    for name in ('APPDATA', 'LOCALAPPDATA', 'USERPROFILE', 'HOME', 'TEMP', 'TMP'):
-        destination = work / 'userdata' / name
+    profile = work / 'userdata' / 'profile'
+    directories = {'USERPROFILE': profile, 'HOME': profile,
+                   'APPDATA': profile / 'AppData/Roaming',
+                   'LOCALAPPDATA': profile / 'AppData/Local',
+                   'TEMP': profile / 'AppData/Local/Temp',
+                   'TMP': profile / 'AppData/Local/Temp'}
+    for name, destination in directories.items():
         destination.mkdir(parents=True, exist_ok=True)
         env[name] = str(destination)
     env.update(QT_QPA_PLATFORM='offscreen', PYINSTALLER_RESET_ENVIRONMENT='1',
