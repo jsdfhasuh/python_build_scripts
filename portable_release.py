@@ -17,6 +17,7 @@ from pathlib import PurePosixPath
 from urllib.parse import quote
 
 import build
+from build_environment import pythonChildEnvironment
 from branding_build import CompilerError
 from branding_build import buildCommands
 from branding_build import executeBuild
@@ -573,6 +574,21 @@ def runRelease(args: argparse.Namespace) -> dict:
   # A failure leaves a valid local ZIP, but never a summary falsely marked as published.
   summaryPath = output / 'build-summary.json'
   writeJsonNew(summaryPath, summary)
+  if args.publish and os.environ.get('VISIONWORKSHOP_REQUIRE_WINDOWS_ACCEPTANCE') == '1':
+    if not protocolEnabled(resolved) or not args.delta_base_lock:
+      raise BuildConfigError('Windows release acceptance requires a frozen protocol-3 baseline')
+    acceptanceRoot = Path(os.environ['RUNNER_TEMP']) / 'visionworkshop-product-acceptance'
+    command = [sys.executable, '-X', 'utf8',
+               str(resolved.packagerRoot / 'scripts/verify_release_transition_windows.py'),
+               '--source-root', str(sourceRoot), '--assets', str(output),
+               '--work', str(acceptanceRoot), '--expected-source-commit', source['commit'],
+               '--baseline-tag', args.delta_base_tag, '--target-tag', args.release_tag,
+               '--baseline-lock', str(args.delta_base_lock)]
+    print('Mandatory real Windows product update acceptance before publication', flush=True)
+    subprocess.run(command, check=True, env=pythonChildEnvironment())
+    report = json.loads((acceptanceRoot / 'acceptance.json').read_text(encoding='utf-8'))
+    if report.get('status') != 'passed':
+      raise BuildConfigError('Real Windows product update acceptance did not pass')
   if args.publish:
     publishAssets(args, resolved, sourceRoot, context, summary, output, content,
                   verifiedArchive=verifiedArchive)
