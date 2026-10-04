@@ -13,6 +13,8 @@ from dataclasses import field
 from pathlib import Path
 from typing import List, Set
 
+from build_config import BuildContext
+
 
 PYINSTALLER_CMD = [sys.executable, '-m', 'PyInstaller']
 
@@ -312,7 +314,6 @@ def _collect_conda_runtime_dlls() -> List[str]:
             if os.path.isfile(path) and path not in seen:
                 seen.add(path)
                 dlls.append(path)
-
     return dlls
 
 
@@ -440,6 +441,9 @@ def append_binary_args(cmd: List[str], job: BuildJob, collect_binaries: List[str
             for dll in conda_dlls:
                 cmd.append(f'--add-binary={dll}{os.pathsep}{dest}')
 
+    for runtimeDll in _collect_python_runtime_dlls():
+        cmd.append(f'--add-binary={runtimeDll}{os.pathsep}.')
+
     if not job.collect_python_binary:
         return
 
@@ -451,12 +455,9 @@ def append_binary_args(cmd: List[str], job: BuildJob, collect_binaries: List[str
     else:
         print("Warning: python DLL not found; the packaged app may fail to run")
 
-    for runtimeDll in _collect_python_runtime_dlls():
-        cmd.append(f'--add-binary={runtimeDll}{os.pathsep}.')
-
-
 def build_pyinstaller_command(
-    job: BuildJob, clean: bool, specpath: str = None
+    job: BuildJob, clean: bool, specpath: str = None,
+    distpath: str | None = None, workpath: str | None = None,
 ) -> List[str]:
     cmd: List[str] = list(PYINSTALLER_CMD)
     cmd.append('--noconfirm')
@@ -467,6 +468,10 @@ def build_pyinstaller_command(
     extra_args = list(job.extra_args)
 
     append_common_args(cmd, job, clean, specpath)
+    if distpath:
+        cmd.extend(['--distpath', distpath])
+    if workpath:
+        cmd.extend(['--workpath', workpath])
     append_data_args(cmd, job)
     append_import_args(cmd, job)
     append_torch_args(cmd, job, collect_binaries, extra_args)
@@ -491,16 +496,27 @@ def build_updater_command(cfg: dict, clean: bool, specpath: str = None) -> List[
 
 
 def build_job_commands(
-    cfg: dict, clean: bool, specpath: str = None
+    cfg: dict, clean: bool, specpath: str = None,
+    context: BuildContext | None = None,
 ) -> List[tuple[BuildJob, List[str]]]:
     jobs = create_build_jobs(cfg)
+    if context:
+        if specpath:
+            raise ValueError('--specpath cannot override isolated branding outputs')
+        return [
+            (job, build_pyinstaller_command(
+                job, clean, str(context.specPath(job.label)),
+                str(context.distRoot), str(context.workPath(job.label)),
+            ))
+            for job in jobs
+        ]
     return [
         (job, build_pyinstaller_command(job, clean, specpath))
         for job in jobs
     ]
 
 
-def copy_updater_to_app_dir(cfg: dict) -> None:
+def copy_updater_to_app_dir(cfg: dict, distpath: str | Path = 'dist') -> None:
     updater_cfg = cfg.get('updater', {}) or {}
     if not updater_cfg.get('enabled', False):
         return
@@ -510,8 +526,8 @@ def copy_updater_to_app_dir(cfg: dict) -> None:
         raise ValueError('Missing "name" in configuration')
 
     updater_name = updater_cfg.get('name', 'updater')
-    updater_exe = Path('dist') / f'{updater_name}.exe'
-    app_dir = Path('dist') / app_name
+    updater_exe = Path(distpath) / f'{updater_name}.exe'
+    app_dir = Path(distpath) / app_name
 
     if not app_dir.exists():
         raise FileNotFoundError(f'Application dist directory not found: {app_dir}')
@@ -559,10 +575,26 @@ def main() -> int:
     parser.add_argument(
         '--specpath', default=None, help='Directory to write .spec (optional)'
     )
+    parser.add_argument('--branding-profile', help='Opt-in portable branding profile')
+    parser.add_argument('--program-name', help='Program filename without .exe')
+    parser.add_argument('--icon-path', help='ICO path, relative to packager root')
     args = parser.parse_args()
 
     try:
+        if any(value is not None for value in (
+            args.branding_profile, args.program_name, args.icon_path
+        )):
+            from branding_build import runBrandedBuild
+            return runBrandedBuild(
+                Path(args.config), profilePath=args.branding_profile,
+                programName=args.program_name, iconPath=args.icon_path,
+                clean=args.clean, dryRun=args.dry_run, specpath=args.specpath,
+            )
         cfg = load_config(args.config)
+        if cfg.get('update_protocol') == 3:
+            from branding_build import runBrandedBuild
+            return runBrandedBuild(Path(args.config), clean=args.clean,
+                                   dryRun=args.dry_run, specpath=args.specpath)
         job_commands = build_job_commands(
             cfg, clean=args.clean, specpath=args.specpath
         )

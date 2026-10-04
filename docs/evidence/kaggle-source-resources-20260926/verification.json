@@ -1,0 +1,96 @@
+{
+  "source": "D:/training_platform-kaggle-foundation",
+  "effective_config_sha256": "02889542979034edfeeb415ebaa8b44b79d95b26ca50a747d536a07cd30c04be",
+  "profile": "profiles/visionworkshop.json",
+  "override": {
+    "program_name": "VisionWorkshop"
+  },
+  "status": "PASS_SOURCE_DATA_MAPPING",
+  "resources": [
+    {
+      "path": "kaggle_func/job_builder.py",
+      "size": 16088,
+      "sha256": "04b632a67cb480a3ed469f4f1c71dda823425b6cce35312e6cfd9477ce243cb2",
+      "destination": "kaggle_func/job_builder.py"
+    },
+    {
+      "path": "kaggle_func/build_errors.py",
+      "size": 278,
+      "sha256": "5080c2783b36453183a00d7845cd0aa10b9f04c4b26a3856a1cbe3fc9a272cb8",
+      "destination": "kaggle_func/build_errors.py"
+    },
+    {
+      "path": "kaggle_func/runtime_builder.py",
+      "size": 5108,
+      "sha256": "b86aae7616414bdc56fddf757681eb0973f660319644b96f0f4f2c07dc98348b",
+      "destination": "kaggle_func/runtime_builder.py"
+    },
+    {
+      "path": "kaggle_func/runtime_bootstrap.py",
+      "size": 9541,
+      "sha256": "16e263cf7b41839d6a4338b991f982820d04223105d42b81ea4415fe378d7bfe",
+      "destination": "kaggle_func/runtime_bootstrap.py"
+    },
+    {
+      "path": "kaggle_func/runtime/__init__.py",
+      "size": 68,
+      "sha256": "0c5fefd19f1ae30e55bf59278c48560bb2924b0b08aee02c425c123ed8fd8e48",
+      "destination": "kaggle_func/runtime/__init__.py"
+    },
+    {
+      "path": "kaggle_func/runtime/config.py",
+      "size": 3337,
+      "sha256": "af7fa58d7c6130ba6a9afdbc0a5c1f4b779e872baa6d63149abcb8edb9afbf86",
+      "destination": "kaggle_func/runtime/config.py"
+    },
+    {
+      "path": "kaggle_func/runtime/yolo_train.py",
+      "size": 50550,
+      "sha256": "17e214559c6d69aa43d01ee2f0a1280144859052a40e18b35c0d32cd4d7af449",
+      "destination": "kaggle_func/runtime/yolo_train.py"
+    },
+    {
+      "path": "kaggle_func/runtime/patchcore_train.py",
+      "size": 68490,
+      "sha256": "5a035ec24d3b26e06793a6172beb400d1f92d48e8a65b4bdf2ab53de6d08b8fe",
+      "destination": "kaggle_func/runtime/patchcore_train.py"
+    },
+    {
+      "path": "kaggle_func/templates/kaggle_yolo_train.py.tpl",
+      "size": 50593,
+      "sha256": "26c4bb4106e52d8c7cc8e81fdca6f2734bc369907f5540b53737905cf752f2ff",
+      "destination": "kaggle_func/templates/kaggle_yolo_train.py.tpl"
+    },
+    {
+      "path": "kaggle_func/templates/kaggle_patchcore_train.py.tpl",
+      "size": 70582,
+      "sha256": "42d4bf199dae8e6406512fb3a29fea25b6b26c756dc6ada1687d0d2b81e5b7fa",
+      "destination": "kaggle_func/templates/kaggle_patchcore_train.py.tpl"
+    },
+    {
+      "path": "anomaly_func/environment.py",
+      "size": 7352,
+      "sha256": "b743eae1a0e8b63948c85aaa1099c7aedda3f2e37c315b767618685c3f1a3529",
+      "destination": "anomaly_func/environment.py"
+    },
+    {
+      "path": "anomaly_func/score_contract.py",
+      "size": 23826,
+      "sha256": "36bbc8d2fe5293713901402af4b0f9e9f23e2d877519c77066cd1948d5a578ef",
+      "destination": "anomaly_func/score_contract.py"
+    },
+    {
+      "path": "anomaly_func/training_progress.py",
+      "size": 22873,
+      "sha256": "cb7d4cb5a37817821bb0ac994032d24fffac01ee52a6b99f32bd9574d47d3b8d",
+      "destination": "anomaly_func/training_progress.py"
+    }
+  ],
+  "dry_run": {
+    "exit_code": 1,
+    "classification": "RESOURCE_MISSING",
+    "reason": "Uninitialized source worktree ultralytics/ultralytics submodule; not changed or initialized"
+  },
+  "frozen_exe": "NOT_RUN",
+  "published": false
+}

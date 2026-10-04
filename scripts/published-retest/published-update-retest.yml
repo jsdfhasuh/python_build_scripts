@@ -1,0 +1,68 @@
+name: Retest published Windows updater (no build or release)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: published-windows-retest-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  retest-published-assets:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      PYTHONIOENCODING: utf-8
+    steps:
+      - name: Read this exact test commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          path: retest-runner
+          persist-credentials: false
+      - name: Read immutable packager baseline
+        uses: actions/checkout@v7
+        with:
+          repository: jsdfhasuh/python_build_scripts
+          ref: cc548366fc8e574ba3eb66398bf17dba9311a800
+          path: packager
+          persist-credentials: false
+      - name: Read exact published product source
+        uses: actions/checkout@v7
+        with:
+          repository: jsdfhasuh/emo-vision-train
+          ref: 014626e0dbbb8f7f90d08e9a2c9776606bc77025
+          path: source
+          token: ${{ secrets.SOURCE_REPO_TOKEN || github.token }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: Install test-only helpers (no product build dependencies)
+        run: python -m pip install requests==2.32.5 psutil==7.1.0 packaging==25.0 PyYAML==6.0.3
+      - name: Validate retest helpers and safety constraints
+        shell: pwsh
+        env:
+          RETEST_SOURCE_ROOT: ${{ github.workspace }}/source
+        run: |
+          python -m unittest discover -s retest-runner/scripts/published-retest -p test_retest_helpers.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'Retest helper checks failed' }
+      - name: Run real released Windows updater against public exact bytes
+        timeout-minutes: 52
+        shell: pwsh
+        run: |
+          python -B -X utf8 retest-runner/scripts/published-retest/retest_published_windows.py --source-root source --packager-root packager --work "$env:RUNNER_TEMP/published-update-retest-${{ github.run_id }}-${{ github.run_attempt }}"
+          if ($LASTEXITCODE -ne 0) { throw 'Published Windows retest failed; see sanitized report' }
+      - name: Save only allowlisted sanitized evidence, including failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: published-windows-retest-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/published-update-retest-${{ github.run_id }}-${{ github.run_attempt }}/retest-report.json
+          if-no-files-found: warn
+          retention-days: 14
+          include-hidden-files: false

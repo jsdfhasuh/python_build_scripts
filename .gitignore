@@ -7,3 +7,4 @@ __pycache__/
 .vscode/
 *.spec
 .release-wizard*.local.json
+release-output/
