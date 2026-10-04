@@ -587,8 +587,14 @@ def runRelease(args: argparse.Namespace) -> dict:
     print('Mandatory real Windows product update acceptance before publication', flush=True)
     subprocess.run(command, check=True, env=pythonChildEnvironment())
     report = json.loads((acceptanceRoot / 'acceptance.json').read_text(encoding='utf-8'))
-    if report.get('status') != 'passed':
-      raise BuildConfigError('Real Windows product update acceptance did not pass')
+    if (report.get('status') != 'passed'
+        or report.get('source_commit') != source['commit']
+        or report.get('target_tag') != args.release_tag
+        or report.get('target_full_sha256') != summary['asset_sha256']
+        or report.get('target_manifest_sha256') != summary['update_protocol']['files_sha256']
+        or report.get('transition', {}).get('state') != 'passed'
+        or report.get('interrupted_recovery', {}).get('state') != 'passed'):
+      raise BuildConfigError('Real Windows product acceptance failed or build binding changed')
   if args.publish:
     publishAssets(args, resolved, sourceRoot, context, summary, output, content,
                   verifiedArchive=verifiedArchive)
