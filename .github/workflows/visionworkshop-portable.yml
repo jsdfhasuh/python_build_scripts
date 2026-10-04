@@ -125,7 +125,7 @@ permissions:
 jobs:
   build:
     runs-on: windows-latest
-    timeout-minutes: 90
+    timeout-minutes: 180
     env:
       PYTHONDONTWRITEBYTECODE: '1'
     outputs:
@@ -189,7 +189,7 @@ jobs:
             source/requirements.txt
             packager/ci/vision-train-runtime.json
       - name: Install ICO validator
-        run: python -m pip install Pillow
+        run: python -m pip install Pillow PyYAML pytest requests psutil
       - name: Preflight before heavy dependencies
         shell: pwsh
         working-directory: packager
@@ -211,10 +211,20 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Dependency parser installation failed' }
           python -X utf8 vision_train_runtime.py install --source-root ../source
           if ($LASTEXITCODE -ne 0) { throw 'GPU runtime dependency installation failed' }
+      - name: Packaging unit and integration tests
+        working-directory: packager
+        run: python -m unittest discover -s tests -v
+      - name: Windows updater contract and transaction tests
+        working-directory: source
+        run: python -m pytest tests/test_update_contract.py tests/test_update_file_transaction.py tests/test_update_v3_runtime.py tests/test_update_v3_recovery.py tests/test_update_launch.py tests/test_update_runtime.py tests/test_update_release.py tests/test_update_real_io.py -q
+      - name: Real Windows frozen updater fixture handoff and recovery
+        working-directory: source
+        run: python -X utf8 scripts/verify_update_windows.py
       - name: Build through the shared portable entry
         shell: pwsh
         working-directory: packager
         env:
+          VISIONWORKSHOP_REQUIRE_WINDOWS_ACCEPTANCE: '1'
           GH_TOKEN: ${{ secrets.RELEASE_REPO_TOKEN || github.token }}
           RELEASE_REPO_TOKEN: ${{ secrets.RELEASE_REPO_TOKEN }}
         run: |
@@ -242,3 +252,15 @@ jobs:
           name: ${{ steps.artifact.outputs.name }}
           path: ${{ runner.temp }}/vision-train-public/
           if-no-files-found: error
+      - name: Save dynamic acceptance evidence even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visionworkshop-validation-evidence-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/visionworkshop-product-acceptance/acceptance.json
+            ${{ runner.temp }}/visionworkshop-product-acceptance/**/*.log
+            source/build/updater-v3-verification/**/verification.json
+            source/build/updater-v3-verification/**/*.png
+            packager/release-output/ci/build-summary.json
+          if-no-files-found: warn
