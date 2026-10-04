@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "repository": "jsdfhasuh/emo-vision-train-release",
+  "source_commit": "014626e0dbbb8f7f90d08e9a2c9776606bc77025",
+  "packager_commit": "cc548366fc8e574ba3eb66398bf17dba9311a800",
+  "releases": {
+    "v1.0.28": {
+      "release_id": 391145728,
+      "build_id": "20260918T001406Z-47810761a611",
+      "source_commit": "f06663a5f8c258e7f32d56d7d538655b1aeb04bd",
+      "assets": [
+        {
+          "id": 571494777,
+          "name": "VisionWorkshop-windows-x86_64-20260918T001406Z-47810761a611-full.zip",
+          "size": 2109173839,
+          "digest": "sha256:d0309d5841f6cafde11226e5d7bdf7cf0b186b5671c21444347083b170934a65",
+          "state": "uploaded"
+        },
+        {
+          "id": 571494779,
+          "name": "VisionWorkshop-windows-x86_64-package_files.json",
+          "size": 2030913,
+          "digest": "sha256:ec2dfabd3a18332dce4a8c5349d3c2a0666bd282f6db7f0b54072d2f9febb107",
+          "state": "uploaded"
+        },
+        {
+          "id": 571494778,
+          "name": "VisionWorkshop-windows-x86_64-release_identity.json",
+          "size": 599,
+          "digest": "sha256:b228b4862b34f244321725538bc99909c651cc491716920cb476e3cca979bea4",
+          "state": "uploaded"
+        }
+      ]
+    },
+    "v1.0.29": {
+      "release_id": 402865744,
+      "build_id": "20261004T045527Z-65136e717f1e",
+      "source_commit": "014626e0dbbb8f7f90d08e9a2c9776606bc77025",
+      "assets": [
+        {
+          "id": 609235090,
+          "name": "VisionWorkshop-windows-x86_64-20261004T045527Z-65136e717f1e-from-20260918T001406Z-47810761a611-delta.zip",
+          "size": 130400988,
+          "digest": "sha256:d43ac724d64836b622ca25eaddf55a78cd79e3165712203de3e250267f54240a",
+          "state": "uploaded"
+        },
+        {
+          "id": 609235093,
+          "name": "VisionWorkshop-windows-x86_64-20261004T045527Z-65136e717f1e-from-20260918T001406Z-47810761a611-delta_descriptor.json",
+          "size": 642,
+          "digest": "sha256:855907ab828240f818151609ce95fc85f2e18e42356668dca48ead7a4df26f32",
+          "state": "uploaded"
+        },
+        {
+          "id": 609235088,
+          "name": "VisionWorkshop-windows-x86_64-20261004T045527Z-65136e717f1e-full.zip",
+          "size": 2111209374,
+          "digest": "sha256:2ca58ec646fb3be5388ea3ad8098f839c890758520e742b3b95c10349fad443f",
+          "state": "uploaded"
+        },
+        {
+          "id": 609235089,
+          "name": "VisionWorkshop-windows-x86_64-package_files.json",
+          "size": 2036071,
+          "digest": "sha256:bedc11205df380bbf6e9c6b0a939f1020419f16f9b0508ece60b7697527f97a0",
+          "state": "uploaded"
+        },
+        {
+          "id": 609235091,
+          "name": "VisionWorkshop-windows-x86_64-release_identity.json",
+          "size": 599,
+          "digest": "sha256:066987b7fb247b8df0348dfa373fef3ed982a0e7eeb7b0177caa6f47ec90bb7e",
+          "state": "uploaded"
+        }
+      ]
+    }
+  }
+}
