@@ -77,4 +77,5 @@ $legacyArguments = @{}
 foreach ($field in $PSBoundParameters.Keys) {
   if ($field -ne 'Publish') { $legacyArguments[$field] = $PSBoundParameters[$field] }
 }
+if ($Target -eq 'emo-master-runtime' -and $Publish) { $legacyArguments['Publish'] = $true }
 & (Join-Path $PSScriptRoot 'publish-local-release-legacy.ps1') @legacyArguments

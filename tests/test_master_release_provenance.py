@@ -11,7 +11,7 @@ PUBLISHER = ROOT / 'scripts' / 'publish-local-release-legacy.ps1'
 class MasterReleaseProvenanceTests(unittest.TestCase):
   def testGuardsAreScopedAndBuildOnlyIsExempt(self):
     text = PUBLISHER.read_text(encoding='utf-8')
-    self.assertIn("$guardMasterPublication = $Target -eq 'emo-master' -and -not $BuildOnly", text)
+    self.assertIn("$guardMasterPublication = $Target -in @('emo-master', 'emo-master-runtime') -and -not $BuildOnly", text)
     self.assertLess(text.index('if ($BuildOnly) {'), text.index('  $releaseExists = Test-MasterReleaseExists'))
 
   def testMasterUploadCannotClobberAndChecksAllAssetsFirst(self):

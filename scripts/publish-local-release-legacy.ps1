@@ -13,10 +13,13 @@ param(
   [switch]$Mandatory,
   [switch]$SkipBuild,
   [switch]$NotesOnly,
-  [switch]$BuildOnly
+  [switch]$BuildOnly,
+  [switch]$Publish
 )
 
 $ErrorActionPreference = 'Stop'
+if ($Target -eq 'emo-master-runtime' -and -not $Publish) { $BuildOnly = $true }
+if ($Publish -and $BuildOnly) { throw 'Publish and BuildOnly cannot be combined' }
 $MaxGithubReleaseAssetBytes = 2147483647
 
 function Get-AssetSha256 {
@@ -46,8 +49,14 @@ function Get-AssetSha256 {
 function Compress-ReleaseArchive {
   param(
     [Parameter(Mandatory = $true)][string]$DistDir,
-    [Parameter(Mandatory = $true)][string]$AssetPath
+    [Parameter(Mandatory = $true)][string]$AssetPath,
+    [switch]$PreferDeflate
   )
+
+  if ($PreferDeflate) {
+    Compress-Archive -LiteralPath $DistDir -DestinationPath $AssetPath -Force
+    return 'zip/deflate'
+  }
 
   $sevenZip = Get-Command 7z -ErrorAction SilentlyContinue
   if ($sevenZip) {
@@ -725,7 +734,7 @@ if ($resolvedReleaseRepo -notmatch '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$') {
 $sourceCommit = Invoke-SourceGit `
   -SourceRootPath $sourceRootPath.Path `
   -Arguments @('rev-parse', 'HEAD')
-$guardMasterPublication = $Target -eq 'emo-master' -and -not $BuildOnly
+$guardMasterPublication = $Target -in @('emo-master', 'emo-master-runtime') -and -not $BuildOnly
 if ($guardMasterPublication) {
   Assert-MasterPublicationSource -SourceRootPath $sourceRootPath.Path `
     -SourceRepoName $config.source_repo -ReleaseRepoName $resolvedReleaseRepo `
@@ -816,6 +825,19 @@ try {
     $artifactDirectory = (Resolve-Path -LiteralPath $trimmedOutputDirectory).Path
   }
 
+  if ($config.PSObject.Properties.Name -contains 'verification_script' -and $config.verification_script) {
+    $verificationScript = ([string]$config.verification_script).Replace('${SOURCE_ROOT}', $sourceRootPath.Path)
+    if (-not (Test-Path -LiteralPath $verificationScript -PathType Leaf)) {
+      throw "Frozen verification script not found: $verificationScript"
+    }
+    $LASTEXITCODE = 0
+    & $verificationScript -Executable (Join-Path $distDir "$($config.name).exe") `
+      -ReportPath (Join-Path $artifactDirectory 'runtime-self-test.json')
+    if ($LASTEXITCODE -ne 0) {
+      throw "Frozen Runtime verification failed with exit code $LASTEXITCODE"
+    }
+  }
+
   $setupName = ''
   $setupPath = ''
   $setupSha256 = ''
@@ -856,7 +878,8 @@ try {
     Remove-Item -LiteralPath $assetPath -Force
   }
 
-  $archiveCompression = Compress-ReleaseArchive -DistDir $distDir -AssetPath $assetPath
+  $preferDeflate = $config.PSObject.Properties.Name -contains 'archive_compression' -and $config.archive_compression -eq 'deflate'
+  $archiveCompression = Compress-ReleaseArchive -DistDir $distDir -AssetPath $assetPath -PreferDeflate:$preferDeflate
   Assert-ReleaseAssetSize -Path $assetPath
   $assetSha256 = Get-AssetSha256 -Path $assetPath
 

@@ -32,7 +32,7 @@ on:
         default: ''
         type: string
       publish_release:
-        description: Publish assets - true publishes; auto builds Vision Train only and publishes other targets
+        description: Publish assets - true publishes; auto builds Vision Train and Runtime only
         required: true
         default: auto
         type: choice
@@ -116,6 +116,12 @@ on:
       artifact_name:
         description: Name of the uploaded Windows release artifact
         value: ${{ jobs.vision_train.outputs.artifact_name || jobs.build.outputs.artifact_name }}
+      source_sha:
+        description: Resolved Runtime source commit
+        value: ${{ jobs.build.outputs.source_sha }}
+      packager_sha:
+        description: Resolved Runtime packager commit
+        value: ${{ jobs.build.outputs.packager_sha }}
 
 permissions:
   contents: read
@@ -151,8 +157,18 @@ jobs:
       contents: write
     outputs:
       artifact_name: ${{ steps.artifact.outputs.name }}
+      source_sha: ${{ steps.identity.outputs.source_sha }}
+      packager_sha: ${{ steps.identity.outputs.packager_sha }}
 
     steps:
+      - name: Set artifact name
+        id: artifact
+        shell: pwsh
+        env:
+          TARGET_INPUT: ${{ inputs.target }}
+          RELEASE_TAG_INPUT: ${{ inputs.release_tag }}
+        run: |
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "name=windows-release-$env:TARGET_INPUT-$env:RELEASE_TAG_INPUT"
       - name: Select the packager revision
         id: revision
         shell: pwsh
@@ -264,6 +280,38 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Record Runtime build identity
+        if: inputs.target == 'emo-master-runtime'
+        id: identity
+        shell: pwsh
+        env:
+          SOURCE_REPO: ${{ steps.config.outputs.source_repo }}
+          REQUESTED_SOURCE_REF: ${{ inputs.source_ref }}
+          REQUESTED_PACKAGER_REF: ${{ steps.revision.outputs.ref }}
+          PUBLISH_RELEASE_INPUT: ${{ inputs.publish_release }}
+        run: |
+          $sourceSha = git -C source rev-parse HEAD
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot resolve source SHA' }
+          $packagerSha = git -C packager rev-parse HEAD
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot resolve packager SHA' }
+          $output = Join-Path $env:GITHUB_WORKSPACE 'packager/release-output'
+          New-Item -ItemType Directory -Path $output -Force | Out-Null
+          [ordered]@{
+            source_repo = $env:SOURCE_REPO
+            source_commit = $sourceSha.Trim()
+            packager_repo = 'jsdfhasuh/python_build_scripts'
+            packager_commit = $packagerSha.Trim()
+            requested_source_ref = $env:REQUESTED_SOURCE_REF
+            requested_packager_ref = $env:REQUESTED_PACKAGER_REF
+            workflow_sha = $env:GITHUB_WORKFLOW_SHA
+            workflow_ref = $env:GITHUB_WORKFLOW_REF
+            run_url = "https://github.com/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID"
+            publish_requested = ($env:PUBLISH_RELEASE_INPUT -eq 'true')
+            fieldAcceptance = 'NOT_RUN'
+          } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $output 'runtime-build.json') -Encoding utf8
+          Add-Content $env:GITHUB_OUTPUT "source_sha=$($sourceSha.Trim())"
+          Add-Content $env:GITHUB_OUTPUT "packager_sha=$($packagerSha.Trim())"
+
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
@@ -283,6 +331,18 @@ jobs:
             $packages = $env:CI_EXTRA_PACKAGES -split ' '
             python -m pip install @packages
           }
+
+      - name: Runtime source regression
+        if: inputs.target == 'emo-master-runtime'
+        shell: pwsh
+        working-directory: source
+        env:
+          QT_QPA_PLATFORM: offscreen
+          PYTHONUTF8: '1'
+        run: |
+          python -m pip install -r requirements-dev.txt
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot install Runtime test dependencies' }
+          ./scripts/validate_runtime_source.ps1 -ReportDirectory ../packager/release-output/source-check
 
       - name: Install pinned Inno Setup
         if: steps.config.outputs.installer_enabled == 'true'
@@ -338,8 +398,12 @@ jobs:
             OutputDirectory = $outputDirectory
           }
 
-          if ($env:PUBLISH_RELEASE_INPUT -eq 'false') {
+          if ($env:PUBLISH_RELEASE_INPUT -eq 'false' -or
+              ($env:TARGET_INPUT -eq 'emo-master-runtime' -and $env:PUBLISH_RELEASE_INPUT -ne 'true')) {
             $publishArgs['BuildOnly'] = $true
+          }
+          if ($env:TARGET_INPUT -eq 'emo-master-runtime' -and $env:PUBLISH_RELEASE_INPUT -eq 'true') {
+            $publishArgs['Publish'] = $true
           }
           $previousSourceRef = $env:PREVIOUS_SOURCE_REF_INPUT.Trim()
           if ($previousSourceRef) {
@@ -353,20 +417,29 @@ jobs:
             $publishArgs['ReleaseBodyPath'] = $releaseBodyPath
           }
 
-          .\scripts\publish-local-release.ps1 @publishArgs
+          if ($env:TARGET_INPUT -eq 'emo-master-runtime') {
+            Start-Transcript -Path (Join-Path $outputDirectory 'build.log')
+            try { .\scripts\publish-local-release.ps1 @publishArgs }
+            finally { Stop-Transcript }
+          } else {
+            .\scripts\publish-local-release.ps1 @publishArgs
+          }
 
-      - name: Set artifact name
-        id: artifact
+      - name: Verify Runtime archive and native cycles
+        if: inputs.target == 'emo-master-runtime' && inputs.publish_release != true && inputs.publish_release != 'true'
         shell: pwsh
         env:
-          TARGET_INPUT: ${{ inputs.target }}
+          SOURCE_SHA: ${{ steps.identity.outputs.source_sha }}
+          PACKAGER_SHA: ${{ steps.identity.outputs.packager_sha }}
           RELEASE_TAG_INPUT: ${{ inputs.release_tag }}
         run: |
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "name=windows-release-$env:TARGET_INPUT-$env:RELEASE_TAG_INPUT"
+          ./source/scripts/verify_runtime_artifacts.ps1 -ArtifactDirectory ./packager/release-output `
+            -ReleaseTag $env:RELEASE_TAG_INPUT -SourceCommit $env:SOURCE_SHA -PackagerCommit $env:PACKAGER_SHA
 
       - name: Upload Windows artifacts
+        if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.artifact.outputs.name }}
           path: packager/release-output/*
-          if-no-files-found: error
+          if-no-files-found: warn

@@ -1,0 +1,35 @@
+{
+  "source_repo": "jsdfhasuh/emo_master",
+  "release_repo": "jsdfhasuh/emo_master",
+  "python_version": "3.10",
+  "pyinstaller_version": "6.22.2",
+  "release_asset_name": "emo-master-runtime-windows-${RELEASE_TAG}.zip",
+  "source_version_file": "${SOURCE_ROOT}/src/emo_master/__init__.py",
+  "verification_script": "${SOURCE_ROOT}/scripts/verify_runtime_package.ps1",
+  "archive_compression": "deflate",
+  "ci_extra_packages": ["pyinstaller==6.22.2"],
+  "entry": "${SOURCE_ROOT}/scripts/run_operator.py",
+  "name": "EmoMasterRuntime",
+  "onefile": false,
+  "console": false,
+  "collect_conda_runtime_dlls": false,
+  "icon": null,
+  "add_data": [
+    "${SOURCE_ROOT}/src/emo_master/apps/runtime/context/migrations:emo_master/apps/runtime/context/migrations",
+    "${SOURCE_ROOT}/src/emo_master/plugins/builtins:emo_master/plugins/builtins"
+  ],
+  "hidden_imports": [
+    "PySide2.QtCore", "PySide2.QtGui", "PySide2.QtUiTools", "PySide2.QtWidgets",
+    "cv2", "grpc", "numpy", "onnxruntime", "yaml"
+  ],
+  "excludes": [
+    "emo_master.apps.designer", "torch", "torchvision", "ultralytics",
+    "onnxruntime_gpu", "onnxruntime.capi.onnxruntime_providers_cuda"
+  ],
+  "collect_binaries": ["onnxruntime"],
+  "extra_args": [
+    "--runtime-hook", "pyi_rth_onnxruntime.py", "--paths=${SOURCE_ROOT}/src",
+    "--collect-submodules", "emo_master.plugins.builtins", "--copy-metadata", "onnxruntime"
+  ],
+  "installer": {"enabled": false}
+}
