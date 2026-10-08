@@ -44,6 +44,7 @@ def load_config(path: str) -> dict:
 
 def expand_config_values(value):
     if isinstance(value, str):
+        value = value.replace('${PACKAGER_ROOT}', str(Path(__file__).resolve().parent))
         return os.path.expandvars(value)
     if isinstance(value, list):
         return [expand_config_values(item) for item in value]

@@ -107,7 +107,7 @@ class PortableTests(unittest.TestCase):
     path.write_bytes(b'FAKE compiler output, never a Windows acceptance test')
     return 0
 
-  def compress(self, app: Path, path: Path) -> str:
+  def compress(self, app: Path, path: Path, *, dictionaryMiB: int = 64) -> str:
     with zipfile.ZipFile(path, 'w', zipfile.ZIP_DEFLATED) as archive:
       for file in sorted(app.rglob('*')):
         if file.is_file():
@@ -145,6 +145,24 @@ class PortableTests(unittest.TestCase):
       self.compressor.assert_not_called()
       package.assert_not_called()
       publish.assert_not_called()
+
+  def test_target_dictionary_is_forwarded_to_the_shared_compressor(self) -> None:
+    config = readJsonObject(self.config)
+    config['zip_lzma_dictionary_mib'] = 256
+    self.config.write_text(json.dumps(config), encoding='utf-8')
+    summary = self.runLocal('--build-only')
+    self.assertEqual(self.compressor.call_args.kwargs, {'dictionaryMiB': 256})
+    self.assertIsNone(summary['archive_lzma_dictionary_mib'])  # Fixture uses Deflate.
+    self.assertFalse(summary['published'])
+
+  def test_invalid_dictionary_is_rejected_before_compilation(self) -> None:
+    config = readJsonObject(self.config)
+    config['zip_lzma_dictionary_mib'] = True
+    self.config.write_text(json.dumps(config), encoding='utf-8')
+    with self.assertRaisesRegex(BuildConfigError, 'zip_lzma_dictionary_mib'):
+      self.runLocal('--build-only')
+    self.compiler.assert_not_called()
+    self.compressor.assert_not_called()
 
   def test_runtime_package_failure_prevents_compression_and_publication(self) -> None:
     with patch('portable_release.validateEnvironment'), \

@@ -25,6 +25,7 @@ from build_config import BuildConfigError
 from build_config import BuildContext
 from build_config import ResolvedBuild
 from build_config import createBuildContext
+from build_config import getZipLzmaDictionary
 from build_config import resolveBuildConfig
 from build_config import validateFileName
 from build_records import CHUNK
@@ -99,7 +100,8 @@ def runChecked(arguments: list[str], *, cwd: Path | None = None) -> str:
   return result.stdout.strip()
 
 
-def compressArchive(appDir: Path, destination: Path) -> str:
+def compressArchive(appDir: Path, destination: Path, *, dictionaryMiB: int = 64) -> str:
+  dictionaryMiB = getZipLzmaDictionary({'zip_lzma_dictionary_mib': dictionaryMiB})
   workingDirectory = logicalPath(appDir.parent)
   sevenZip = shutil.which('7z')
   # Chocolatey/.NET shims reject extended current directories. Keep subprocess
@@ -110,7 +112,8 @@ def compressArchive(appDir: Path, destination: Path) -> str:
     for threads in (2, 1):
       # ZIP member names must round-trip independently of the Windows code page.
       result = subprocess.run([
-        sevenZip, 'a', '-tzip', '-mm=LZMA', '-mx=9', '-md=64m', f'-mmt={threads}', '-mcu=on',
+        sevenZip, 'a', '-tzip', '-mm=LZMA', '-mx=9', f'-md={dictionaryMiB}m',
+        f'-mmt={threads}', '-mcu=on',
         str(ioPath(destination)), f'.{os.sep}{appDir.name}',
       ], cwd=workingDirectory, check=False)
       if result.returncode == 0:
@@ -520,7 +523,11 @@ def runRelease(args: argparse.Namespace) -> dict:
   assetPath = output / assetName
   try:
     with ReleaseProgress('压缩 ZIP'):
-      compression = compressArchive(appDir, temporary)
+      options = {}
+      dictionaryMiB = getZipLzmaDictionary(resolved.config)
+      if dictionaryMiB != 64:
+        options['dictionaryMiB'] = dictionaryMiB
+      compression = compressArchive(appDir, temporary, **options)
     if not ioPath(temporary).is_file() or not 0 < ioPath(temporary).stat().st_size <= MAX_ASSET_BYTES:
       raise BuildConfigError('ZIP is missing, empty or exceeds the existing release size limit')
     verifiedArchive = verifyArchive(temporary, resolved.programName, record['files'])
@@ -541,6 +548,7 @@ def runRelease(args: argparse.Namespace) -> dict:
     'release_tag': args.release_tag, 'asset_name': assetName,
     'asset_sha256': verifiedArchive.sha256, 'asset_size': verifiedArchive.size,
     'archive_compression': compression, 'files_sha256': record['files_sha256'],
+    'archive_lzma_dictionary_mib': dictionaryMiB if compression == 'zip/lzma' else None,
     'icon_sha256': resolved.iconSha256, 'source_commit': source.get('commit'),
     'packager_commit': record['inputs']['packager'].get('commit'),
     'source_dirty': source.get('dirty', True), 'published': False,

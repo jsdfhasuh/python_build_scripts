@@ -13,6 +13,7 @@
   "name": "VisionWorkshop",
   "onefile": false,
   "console": true,
+  "zip_lzma_dictionary_mib": 256,
   "icon": null,
   "add_data": [
     "${SOURCE_ROOT}/ui:ui",
@@ -72,12 +73,27 @@
     "openai",
     "termcolor"
   ],
-  "excludes": [],
+  "excludes": [
+    "notebook",
+    "notebook_shim",
+    "jupyterlab",
+    "jupyterlab_server",
+    "jupyter_server",
+    "jupytext.async_contentsmanager",
+    "jupytext.sync_contentsmanager",
+    "ipykernel",
+    "ipywidgets",
+    "IPython.testing",
+    "pytest",
+    "_pytest"
+  ],
   "collect_binaries": [
     "torch",
     "torchvision"
   ],
   "extra_args": [
+    "--additional-hooks-dir",
+    "${PACKAGER_ROOT}",
     "--copy-metadata",
     "torch",
     "--copy-metadata",

@@ -50,6 +50,22 @@ python build.py --config configs/emo-vision-train.json --dry-run
 ZIP 优先用 7-Zip；内存分配失败时只重试为单线程。无 7-Zip 时使用支持扩展路径的 Python ZIP64
 流式归档。归档验证与增量负载验证不等于已经执行完整产品更新。
 
+### Vision Train size policy
+
+The target excludes the local Notebook/Jupyter server, browser frontends, notebook widgets
+and developer test runners. It retains `jupytext`/`nbformat` conversion, IPython, training
+dependencies, GPU DLL collection, pinned offline model assets and dependency metadata.
+The target-only analysis hook delegates to the upstream Torch hook and collects Torch as
+inspectable `.py` files without also embedding a duplicate copy in PYZ. Runtime hooks are
+unchanged; do not remove CUDA DLLs or model files manually from an existing build.
+
+`zip_lzma_dictionary_mib` selects 64, 128 or 256 MiB; the default for other targets remains
+64 MiB. Vision Train selects 256 MiB with Unicode ZIP/LZMA and the existing single-thread
+retry after a memory-allocation failure. Compression and extraction need more memory.
+The release summary records the dictionary used for native LZMA archives. The individual
+asset limit remains 2,147,483,647 bytes. Rebuild cleanly after changing this policy, then
+verify every ZIP member against the build record; directory size is not ZIP-size evidence.
+
 ## 发布文档与上传
 
 发布正文先生成或导入，再预览和冻结摘要。默认基线来自上次发布，亦可显式选择正确源码范围。

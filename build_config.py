@@ -57,14 +57,23 @@ def readJsonObject(path: Path) -> dict:
   return result
 
 
-def expandLegacyValues(value: object) -> object:
+def expandLegacyValues(value: object, packagerRoot: Path | None = None) -> object:
   if isinstance(value, str):
+    root = packagerRoot or Path(__file__).resolve().parent
+    value = value.replace('${PACKAGER_ROOT}', str(root))
     return os.path.expandvars(value)
   if isinstance(value, list):
-    return [expandLegacyValues(item) for item in value]
+    return [expandLegacyValues(item, packagerRoot) for item in value]
   if isinstance(value, dict):
-    return {key: expandLegacyValues(item) for key, item in value.items()}
+    return {key: expandLegacyValues(item, packagerRoot) for key, item in value.items()}
   return value
+
+
+def getZipLzmaDictionary(config: dict) -> int:
+  size = config.get('zip_lzma_dictionary_mib', 64)
+  if type(size) is not int or size not in (64, 128, 256):
+    raise BuildConfigError('zip_lzma_dictionary_mib must be 64, 128 or 256')
+  return size
 
 
 def requireText(value: object, label: str) -> str:
@@ -350,7 +359,8 @@ def resolveBuildConfig(
   if target != SUPPORTED_TARGET:
     raise BuildConfigError(f'Branding is currently supported only for {SUPPORTED_TARGET}')
   raw = readJsonObject(configPath)
-  cfg = expandLegacyValues(copy.deepcopy(raw))
+  cfg = expandLegacyValues(copy.deepcopy(raw), root)
+  getZipLzmaDictionary(cfg)
   if cfg.get('onefile', True) is not False:
     raise BuildConfigError('VisionWorkshop branding requires an onedir main application')
   installer = cfg.get('installer') or {}

@@ -1,4 +1,4 @@
-"""Protect the unchanged default target contracts without external application code."""
+"""Protect default target contracts without external application code."""
 
 import contextlib
 import hashlib
@@ -32,7 +32,7 @@ class DefaultBuildTests(unittest.TestCase):
 
   def test_target_configuration_semantics_are_pinned(self) -> None:
     expected = {
-      'emo-vision-train': '7c44fe523ef0254e6ac5dbbaf9ebdbf048ea65ac1390648c31a28e2f3553b65e',
+      'emo-vision-train': '2c7d681f8106bf30dbb6b39154845208d34e02e750875b5974ec9a99f0eec8f5',
       'emo-master': 'd36a9dd53f6a6e344ba21c9c2d8307c65fe59c10972c2ee5278d62933c1065c9',
     }
     for target, digest in expected.items():
@@ -49,6 +49,7 @@ class DefaultBuildTests(unittest.TestCase):
     expected = [*build.PYINSTALLER_CMD, '--noconfirm', '--clean', '--name', 'VisionWorkshop']
     expected += [f'--add-data={item}' for item in build.normalize_add_data(config['add_data'])]
     expected += [f'--hidden-import={item}' for item in config['hidden_imports']]
+    expected += [f'--exclude-module={item}' for item in config['excludes']]
     expected += ['--runtime-hook', 'torch-hook.py', '--noupx',
                  '--collect-binaries=torch', '--collect-binaries=torchvision',
                  '--collect-binaries=python']
