@@ -1,4 +1,4 @@
-"""Keep inspectable Torch source without a duplicate PYZ copy for Vision Train."""
+"""Collect inspectable Torch submodules once while retaining the PYZ entrypoint."""
 
 import importlib.util
 from pathlib import Path
@@ -15,5 +15,8 @@ if 'module_collection_mode' not in upstream:
 # Preserve upstream binary, data, hidden-import and platform-specific collection.
 globals().update({name: value for name, value in upstream.items() if not name.startswith('__')})
 upstreamMode = module_collection_mode
-module_collection_mode = dict(upstreamMode) if isinstance(upstreamMode, dict) else {}
-module_collection_mode['torch'] = 'py'
+module_collection_mode = {name: 'py' for name in hiddenimports if name.startswith('torch.')}
+if isinstance(upstreamMode, dict):
+  module_collection_mode.update(upstreamMode)
+# Keep the small initializer in PYZ for the existing frozen-runtime admission gate.
+module_collection_mode['torch'] = 'pyz+py'

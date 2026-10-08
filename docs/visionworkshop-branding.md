@@ -56,9 +56,10 @@ The target excludes the local Notebook/Jupyter server, browser frontends, notebo
 and developer test runners. It retains `jupytext`/`nbformat` conversion, IPython, training
 dependencies, GPU DLL collection, pinned offline model assets and dependency metadata.
 The `rfc3987_syntax` grammar data is collected for frozen `nbformat`/Kaggle conversion.
-The target-only analysis hook delegates to the upstream Torch hook and collects Torch as
-inspectable `.py` files without also embedding a duplicate copy in PYZ. Runtime hooks are
-unchanged; do not remove CUDA DLLs or model files manually from an existing build.
+The target-only analysis hook delegates to the upstream Torch hook and collects its
+submodules as inspectable `.py` files without duplicate PYZ copies. The small Torch package
+initializer remains in PYZ, preserving the existing frozen-runtime admission gate.
+Runtime hooks are unchanged; do not remove CUDA DLLs or model files manually from a build.
 
 `zip_lzma_dictionary_mib` selects 64, 128 or 256 MiB; the default for other targets remains
 64 MiB. Vision Train selects 256 MiB with Unicode ZIP/LZMA and the existing single-thread

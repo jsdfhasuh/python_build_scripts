@@ -49,7 +49,8 @@ class SlimmingPolicyTests(unittest.TestCase):
     for mode in ('pyz+py', {'torch': 'pyz+py', 'torch.special': 'pyz'}):
       with self.subTest(mode=mode):
         original = {'module_collection_mode': mode, 'binaries': [('cuda.dll', 'torch/lib')],
-                    'datas': [('source.py', 'torch')], 'hiddenimports': ['torch.distributed'],
+                    'datas': [('source.py', 'torch')],
+                    'hiddenimports': ['torch', 'torch.distributed', 'torch.cuda'],
                     'bindepend_symlink_suppression': ['**/torch/lib/*.so*']}
         with patch('importlib.util.find_spec',
                    return_value=SimpleNamespace(origin=str(ROOT / 'upstream/__init__.py'))), \
@@ -58,7 +59,9 @@ class SlimmingPolicyTests(unittest.TestCase):
           namespace = {'__file__': str(HOOK), '__name__': 'tested_torch_hook'}
           exec(compile(HOOK.read_bytes(), namespace['__file__'], 'exec'), namespace)
         upstream.assert_called_once_with(str(ROOT / 'upstream/stdhooks/hook-torch.py'))
-        self.assertEqual(namespace['module_collection_mode']['torch'], 'py')
+        self.assertEqual(namespace['module_collection_mode']['torch'], 'pyz+py')
+        self.assertEqual(namespace['module_collection_mode']['torch.distributed'], 'py')
+        self.assertEqual(namespace['module_collection_mode']['torch.cuda'], 'py')
         for name in ('binaries', 'datas', 'hiddenimports', 'bindepend_symlink_suppression'):
           self.assertEqual(namespace[name], original[name])
         if isinstance(mode, dict):
