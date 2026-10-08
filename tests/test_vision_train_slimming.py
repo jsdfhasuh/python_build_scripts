@@ -17,6 +17,7 @@ import portable_release
 
 
 ROOT = Path(__file__).resolve().parents[1]
+HOOK = ROOT / 'hooks/vision-train/hook-torch.py'
 
 
 class SlimmingPolicyTests(unittest.TestCase):
@@ -41,7 +42,7 @@ class SlimmingPolicyTests(unittest.TestCase):
       resolved = resolveBuildConfig(ROOT / 'configs/emo-vision-train.json')
     for value in (config, resolved.config):
       arguments = value['extra_args']
-      self.assertEqual(arguments[arguments.index('--additional-hooks-dir') + 1], str(ROOT))
+      self.assertEqual(Path(arguments[arguments.index('--additional-hooks-dir') + 1]), HOOK.parent)
       self.assertNotIn('--additional-hooks-dir', value['updater']['extra_args'])
 
   def test_upstream_hook_is_preserved_and_source_collected_once(self) -> None:
@@ -54,8 +55,8 @@ class SlimmingPolicyTests(unittest.TestCase):
                    return_value=SimpleNamespace(origin=str(ROOT / 'upstream/__init__.py'))), \
              patch('runpy.run_path', return_value=original) as upstream:
           # Execute the local hook without mocking its own top-level runner.
-          namespace = {'__file__': str(ROOT / 'hook-torch.py'), '__name__': 'tested_torch_hook'}
-          exec(compile((ROOT / 'hook-torch.py').read_bytes(), namespace['__file__'], 'exec'), namespace)
+          namespace = {'__file__': str(HOOK), '__name__': 'tested_torch_hook'}
+          exec(compile(HOOK.read_bytes(), namespace['__file__'], 'exec'), namespace)
         upstream.assert_called_once_with(str(ROOT / 'upstream/stdhooks/hook-torch.py'))
         self.assertEqual(namespace['module_collection_mode']['torch'], 'py')
         for name in ('binaries', 'datas', 'hiddenimports', 'bindepend_symlink_suppression'):
@@ -67,7 +68,7 @@ class SlimmingPolicyTests(unittest.TestCase):
   def test_missing_upstream_hook_fails_closed(self) -> None:
     with patch('importlib.util.find_spec', return_value=None):
       with self.assertRaisesRegex(RuntimeError, 'upstream'):
-        exec(compile((ROOT / 'hook-torch.py').read_bytes(), 'hook-torch.py', 'exec'), {})
+        exec(compile(HOOK.read_bytes(), 'hook-torch.py', 'exec'), {})
 
   def test_dictionary_is_bounded_and_other_targets_keep_default(self) -> None:
     self.assertEqual(getZipLzmaDictionary({}), 64)
