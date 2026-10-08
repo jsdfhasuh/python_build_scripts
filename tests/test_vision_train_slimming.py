@@ -27,6 +27,7 @@ class SlimmingPolicyTests(unittest.TestCase):
     self.assertIn('${SOURCE_ROOT}/static:static', config['add_data'])
     self.assertIn('safetensors.torch', config['hidden_imports'])
     self.assertIn('lightning_fabric', config['extra_args'])
+    self.assertIn('rfc3987_syntax', config['extra_args'])
     self.assertTrue({'notebook', 'jupyterlab', 'jupyter_server', 'pytest'} <= set(config['excludes']))
     for name in ('torch', 'torch.distributed', 'torchvision', 'onnxruntime', 'timm',
                  'safetensors', 'IPython', 'nbformat', 'jupytext'):

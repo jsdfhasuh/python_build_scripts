@@ -32,7 +32,7 @@ class DefaultBuildTests(unittest.TestCase):
 
   def test_target_configuration_semantics_are_pinned(self) -> None:
     expected = {
-      'emo-vision-train': '2c7d681f8106bf30dbb6b39154845208d34e02e750875b5974ec9a99f0eec8f5',
+      'emo-vision-train': '6969ecc3e5c86dfa1cc65f30edee1b230655687eb75c79b738582a622628a11a',
       'emo-master': 'd36a9dd53f6a6e344ba21c9c2d8307c65fe59c10972c2ee5278d62933c1065c9',
     }
     for target, digest in expected.items():

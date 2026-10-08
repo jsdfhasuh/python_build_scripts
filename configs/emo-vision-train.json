@@ -124,6 +124,8 @@
     "kornia",
     "--collect-data",
     "lightning_fabric",
+    "--collect-data",
+    "rfc3987_syntax",
     "--copy-metadata",
     "kaggle",
     "--copy-metadata",

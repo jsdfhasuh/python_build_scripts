@@ -55,6 +55,7 @@ ZIP 优先用 7-Zip；内存分配失败时只重试为单线程。无 7-Zip 时
 The target excludes the local Notebook/Jupyter server, browser frontends, notebook widgets
 and developer test runners. It retains `jupytext`/`nbformat` conversion, IPython, training
 dependencies, GPU DLL collection, pinned offline model assets and dependency metadata.
+The `rfc3987_syntax` grammar data is collected for frozen `nbformat`/Kaggle conversion.
 The target-only analysis hook delegates to the upstream Torch hook and collects Torch as
 inspectable `.py` files without also embedding a duplicate copy in PYZ. Runtime hooks are
 unchanged; do not remove CUDA DLLs or model files manually from an existing build.
