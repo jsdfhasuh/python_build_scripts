@@ -121,6 +121,9 @@ class PackageTests(unittest.TestCase):
       self.write('torch/lib/' + name)
     for name in self.profile['models']:
       self.write('static/models/' + name)
+    for name in runtime.IMAGE_SIMPLIFICATION_DISTRIBUTIONS:
+      self.write(f'{name.lower()}-1.0.dist-info/METADATA',
+                 f'Metadata-Version: 2.1\nName: {name}\nVersion: 1.0\n')
     for name in runtime.KAGGLE_SOURCE_FILES:
       self.write(name)
     stack = contextlib.ExitStack()
@@ -164,6 +167,26 @@ class PackageTests(unittest.TestCase):
   def test_source_model_is_required(self):
     (self.internal / 'static/models/edge_sam_encoder.onnx').unlink()
     with self.assertRaisesRegex(BuildConfigError, 'edge_sam_encoder.onnx'):
+      runtime.validatePackage(self.app, 'VisionWorkshop')
+
+  def test_image_simplification_weight_is_required(self):
+    (self.internal / 'static/models/image_simplification/dinov2_vits14/model.safetensors').unlink()
+    with self.assertRaisesRegex(BuildConfigError, 'dinov2_vits14/model.safetensors'):
+      runtime.validatePackage(self.app, 'VisionWorkshop')
+
+  def test_metadata_must_be_bundled_even_when_installed_in_build_environment(self):
+    for name in runtime.IMAGE_SIMPLIFICATION_DISTRIBUTIONS:
+      with self.subTest(name=name):
+        path = self.internal / f'{name.lower()}-1.0.dist-info/METADATA'
+        text = path.read_text(encoding='utf-8')
+        path.unlink()
+        with self.assertRaisesRegex(BuildConfigError, f'distribution metadata: {name}'):
+          runtime.validatePackage(self.app, 'VisionWorkshop')
+        path.write_text(text, encoding='utf-8')
+
+  def test_safetensors_adapter_must_be_in_the_executable(self):
+    self.readModules.return_value.remove('safetensors.torch')
+    with self.assertRaisesRegex(BuildConfigError, 'Missing EXE modules: safetensors.torch'):
       runtime.validatePackage(self.app, 'VisionWorkshop')
 
   def test_builder_source_must_exist_as_data_even_when_imports_are_available(self):

@@ -1,3 +1,4 @@
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -6,9 +7,34 @@ from unittest.mock import patch
 
 import branding_build
 from build_config import BuildConfigError
+from build_config import resolveBuildConfig
+
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 class SourceAssetTests(unittest.TestCase):
+  def test_vision_config_prepares_both_weights_and_preserves_metadata_with_overrides(self):
+    with tempfile.TemporaryDirectory() as directory:
+      source = Path(directory).resolve()
+      with patch.dict(os.environ, {'SOURCE_ROOT': str(source)}):
+        for options in ({}, {'profilePath': 'profiles/visionworkshop.json'},
+                        {'profilePath': 'profiles/visionworkshop.json',
+                         'programName': 'VisionWorkshop'}):
+          with self.subTest(options=options):
+            config = resolveBuildConfig(ROOT / 'configs/emo-vision-train.json',
+                                        **options).config
+            self.assertEqual(config['prepare_source_assets'], 'scripts/prepare_desktop_weights.py')
+            self.assertTrue({'timm', 'safetensors.torch'} <= set(config['hidden_imports']))
+            args = config['extra_args']
+            metadata = {args[index + 1] for index, flag in enumerate(args)
+                        if flag == '--copy-metadata'}
+            self.assertTrue({'torch', 'torchvision', 'timm', 'safetensors', 'numpy', 'Pillow'}
+                            <= metadata)
+            mappings = [item.rsplit(':', 1) for item in config['add_data']]
+            self.assertTrue(any(Path(origin) == source / 'static' and destination == 'static'
+                                for origin, destination in mappings))
+
   def test_script_uses_build_interpreter_and_source_directory(self):
     with tempfile.TemporaryDirectory() as folder:
       root = Path(folder)

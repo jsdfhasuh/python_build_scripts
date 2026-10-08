@@ -18,6 +18,7 @@ from build_environment import pythonChildEnvironment
 
 ROOT = Path(__file__).resolve().parent
 PROFILE = ROOT / 'ci/vision-train-runtime.json'
+IMAGE_SIMPLIFICATION_DISTRIBUTIONS = ('torch', 'torchvision', 'timm', 'safetensors', 'numpy', 'Pillow')
 
 # Frozen builders read these source bytes; PYZ imports cannot replace data files.
 KAGGLE_SOURCE_FILES = [
@@ -194,6 +195,19 @@ def validateCudaDependencies(internal: Path) -> None:
         raise BuildConfigError(f'{path.name} requires missing bundled DLL {dependency}')
 
 
+def validateImageSimplificationMetadata(internal: Path) -> None:
+  def normalize(name: str) -> str:
+    return re.sub(r'[-_.]+', '-', name).casefold()
+
+  available = {normalize(item.metadata.get('Name', ''))
+               for item in importlib.metadata.distributions(path=[str(ioPath(internal))])
+               if item.version}
+  missing = [name for name in IMAGE_SIMPLIFICATION_DISTRIBUTIONS
+             if normalize(name) not in available]
+  if missing:
+    raise BuildConfigError('Missing image simplification distribution metadata: ' + ', '.join(missing))
+
+
 def validatePackage(appDir: Path, programName: str) -> dict:
   profile = loadProfile()
   internal = appDir / '_internal'
@@ -202,6 +216,7 @@ def validatePackage(appDir: Path, programName: str) -> dict:
   validateTorch(version, cuda, profile)
   requireFiles(internal / 'torch/lib', profile['torch_dlls'])
   requireFiles(internal / 'static/models', profile['models'])
+  validateImageSimplificationMetadata(internal)
   requireFiles(internal, KAGGLE_SOURCE_FILES)
   validateModules(readPackagedModules(appDir / f'{programName}.exe'), profile['modules'])
   if not list(ioPath(internal / '_polars_runtime_32').glob('*.pyd')):
