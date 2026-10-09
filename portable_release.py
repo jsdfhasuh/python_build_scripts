@@ -508,10 +508,14 @@ def runRelease(args: argparse.Namespace) -> dict:
   if args.verify_vision_train_runtime:
     if resolved.target != 'emo-vision-train':
       raise BuildConfigError('Vision Train runtime validation cannot be used for another target')
-    validateEnvironment(sourceRoot)
+    if record is not None:
+      validateEnvironment(sourceRoot)
   if record is None:
     with ReleaseProgress('编译应用、更新器并记录构建输入和产物'):
-      record = executeBuild(resolved, context, sourceRoot)
+      buildOptions = {}
+      if args.verify_vision_train_runtime:
+        buildOptions['environmentCheck'] = validateEnvironment
+      record = executeBuild(resolved, context, sourceRoot, **buildOptions)
   if record['inputs']['source'] != source:
     raise BuildConfigError('Source changed after preflight; rebuild with the requested checkout')
   appDir = context.distRoot / resolved.programName

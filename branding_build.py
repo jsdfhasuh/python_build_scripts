@@ -8,6 +8,7 @@ import shutil
 import stat
 import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
 
 import build
@@ -136,10 +137,14 @@ def removeProtocolBytecode(resolved: ResolvedBuild, context: BuildContext) -> No
 @preventSourceBytecode()
 def executeBuild(
   resolved: ResolvedBuild, context: BuildContext, sourceRoot: Path, *, clean: bool = True,
+  environmentCheck: Callable[[Path], None] | None = None,
 ) -> dict:
   if sys.platform != 'win32':
     raise BuildConfigError('Actual VisionWorkshop EXE builds require Windows; use --dry-run here')
   prepareSourceAssets(resolved, sourceRoot)
+  # Validate prepared assets before capturing inputs or starting any compiler.
+  if environmentCheck is not None:
+    environmentCheck(sourceRoot)
   commands = buildCommands(resolved, context, clean=clean)
   beforeDetails = {}
   before = inputSnapshot(resolved, sourceRoot, details=beforeDetails)

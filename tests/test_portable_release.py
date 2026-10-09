@@ -120,6 +120,143 @@ class PortableTests(unittest.TestCase):
   def recordPath(self) -> Path:
     return next((self.packager / 'build').rglob('build-record.json'))
 
+  def configureOfflineAssetPreparation(self) -> Path:
+    config = readJsonObject(self.config)
+    config['prepare_source_assets'] = 'prepare.py'
+    self.config.write_text(json.dumps(config), encoding='utf-8')
+    relative = 'static/models/image_simplification/dinov2_vits14/model.safetensors'
+    # This is a small pinned fixture, not a real model or GPU acceptance test.
+    (self.source / 'prepare.py').write_text(
+      'from pathlib import Path\n'
+      f'asset = Path(__file__).resolve().parent / {relative!r}\n'
+      'expected = b"pinned offline fixture"\n'
+      'if asset.exists() and asset.read_bytes() != expected:\n'
+      '    raise SystemExit("corrupt offline fixture")\n'
+      'asset.parent.mkdir(parents=True, exist_ok=True)\n'
+      'asset.write_bytes(expected)\n'
+      'count = asset.parent / "preparation-count.txt"\n'
+      'count.write_text(str(int(count.read_text()) + 1 if count.exists() else 1))\n',
+      encoding='utf-8',
+    )
+    with (self.source / '.gitignore').open('a', encoding='utf-8') as stream:
+      stream.write('static/models/\n')
+    for root in (self.source, self.packager):
+      git(root, 'add', '.')
+      git(root, 'commit', '-m', 'configure offline asset fixture')
+    return self.source / relative
+
+  def checkOfflineFixture(self, source: Path) -> None:
+    from vision_train_runtime import requireFiles
+    relative = 'image_simplification/dinov2_vits14/model.safetensors'
+    requireFiles(source / 'static/models', [relative])
+    self.assertEqual((source / 'static/models' / relative).read_bytes(),
+                     b'pinned offline fixture')
+
+  def test_runtime_fresh_build_prepares_assets_once_before_validation_and_snapshot(self) -> None:
+    asset = self.configureOfflineAssetPreparation()
+    self.assertFalse(asset.exists())
+    events = []
+    originalSnapshot = branding_build.inputSnapshot
+    def environment(source):
+      self.checkOfflineFixture(source)
+      events.append('environment')
+    def snapshot(*args, **kwargs):
+      self.checkOfflineFixture(self.source)
+      self.assertIn('environment', events)
+      events.append('snapshot')
+      return originalSnapshot(*args, **kwargs)
+    def compiler(command):
+      self.assertIn('snapshot', events)
+      events.append('compiler')
+      return self.compile(command)
+    self.compiler.side_effect = compiler
+    with patch('portable_release.validateEnvironment', side_effect=environment) as check, \
+         patch('branding_build.inputSnapshot', side_effect=snapshot), \
+         patch('portable_release.validatePackage', return_value={'status': 'passed'}):
+      summary = self.runLocal('--build-only', '--verify-vision-train-runtime')
+    self.assertFalse(summary['published'])
+    check.assert_called_once_with(self.source)
+    self.assertEqual(events[:2], ['environment', 'snapshot'])
+    self.assertEqual((asset.parent / 'preparation-count.txt').read_text(), '1')
+
+  def test_runtime_corrupt_assets_stop_before_validation_snapshot_and_compilation(self) -> None:
+    asset = self.configureOfflineAssetPreparation()
+    asset.parent.mkdir(parents=True)
+    asset.write_bytes(b'corrupt')
+    with patch('portable_release.validateEnvironment') as environment, \
+         patch('branding_build.inputSnapshot') as snapshot, \
+         patch('portable_release.validatePackage') as package, \
+         patch('portable_release.publishAssets') as publish:
+      with self.assertRaisesRegex(BuildConfigError, 'Asset preparation failed'):
+        self.runLocal('--build-only', '--verify-vision-train-runtime')
+    environment.assert_not_called()
+    snapshot.assert_not_called()
+    self.compiler.assert_not_called()
+    self.compressor.assert_not_called()
+    package.assert_not_called()
+    publish.assert_not_called()
+    self.assertEqual(asset.read_bytes(), b'corrupt')
+    self.assertFalse(list(self.packager.rglob('build-record.json')))
+
+  def test_runtime_environment_failure_after_preparation_still_blocks_compilation(self) -> None:
+    asset = self.configureOfflineAssetPreparation()
+    def environment(source):
+      self.checkOfflineFixture(source)
+      raise BuildConfigError('CPU torch')
+    with patch('portable_release.validateEnvironment', side_effect=environment), \
+         patch('branding_build.inputSnapshot') as snapshot, \
+         patch('portable_release.publishAssets') as publish:
+      with self.assertRaisesRegex(BuildConfigError, 'CPU torch'):
+        self.runLocal('--build-only', '--verify-vision-train-runtime')
+    self.assertTrue(asset.exists())
+    snapshot.assert_not_called()
+    self.compiler.assert_not_called()
+    self.compressor.assert_not_called()
+    publish.assert_not_called()
+
+  def test_runtime_preview_with_missing_assets_stays_read_only(self) -> None:
+    asset = self.configureOfflineAssetPreparation()
+    with patch('branding_build.prepareSourceAssets') as prepare, \
+         patch('portable_release.validateEnvironment') as environment:
+      self.runLocal('--dry-run', '--verify-vision-train-runtime')
+    self.assertFalse(asset.exists())
+    prepare.assert_not_called()
+    environment.assert_not_called()
+    self.compiler.assert_not_called()
+    self.compressor.assert_not_called()
+
+  def test_runtime_record_reuse_validates_without_preparing_assets(self) -> None:
+    asset = self.configureOfflineAssetPreparation()
+    self.runLocal('--build-only')
+    self.compiler.reset_mock()
+    with patch('branding_build.prepareSourceAssets') as prepare, \
+         patch('portable_release.validateEnvironment', side_effect=self.checkOfflineFixture) as check, \
+         patch('portable_release.validatePackage', return_value={'status': 'passed'}):
+      self.runLocal('--skip-build', '--build-record-path', str(self.recordPath()),
+                    '--build-only', '--verify-vision-train-runtime')
+    prepare.assert_not_called()
+    check.assert_called_once_with(self.source)
+    self.compiler.assert_not_called()
+    self.assertEqual((asset.parent / 'preparation-count.txt').read_text(), '1')
+
+  def test_runtime_record_reuse_missing_assets_does_not_download_or_compress(self) -> None:
+    asset = self.configureOfflineAssetPreparation()
+    self.runLocal('--build-only')
+    asset.unlink()
+    self.compiler.reset_mock()
+    self.compressor.reset_mock()
+    with patch('branding_build.prepareSourceAssets') as prepare, \
+         patch('portable_release.validateEnvironment', side_effect=self.checkOfflineFixture), \
+         patch('portable_release.publishAssets') as publish:
+      with self.assertRaisesRegex(BuildConfigError, 'Missing runtime files'):
+        self.runLocal('--skip-build', '--build-record-path', str(self.recordPath()),
+                      '--build-only', '--verify-vision-train-runtime')
+    self.assertFalse(asset.exists())
+    prepare.assert_not_called()
+    self.compiler.assert_not_called()
+    self.compressor.assert_not_called()
+    publish.assert_not_called()
+
   def test_fresh_build_creates_single_root_zip_and_public_summary_only(self) -> None:
     with patch('portable_release.runChecked', side_effect=AssertionError('No GH in BuildOnly')):
       summary = self.runLocal('--build-only')
