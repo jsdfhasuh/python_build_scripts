@@ -25,6 +25,7 @@ class SourceAssetTests(unittest.TestCase):
             config = resolveBuildConfig(ROOT / 'configs/emo-vision-train.json',
                                         **options).config
             self.assertEqual(config['prepare_source_assets'], 'scripts/prepare_desktop_weights.py')
+            self.assertEqual(config['generated_data_paths'], ['dino_runtime'])
             self.assertTrue({'timm', 'safetensors.torch'} <= set(config['hidden_imports']))
             args = config['extra_args']
             metadata = {args[index + 1] for index, flag in enumerate(args)

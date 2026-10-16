@@ -502,7 +502,7 @@ def runRelease(args: argparse.Namespace) -> dict:
   if args.dry_run:
     print('\nRelease 正文预览：\n' + content.body)
     if not args.skip_build:
-      for job, command in buildCommands(resolved, context):
+      for job, command in buildCommands(resolved, context, preview=True):
         print(f'{job.label}: {subprocess.list2cmdline(command)}')
     return preview
   if args.verify_vision_train_runtime:

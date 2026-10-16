@@ -139,6 +139,12 @@ Pillow 的包元数据；完整运行时包检查要求 DINO 文件和这些元�
 请使用包含此脚本的应用源码版本。预览、notes-only、显式记录重归档不运行准备脚本。
 重归档仍按原构建记录校验输入和产物，不补写旧包中的权重。
 
+独立 DINO 运行时目录 `dino_runtime` 由准备脚本生成，不进入 Git。
+配置通过 `generated_data_paths: ["dino_runtime"]` 显式声明该生成资源。
+品牌构建和便携发布的 dry-run 允许声明中与 `add_data` 源路径完全匹配的目录暂时缺失，
+但仍检查准备脚本、源码目录边界及其他普通资源；预览不会执行准备脚本或创建占位目录。
+正式构建先准备资源，再严格检查所有 `add_data` 源路径，检查通过后才生成输入快照并编译。
+
 外部仓库：`python -m unittest discover -s tests -v`。
 应用仓库：`python scripts/verify_update_windows.py` 干净编译测试应用与真实更新器，执行连续更新及
 主程序入口缺失时的独立恢复。`--reuse-build` 必须指向完全匹配当前运行时代码的明确构建。

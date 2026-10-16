@@ -75,6 +75,69 @@ class CommandIntegrationTests(unittest.TestCase):
     self.assertEqual(set(self.root.iterdir()), before)
     self.assertIn('VisionWorkshop', self.output.getvalue())
 
+  def generatedConfig(self):
+    config = json.loads(self.config.read_text(encoding='utf-8'))
+    config['prepare_source_assets'] = 'prepare.py'
+    config['generated_data_paths'] = ['dino_runtime']
+    config['add_data'] = [str(self.root / 'dino_runtime') + ':dino_runtime']
+    (self.root / 'prepare.py').write_text(
+      'from pathlib import Path\n'
+      '(Path(__file__).parent / "dino_runtime").mkdir()\n', encoding='utf-8')
+    self.config.write_text(json.dumps(config), encoding='utf-8')
+    return config
+
+  def test_generated_asset_preview_preserves_mapping_without_preparing(self):
+    self.generatedConfig()
+    before = set(self.root.rglob('*'))
+    with patch('branding_build.prepareSourceAssets') as prepare, patch('build.run_command') as execute:
+      self.assertEqual(self.runBuild(dryRun=True), 0)
+    prepare.assert_not_called()
+    execute.assert_not_called()
+    self.assertEqual(set(self.root.rglob('*')), before)
+    self.assertIn('--add-data=', self.output.getvalue())
+    self.assertIn('dino_runtime', self.output.getvalue())
+
+  def test_generated_preview_still_rejects_missing_ordinary_data(self):
+    config = self.generatedConfig()
+    config['add_data'].append(str(self.root / 'missing-static') + ':static')
+    self.config.write_text(json.dumps(config), encoding='utf-8')
+    self.assertEqual(self.runBuild(dryRun=True), 1)
+    self.assertIn('add_data source not found', self.output.getvalue())
+
+  def test_generated_declarations_require_safe_mapped_paths_and_preparer(self):
+    for value in ('dino_runtime', [None], ['../escape'], ['/absolute'], ['C:/escape'],
+                  ['dino_runtime/../escape'], ['dino_runtime\\escape'], ['unmapped']):
+      with self.subTest(value=value):
+        config = self.generatedConfig()
+        config['generated_data_paths'] = value
+        self.config.write_text(json.dumps(config), encoding='utf-8')
+        self.assertEqual(self.runBuild(dryRun=True), 1)
+    config = self.generatedConfig()
+    config.pop('prepare_source_assets')
+    self.config.write_text(json.dumps(config), encoding='utf-8')
+    self.assertEqual(self.runBuild(dryRun=True), 1)
+    self.generatedConfig()
+    (self.root / 'prepare.py').unlink()
+    self.assertEqual(self.runBuild(dryRun=True), 1)
+
+  def test_actual_build_rejects_generated_asset_missing_after_preparation(self):
+    self.generatedConfig()
+    with patch('branding_build.sys.platform', 'win32'), \
+         patch('branding_build.prepareSourceAssets') as prepare, \
+         patch('build.run_command') as execute, patch('branding_build.inputSnapshot') as snapshot:
+      self.assertEqual(self.runBuild(), 1)
+    prepare.assert_called_once()
+    execute.assert_not_called()
+    snapshot.assert_not_called()
+    self.assertIn('add_data source not found', self.output.getvalue())
+
+  def test_actual_directory_build_prepares_before_building_commands(self):
+    self.generatedConfig()
+    with patch('branding_build.sys.platform', 'win32'), \
+         patch('build.run_command', side_effect=self.fakeCompiler):
+      self.assertEqual(self.runBuild(), 0)
+    self.assertTrue((self.root / 'dino_runtime').is_dir())
+
   def test_invalid_name_fails_before_build(self) -> None:
     with patch('build.run_command') as execute:
       self.assertEqual(self.runBuild(programName='updater', dryRun=True), 1)

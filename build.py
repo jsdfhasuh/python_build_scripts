@@ -199,11 +199,17 @@ def validate_path(path: str, label: str) -> None:
         raise FileNotFoundError(f'{label} not found: {path}')
 
 
-def validate_build_paths(entry: str, add_data: List[str], icon: str | None) -> None:
+def validate_build_paths(
+    entry: str, add_data: List[str], icon: str | None,
+    deferred_data_sources: frozenset[Path] = frozenset(),
+) -> None:
     validate_file(entry, 'Entry script')
 
     for item in add_data:
         source, _ = split_add_data(item)
+        if Path(source).resolve() in deferred_data_sources and not os.path.exists(source):
+            print(f'Generated add_data source will be checked after preparation: {source}')
+            continue
         validate_path(source, 'add_data source')
 
     if icon:
@@ -459,11 +465,12 @@ def append_binary_args(cmd: List[str], job: BuildJob, collect_binaries: List[str
 def build_pyinstaller_command(
     job: BuildJob, clean: bool, specpath: str = None,
     distpath: str | None = None, workpath: str | None = None,
+    *, deferred_data_sources: frozenset[Path] = frozenset(),
 ) -> List[str]:
     cmd: List[str] = list(PYINSTALLER_CMD)
     cmd.append('--noconfirm')
 
-    validate_build_paths(job.entry, job.add_data, job.icon)
+    validate_build_paths(job.entry, job.add_data, job.icon, deferred_data_sources)
 
     collect_binaries = list(job.collect_binaries)
     extra_args = list(job.extra_args)
@@ -499,6 +506,7 @@ def build_updater_command(cfg: dict, clean: bool, specpath: str = None) -> List[
 def build_job_commands(
     cfg: dict, clean: bool, specpath: str = None,
     context: BuildContext | None = None,
+    *, deferred_data_sources: frozenset[Path] = frozenset(),
 ) -> List[tuple[BuildJob, List[str]]]:
     jobs = create_build_jobs(cfg)
     if context:
@@ -508,11 +516,13 @@ def build_job_commands(
             (job, build_pyinstaller_command(
                 job, clean, str(context.specPath(job.label)),
                 str(context.distRoot), str(context.workPath(job.label)),
+                deferred_data_sources=deferred_data_sources,
             ))
             for job in jobs
         ]
     return [
-        (job, build_pyinstaller_command(job, clean, specpath))
+        (job, build_pyinstaller_command(job, clean, specpath,
+                                       deferred_data_sources=deferred_data_sources))
         for job in jobs
     ]
 

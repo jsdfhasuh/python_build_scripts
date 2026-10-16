@@ -34,10 +34,8 @@ class CompilerError(BuildConfigError):
     super().__init__(f'Compiler failed with exit code {returncode}; no success record written')
 
 
-def prepareSourceAssets(resolved: ResolvedBuild, sourceRoot: Path) -> None:
+def preparationScript(resolved: ResolvedBuild, sourceRoot: Path) -> Path:
   script = resolved.config.get('prepare_source_assets')
-  if not script:
-    return
   if not isinstance(script, str) or Path(script).is_absolute():
     raise BuildConfigError('prepare_source_assets must be a source-relative Python script')
   path = sourceRoot / script
@@ -46,19 +44,53 @@ def prepareSourceAssets(resolved: ResolvedBuild, sourceRoot: Path) -> None:
     raise BuildConfigError(f'Asset preparation script is missing or outside SourceRoot: {path}')
   if path.suffix != '.py':
     raise BuildConfigError('Asset preparation script must be a Python file')
+  return path
+
+
+def prepareSourceAssets(resolved: ResolvedBuild, sourceRoot: Path) -> None:
+  if not resolved.config.get('prepare_source_assets'):
+    return
+  path = preparationScript(resolved, sourceRoot)
   print(f'Preparing bundled source assets: {path}', flush=True)
   result = subprocess.run([sys.executable, '-B', str(path)], cwd=sourceRoot, check=False)
   if result.returncode:
     raise BuildConfigError(f'Asset preparation failed with exit code {result.returncode}')
 
 
+def generatedDataSources(resolved: ResolvedBuild) -> frozenset[Path]:
+  names = resolved.config.get('generated_data_paths', [])
+  if not isinstance(names, list):
+    raise BuildConfigError('generated_data_paths must be a list of source-relative paths')
+  if not names:
+    return frozenset()
+  sourceRoot = Path(os.environ.get('SOURCE_ROOT') or Path(resolved.config['entry']).parent).resolve()
+  preparationScript(resolved, sourceRoot)
+  mappings = {Path(build.split_add_data(item)[0]).resolve()
+              for item in resolved.config.get('add_data', [])}
+  paths = set()
+  for name in names:
+    if (not isinstance(name, str) or not name or '\\' in name or ':' in name
+        or any(part in ('', '.', '..') for part in name.split('/'))):
+      raise BuildConfigError('Invalid generated_data_paths entry: ' + str(name))
+    path = sourceRoot / name
+    rejectLinks(path)
+    path = path.resolve()
+    if not path.is_relative_to(sourceRoot) or path not in mappings:
+      raise BuildConfigError('Generated data must match a source-relative add_data source: ' + name)
+    paths.add(path)
+  return frozenset(paths)
+
+
 def buildCommands(
   resolved: ResolvedBuild, context: BuildContext, *, clean: bool = True,
+  preview: bool = False,
 ) -> list[tuple[build.BuildJob, list[str]]]:
   configuration = copy.deepcopy(resolved.config)
   if protocolEnabled(resolved):
     configuration['name'] = 'VisionWorkshopApp'
-  commands = build.build_job_commands(configuration, clean=clean, context=context)
+  generated = generatedDataSources(resolved)
+  commands = build.build_job_commands(configuration, clean=clean, context=context,
+    deferred_data_sources=generated if preview else frozenset())
   if protocolEnabled(resolved):
     sourceRoot = Path(os.environ.get('SOURCE_ROOT') or Path(resolved.config['entry']).parent)
     for _, command in commands:
@@ -203,13 +235,13 @@ def runBrandedBuild(
       configPath, profilePath=profilePath, programName=programName, iconPath=iconPath,
     )
     context = createBuildContext(resolved)
-    commands = buildCommands(resolved, context, clean=clean)
     summary = resolved.summary()
     summary['dist_directory'] = str(context.distRoot / resolved.programName)
     print(json.dumps(summary, ensure_ascii=False, indent=2))
     print('Window appearance and updater compatibility are NOT verified by this build.')
     print('Local build only. Runtime automatic updates are NOT disabled.')
     if dryRun:
+      commands = buildCommands(resolved, context, clean=clean, preview=True)
       for job, command in commands:
         print(f'Dry run {job.label} command:')
         print(' '.join(shlex.quote(item) for item in command))

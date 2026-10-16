@@ -120,9 +120,12 @@ class PortableTests(unittest.TestCase):
   def recordPath(self) -> Path:
     return next((self.packager / 'build').rglob('build-record.json'))
 
-  def configureOfflineAssetPreparation(self) -> Path:
+  def configureOfflineAssetPreparation(self, *, generatedRoot: bool = False) -> Path:
     config = readJsonObject(self.config)
     config['prepare_source_assets'] = 'prepare.py'
+    if generatedRoot:
+      config['generated_data_paths'] = ['static/models']
+      config.setdefault('add_data', []).append(str(self.source / 'static/models') + ':static/models')
     self.config.write_text(json.dumps(config), encoding='utf-8')
     relative = 'static/models/image_simplification/dinov2_vits14/model.safetensors'
     # This is a small pinned fixture, not a real model or GPU acceptance test.
@@ -215,13 +218,25 @@ class PortableTests(unittest.TestCase):
     publish.assert_not_called()
 
   def test_runtime_preview_with_missing_assets_stays_read_only(self) -> None:
-    asset = self.configureOfflineAssetPreparation()
+    asset = self.configureOfflineAssetPreparation(generatedRoot=True)
+    self.assertFalse((self.source / 'static/models').exists())
     with patch('branding_build.prepareSourceAssets') as prepare, \
          patch('portable_release.validateEnvironment') as environment:
       self.runLocal('--dry-run', '--verify-vision-train-runtime')
     self.assertFalse(asset.exists())
     prepare.assert_not_called()
     environment.assert_not_called()
+    self.compiler.assert_not_called()
+    self.compressor.assert_not_called()
+    self.assertIn('--add-data=', self.log.getvalue())
+
+  def test_generated_data_missing_after_successful_preparer_stops_before_compile(self):
+    self.configureOfflineAssetPreparation(generatedRoot=True)
+    with patch('branding_build.prepareSourceAssets'), \
+         patch('branding_build.inputSnapshot') as snapshot:
+      with self.assertRaisesRegex(FileNotFoundError, 'add_data source not found'):
+        self.runLocal('--build-only')
+    snapshot.assert_not_called()
     self.compiler.assert_not_called()
     self.compressor.assert_not_called()
 

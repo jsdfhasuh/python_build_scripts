@@ -10,6 +10,7 @@
   ],
   "entry": "${SOURCE_ROOT}/main.py",
   "prepare_source_assets": "scripts/prepare_desktop_weights.py",
+  "generated_data_paths": ["dino_runtime"],
   "name": "VisionWorkshop",
   "onefile": false,
   "console": true,
