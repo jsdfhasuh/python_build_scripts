@@ -25,6 +25,14 @@ DINO_RUNTIME_FILES = [
   'source/scripts/inspect_dino_runtime.py', 'source/scripts/dinov2_onnx_worker.py',
   'source/scripts/verify_dinov2_p5.py',
 ]
+DINO_MAIN_MODULES = [
+  'dino_onnx_entry', 'anomaly_func.dinov2_main_runtime',
+  'anomaly_func.dinov2_onnx_session', 'anomaly_func.dinov2_onnx_client',
+  'anomaly_func.dinov2_onnx_acceptance', 'scripts.dinov2_onnx_worker',
+  'scripts.verify_dinov2_p5', 'patchcore_dino_runtime.spec',
+]
+DINO_MAIN_METADATA = ('onnxruntime-gpu', 'onnx', 'numpy', 'Pillow', 'psutil',
+                      'opencv-contrib-python-headless')
 
 # Frozen builders read these source bytes; PYZ imports cannot replace data files.
 KAGGLE_SOURCE_FILES = [
@@ -148,6 +156,8 @@ def validateEnvironment(source: Path) -> None:
     '"ONNX Runtime GPU provider is missing"',
   ])
   runCommand([sys.executable, '-B', '-c', code])
+  runCommand([sys.executable, '-I', '-B', str(source / 'dino_onnx_entry.py'),
+              '--dino-onnx-worker', 'inspect', 'CPUExecutionProvider'])
   print('Runtime environment verified; physical GPU execution remains untested.', flush=True)
 
 
@@ -214,6 +224,21 @@ def validateImageSimplificationMetadata(internal: Path) -> None:
     raise BuildConfigError('Missing image simplification distribution metadata: ' + ', '.join(missing))
 
 
+def validateDinoMainRuntime(internal: Path, modules: set[str]) -> None:
+  if ioPath(internal / 'dino_runtime').exists():
+    raise BuildConfigError('Obsolete DINO sub-environment must not be bundled')
+  validateModules(modules, DINO_MAIN_MODULES)
+  requireFiles(internal, ['python311.dll',
+    'onnxruntime/capi/onnxruntime_pybind11_state.pyd',
+    'onnxruntime/capi/onnxruntime_providers_shared.dll'])
+  available = {re.sub(r'[-_.]+', '-', item.metadata.get('Name', '')).casefold()
+               for item in importlib.metadata.distributions(path=[str(ioPath(internal))])
+               if item.version}
+  missing = [name for name in DINO_MAIN_METADATA if name.casefold() not in available]
+  if missing:
+    raise BuildConfigError('Missing DINO main-runtime metadata: ' + ', '.join(missing))
+
+
 def validateDinoRuntime(root: Path) -> None:
   requireFiles(root, ['runtime.json', *DINO_RUNTIME_FILES])
   document = json.loads(ioPath(root / 'runtime.json').read_text(encoding='utf-8'))
@@ -259,13 +284,15 @@ def validatePackage(appDir: Path, programName: str) -> dict:
   requireFiles(internal / 'static/models', profile['models'])
   validateImageSimplificationMetadata(internal)
   requireFiles(internal, KAGGLE_SOURCE_FILES)
-  validateDinoRuntime(internal / 'dino_runtime')
-  validateModules(readPackagedModules(appDir / f'{programName}.exe'), profile['modules'])
+  modules = readPackagedModules(appDir / f'{programName}.exe')
+  validateModules(modules, profile['modules'])
+  validateDinoMainRuntime(internal, modules)
   if not list(ioPath(internal / '_polars_runtime_32').glob('*.pyd')):
     raise BuildConfigError('Missing packaged Polars native extension')
   validateCudaDependencies(internal)
   return {'status': 'passed', 'torch': version, 'cuda': cuda,
           'required_modules': profile['modules'], 'required_source_data': KAGGLE_SOURCE_FILES,
+          'dino_runtime': 'main-application', 'dino_worker_modules': DINO_MAIN_MODULES,
           'gpu_execution': 'not-run'}
 
 

@@ -41,7 +41,10 @@ for dll_dir in candidates:
 
 try:
     import ctypes
-    torch_lib_dirs = [d for d in seen if d.endswith(os.path.join('torch', 'lib')) and os.path.isdir(d)]
+    # DINO uses ORT and loads CUDA DLLs explicitly; it does not need Torch's CPU stack.
+    dino_worker = len(sys.argv) > 1 and sys.argv[1] == '--dino-onnx-worker'
+    torch_lib_dirs = [] if dino_worker else [
+        d for d in seen if d.endswith(os.path.join('torch', 'lib')) and os.path.isdir(d)]
     for d in torch_lib_dirs:
         for name in ('torch_global_deps.dll', 'c10.dll', 'torch_cpu.dll', 'torch_python.dll'):
             p = os.path.join(d, name)

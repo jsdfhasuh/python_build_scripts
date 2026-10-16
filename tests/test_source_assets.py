@@ -25,7 +25,7 @@ class SourceAssetTests(unittest.TestCase):
             config = resolveBuildConfig(ROOT / 'configs/emo-vision-train.json',
                                         **options).config
             self.assertEqual(config['prepare_source_assets'], 'scripts/prepare_desktop_weights.py')
-            self.assertEqual(config['generated_data_paths'], ['dino_runtime'])
+            self.assertNotIn('dino_runtime', config.get('generated_data_paths', []))
             self.assertTrue({'timm', 'safetensors.torch'} <= set(config['hidden_imports']))
             args = config['extra_args']
             metadata = {args[index + 1] for index, flag in enumerate(args)
@@ -35,9 +35,8 @@ class SourceAssetTests(unittest.TestCase):
             mappings = [item.rsplit(':', 1) for item in config['add_data']]
             self.assertTrue(any(Path(origin) == source / 'static' and destination == 'static'
                                 for origin, destination in mappings))
-            self.assertTrue(any(Path(origin) == source / 'dino_runtime'
-                                and destination == 'dino_runtime'
-                                for origin, destination in mappings))
+            self.assertFalse(any(destination == 'dino_runtime' for origin, destination in mappings))
+            self.assertTrue({'onnxruntime-gpu', 'psutil', 'opencv-contrib-python-headless'} <= metadata)
 
   def test_script_uses_build_interpreter_and_source_directory(self):
     with tempfile.TemporaryDirectory() as folder:

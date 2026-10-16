@@ -13,7 +13,7 @@ HOOK = Path(__file__).resolve().parents[1] / 'pyi_rth_torch_dll.py'
 
 
 class TorchRuntimeHookTests(unittest.TestCase):
-  def runHook(self, *, debug=False, stream=None):
+  def runHook(self, *, debug=False, stream=None, workerFlag=None):
     code = compile(HOOK.read_text(encoding='utf-8'), str(HOOK), 'exec')
     environment = {'PATH': 'original-path'}
     if debug:
@@ -22,6 +22,7 @@ class TorchRuntimeHookTests(unittest.TestCase):
       stack.enter_context(patch.dict(os.environ, environment, clear=True))
       stack.enter_context(patch.object(sys, '_MEIPASS', 'fixture-runtime', create=True))
       stack.enter_context(patch.object(sys, 'stderr', stream))
+      stack.enter_context(patch.object(sys, 'argv', ['app'] + ([workerFlag] if workerFlag else [])))
       stack.enter_context(patch('os.path.isdir', return_value=True))
       stack.enter_context(patch('os.path.isfile', return_value=True))
       addDirectory = stack.enter_context(patch('os.add_dll_directory', create=True))
@@ -31,7 +32,7 @@ class TorchRuntimeHookTests(unittest.TestCase):
       exec(code, namespace)
       openFile.assert_not_called()
       self.assertEqual(addDirectory.call_count, 4)
-      self.assertEqual(preload.call_count, 8)
+      self.assertEqual(preload.call_count, 0 if workerFlag == '--dino-onnx-worker' else 8)
       self.assertIn('fixture-runtime', os.environ['PATH'])
       self.assertTrue(os.environ['PATH'].endswith('original-path'))
       self.assertEqual(os.environ['KMP_DUPLICATE_LIB_OK'], 'TRUE')
@@ -41,6 +42,14 @@ class TorchRuntimeHookTests(unittest.TestCase):
     stream = io.StringIO()
     self.runHook(stream=stream)
     self.assertEqual(stream.getvalue(), '')
+
+  def test_dino_skips_only_torch_preload_not_library_search_paths(self):
+    self.runHook(workerFlag='--dino-onnx-worker')
+
+  def test_other_workers_keep_existing_preloads(self):
+    for flag in ('--cnn-patchcore-onnx-worker', '--multiprocessing-fork', '--dino-onnx-worker-other'):
+      with self.subTest(flag=flag):
+        self.runHook(workerFlag=flag)
 
   def test_explicit_debug_uses_stderr_without_opening_files(self):
     stream = io.StringIO()

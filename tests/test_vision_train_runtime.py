@@ -122,21 +122,18 @@ class PackageTests(unittest.TestCase):
       self.write('torch/lib/' + name)
     for name in self.profile['models']:
       self.write('static/models/' + name)
-    for name in runtime.IMAGE_SIMPLIFICATION_DISTRIBUTIONS:
+    for name in set(runtime.IMAGE_SIMPLIFICATION_DISTRIBUTIONS + runtime.DINO_MAIN_METADATA):
       self.write(f'{name.lower()}-1.0.dist-info/METADATA',
                  f'Metadata-Version: 2.1\nName: {name}\nVersion: 1.0\n')
     for name in runtime.KAGGLE_SOURCE_FILES:
       self.write(name)
-    for name in runtime.DINO_RUNTIME_FILES:
-      self.write('dino_runtime/' + name)
-    self.write('dino_runtime/runtime.json', json.dumps({
-      'format': 'dino_windows_runtime_p7_v1',
-      'files': runtime.scanFiles(self.internal / 'dino_runtime'),
-    }))
+    for name in ('python311.dll', 'onnxruntime/capi/onnxruntime_pybind11_state.pyd',
+                 'onnxruntime/capi/onnxruntime_providers_shared.dll'):
+      self.write(name)
     stack = contextlib.ExitStack()
     self.addCleanup(stack.close)
     self.readModules = stack.enter_context(patch.object(
-      runtime, 'readPackagedModules', return_value=set(self.profile['modules'])))
+      runtime, 'readPackagedModules', return_value=set(self.profile['modules'] + runtime.DINO_MAIN_MODULES)))
     self.readImports = stack.enter_context(patch.object(runtime, 'readDllImports', return_value=[]))
 
   def write(self, name, text='fixture'):
@@ -157,6 +154,7 @@ class PackageTests(unittest.TestCase):
     self.readModules.assert_not_called()
 
   def configureSharedDinoRuntime(self, extraNames=()):
+    self.configureLegacyDinoRuntime()
     from build_records import fileHash
     binding = 'onnxruntime/capi/onnxruntime_pybind11_state.cp312-win_amd64.pyd'
     names = [binding, *('onnxruntime/capi/' + name for name in (
@@ -190,13 +188,11 @@ class PackageTests(unittest.TestCase):
       runtime.validateDinoRuntime(path.parent)
 
   def test_shared_dino_cuda_filenames_allow_windows_mixed_case(self):
-    self.configureSharedDinoRuntime([
+    path, _ = self.configureSharedDinoRuntime([
       'torch/lib/nvJitLink_120_0.dll', 'torch/lib/NVRTC64_120_0.DLL',
       'torch/lib/cuDNN_ops64_9.dll',
     ])
-    report = runtime.validatePackage(self.app, 'VisionWorkshop')
-    self.assertEqual(report['status'], 'passed')
-    self.assertEqual(report['gpu_execution'], 'not-run')
+    runtime.validateDinoRuntime(path.parent)
 
   def test_shared_dino_mixed_case_library_still_requires_matching_hash(self):
     name = 'torch/lib/nvJitLink_120_0.dll'
@@ -226,21 +222,51 @@ class PackageTests(unittest.TestCase):
           runtime.validateDinoRuntime(path.parent)
         del document['shared_files'][name]
 
-  def test_missing_dino_runtime_blocks_packaging(self):
+  def configureLegacyDinoRuntime(self):
+    for name in runtime.DINO_RUNTIME_FILES:
+      self.write('dino_runtime/' + name)
+    self.write('dino_runtime/runtime.json', json.dumps({
+      'format': 'dino_windows_runtime_p7_v1',
+      'files': runtime.scanFiles(self.internal / 'dino_runtime'),
+    }))
+
+  def test_legacy_missing_dino_runtime_is_rejected(self):
+    self.configureLegacyDinoRuntime()
     (self.internal / 'dino_runtime/python.exe').unlink()
     with self.assertRaisesRegex(BuildConfigError, 'python.exe'):
-      runtime.validatePackage(self.app, 'VisionWorkshop')
+      runtime.validateDinoRuntime(self.internal / 'dino_runtime')
 
   def test_dino_runtime_corruption_or_extra_file_blocks_packaging(self):
+    self.configureLegacyDinoRuntime()
     for name in ('python312.dll', 'extra.pth'):
       with self.subTest(name=name):
         self.write('dino_runtime/' + name, 'changed')
         with self.assertRaisesRegex(BuildConfigError, 'DINO runtime inventory/hash'):
-          runtime.validatePackage(self.app, 'VisionWorkshop')
+          runtime.validateDinoRuntime(self.internal / 'dino_runtime')
         if name == 'python312.dll':
           self.write('dino_runtime/' + name)
         else:
           (self.internal / 'dino_runtime' / name).unlink()
+
+  def test_main_runtime_rejects_obsolete_second_environment(self):
+    self.configureLegacyDinoRuntime()
+    with self.assertRaisesRegex(BuildConfigError, 'Obsolete DINO'):
+      runtime.validatePackage(self.app, 'VisionWorkshop')
+
+  def test_main_runtime_requires_worker_modules(self):
+    self.readModules.return_value.remove('dino_onnx_entry')
+    with self.assertRaisesRegex(BuildConfigError, 'dino_onnx_entry'):
+      runtime.validatePackage(self.app, 'VisionWorkshop')
+
+  def test_main_runtime_requires_native_binding(self):
+    (self.internal / 'onnxruntime/capi/onnxruntime_pybind11_state.pyd').unlink()
+    with self.assertRaisesRegex(BuildConfigError, 'onnxruntime_pybind11_state'):
+      runtime.validatePackage(self.app, 'VisionWorkshop')
+
+  def test_main_runtime_requires_metadata(self):
+    (self.internal / 'psutil-1.0.dist-info/METADATA').unlink()
+    with self.assertRaisesRegex(BuildConfigError, 'DINO main-runtime metadata: psutil'):
+      runtime.validatePackage(self.app, 'VisionWorkshop')
 
   def test_missing_cudnn_component_is_fatal(self):
     (self.internal / 'torch/lib/cudnn_ops64_9.dll').unlink()
