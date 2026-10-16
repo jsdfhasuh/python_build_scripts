@@ -23,6 +23,7 @@
     "${SOURCE_ROOT}/training_platform.ui:.",
     "${SOURCE_ROOT}/tool.py:.",
     "${SOURCE_ROOT}/static:static",
+    "${SOURCE_ROOT}/dino_runtime:dino_runtime",
     "${SOURCE_ROOT}/kaggle_func/templates:kaggle_func\\templates",
     "${SOURCE_ROOT}/kaggle_func/job_builder.py:kaggle_func",
     "${SOURCE_ROOT}/kaggle_func/build_errors.py:kaggle_func",

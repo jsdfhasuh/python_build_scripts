@@ -1,5 +1,6 @@
 import contextlib
 import io
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -126,6 +127,12 @@ class PackageTests(unittest.TestCase):
                  f'Metadata-Version: 2.1\nName: {name}\nVersion: 1.0\n')
     for name in runtime.KAGGLE_SOURCE_FILES:
       self.write(name)
+    for name in runtime.DINO_RUNTIME_FILES:
+      self.write('dino_runtime/' + name)
+    self.write('dino_runtime/runtime.json', json.dumps({
+      'format': 'dino_windows_runtime_p7_v1',
+      'files': runtime.scanFiles(self.internal / 'dino_runtime'),
+    }))
     stack = contextlib.ExitStack()
     self.addCleanup(stack.close)
     self.readModules = stack.enter_context(patch.object(
@@ -148,6 +155,51 @@ class PackageTests(unittest.TestCase):
     with self.assertRaisesRegex(BuildConfigError, 'Expected torch'):
       runtime.validatePackage(self.app, 'VisionWorkshop')
     self.readModules.assert_not_called()
+
+  def test_shared_dino_libraries_are_verified_without_loading_gpu(self):
+    from build_records import fileHash
+    binding = 'onnxruntime/capi/onnxruntime_pybind11_state.cp312-win_amd64.pyd'
+    names = [binding, *('onnxruntime/capi/' + name for name in (
+      'onnxruntime.dll', 'onnxruntime_providers_shared.dll',
+      'onnxruntime_providers_cuda.dll', 'onnxruntime_providers_tensorrt.dll')),
+      'torch/lib/cudart64_12.dll', 'torch/lib/cudnn64_9.dll',
+      'torch/lib/cublas64_12.dll', 'torch/lib/cublasLt64_12.dll']
+    for name in names:
+      self.write(name)
+    shared = {name: {'size': (self.internal / name).stat().st_size,
+                     'sha256': fileHash(self.internal / name)} for name in names}
+    path = self.internal / 'dino_runtime/runtime.json'
+    document = json.loads(path.read_text())
+    document.update(format='dino_windows_runtime_p7_v2', finalized=True,
+                    distribution='onnxruntime-gpu',
+                    providers=['CPUExecutionProvider', 'CUDAExecutionProvider'],
+                    shared_files=shared, binding=shared[binding])
+    path.write_text(json.dumps(document))
+    runtime.validateDinoRuntime(path.parent)
+    self.write('torch/lib/cudnn64_9.dll', 'changed')
+    with self.assertRaisesRegex(BuildConfigError, 'shared library hash'):
+      runtime.validateDinoRuntime(path.parent)
+    document['shared_files']['../escape.dll'] = shared[binding]
+    self.write('torch/lib/cudnn64_9.dll')
+    path.write_text(json.dumps(document))
+    with self.assertRaisesRegex(BuildConfigError, 'Unexpected DINO'):
+      runtime.validateDinoRuntime(path.parent)
+
+  def test_missing_dino_runtime_blocks_packaging(self):
+    (self.internal / 'dino_runtime/python.exe').unlink()
+    with self.assertRaisesRegex(BuildConfigError, 'python.exe'):
+      runtime.validatePackage(self.app, 'VisionWorkshop')
+
+  def test_dino_runtime_corruption_or_extra_file_blocks_packaging(self):
+    for name in ('python312.dll', 'extra.pth'):
+      with self.subTest(name=name):
+        self.write('dino_runtime/' + name, 'changed')
+        with self.assertRaisesRegex(BuildConfigError, 'DINO runtime inventory/hash'):
+          runtime.validatePackage(self.app, 'VisionWorkshop')
+        if name == 'python312.dll':
+          self.write('dino_runtime/' + name)
+        else:
+          (self.internal / 'dino_runtime' / name).unlink()
 
   def test_missing_cudnn_component_is_fatal(self):
     (self.internal / 'torch/lib/cudnn_ops64_9.dll').unlink()

@@ -14,11 +14,17 @@ from path_boundary import ioPath
 
 from build_config import BuildConfigError
 from build_environment import pythonChildEnvironment
+from build_records import scanFiles
 
 
 ROOT = Path(__file__).resolve().parent
 PROFILE = ROOT / 'ci/vision-train-runtime.json'
 IMAGE_SIMPLIFICATION_DISTRIBUTIONS = ('torch', 'torchvision', 'timm', 'safetensors', 'numpy', 'Pillow')
+DINO_RUNTIME_FILES = [
+  'python.exe', 'python312.dll', 'python312.zip', 'python312._pth',
+  'source/scripts/inspect_dino_runtime.py', 'source/scripts/dinov2_onnx_worker.py',
+  'source/scripts/verify_dinov2_p5.py',
+]
 
 # Frozen builders read these source bytes; PYZ imports cannot replace data files.
 KAGGLE_SOURCE_FILES = [
@@ -208,6 +214,39 @@ def validateImageSimplificationMetadata(internal: Path) -> None:
     raise BuildConfigError('Missing image simplification distribution metadata: ' + ', '.join(missing))
 
 
+def validateDinoRuntime(root: Path) -> None:
+  requireFiles(root, ['runtime.json', *DINO_RUNTIME_FILES])
+  document = json.loads(ioPath(root / 'runtime.json').read_text(encoding='utf-8'))
+  files = scanFiles(root)
+  files.pop('runtime.json')
+  if (document.get('format') not in ('dino_windows_runtime_p7_v1', 'dino_windows_runtime_p7_v2')
+      or files != document.get('files')):
+    raise BuildConfigError('Packaged DINO runtime inventory/hash mismatch')
+  if document['format'] == 'dino_windows_runtime_p7_v2':
+    from build_records import fileHash, rejectLinks
+    binding = 'onnxruntime/capi/onnxruntime_pybind11_state.cp312-win_amd64.pyd'
+    required = {binding, *('onnxruntime/capi/' + name for name in (
+      'onnxruntime.dll', 'onnxruntime_providers_shared.dll',
+      'onnxruntime_providers_cuda.dll', 'onnxruntime_providers_tensorrt.dll')),
+      'torch/lib/cudart64_12.dll', 'torch/lib/cudnn64_9.dll',
+      'torch/lib/cublas64_12.dll', 'torch/lib/cublasLt64_12.dll'}
+    shared = document.get('shared_files', {})
+    if (document.get('finalized') is not True or not required <= shared.keys()
+        or document.get('providers') != ['CPUExecutionProvider', 'CUDAExecutionProvider']
+        or document.get('distribution') != 'onnxruntime-gpu'
+        or shared[binding] != document.get('binding')):
+      raise BuildConfigError('DINO shared runtime is not finalized')
+    for name, expected in shared.items():
+      allowed = (name in required or re.fullmatch(
+        r'torch/lib/(?:cublas|cudnn|cudart|cufft|curand|cusolver|cusparse|nvrtc|nvjitlink)[A-Za-z0-9_.-]*\.dll', name))
+      if not allowed:
+        raise BuildConfigError('Unexpected DINO shared library: ' + name)
+      path = root.parent / name
+      rejectLinks(path)
+      if {'size': ioPath(path).stat().st_size, 'sha256': fileHash(path)} != expected:
+        raise BuildConfigError('DINO shared library hash mismatch: ' + name)
+
+
 def validatePackage(appDir: Path, programName: str) -> dict:
   profile = loadProfile()
   internal = appDir / '_internal'
@@ -218,6 +257,7 @@ def validatePackage(appDir: Path, programName: str) -> dict:
   requireFiles(internal / 'static/models', profile['models'])
   validateImageSimplificationMetadata(internal)
   requireFiles(internal, KAGGLE_SOURCE_FILES)
+  validateDinoRuntime(internal / 'dino_runtime')
   validateModules(readPackagedModules(appDir / f'{programName}.exe'), profile['modules'])
   if not list(ioPath(internal / '_polars_runtime_32').glob('*.pyd')):
     raise BuildConfigError('Missing packaged Polars native extension')
