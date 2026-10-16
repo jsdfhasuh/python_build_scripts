@@ -156,14 +156,14 @@ class PackageTests(unittest.TestCase):
       runtime.validatePackage(self.app, 'VisionWorkshop')
     self.readModules.assert_not_called()
 
-  def test_shared_dino_libraries_are_verified_without_loading_gpu(self):
+  def configureSharedDinoRuntime(self, extraNames=()):
     from build_records import fileHash
     binding = 'onnxruntime/capi/onnxruntime_pybind11_state.cp312-win_amd64.pyd'
     names = [binding, *('onnxruntime/capi/' + name for name in (
       'onnxruntime.dll', 'onnxruntime_providers_shared.dll',
       'onnxruntime_providers_cuda.dll', 'onnxruntime_providers_tensorrt.dll')),
       'torch/lib/cudart64_12.dll', 'torch/lib/cudnn64_9.dll',
-      'torch/lib/cublas64_12.dll', 'torch/lib/cublasLt64_12.dll']
+      'torch/lib/cublas64_12.dll', 'torch/lib/cublasLt64_12.dll', *extraNames]
     for name in names:
       self.write(name)
     shared = {name: {'size': (self.internal / name).stat().st_size,
@@ -175,15 +175,56 @@ class PackageTests(unittest.TestCase):
                     providers=['CPUExecutionProvider', 'CUDAExecutionProvider'],
                     shared_files=shared, binding=shared[binding])
     path.write_text(json.dumps(document))
+    return path, document
+
+  def test_shared_dino_libraries_are_verified_without_loading_gpu(self):
+    path, document = self.configureSharedDinoRuntime()
     runtime.validateDinoRuntime(path.parent)
     self.write('torch/lib/cudnn64_9.dll', 'changed')
     with self.assertRaisesRegex(BuildConfigError, 'shared library hash'):
       runtime.validateDinoRuntime(path.parent)
-    document['shared_files']['../escape.dll'] = shared[binding]
+    document['shared_files']['../escape.dll'] = document['binding']
     self.write('torch/lib/cudnn64_9.dll')
     path.write_text(json.dumps(document))
     with self.assertRaisesRegex(BuildConfigError, 'Unexpected DINO'):
       runtime.validateDinoRuntime(path.parent)
+
+  def test_shared_dino_cuda_filenames_allow_windows_mixed_case(self):
+    self.configureSharedDinoRuntime([
+      'torch/lib/nvJitLink_120_0.dll', 'torch/lib/NVRTC64_120_0.DLL',
+      'torch/lib/cuDNN_ops64_9.dll',
+    ])
+    report = runtime.validatePackage(self.app, 'VisionWorkshop')
+    self.assertEqual(report['status'], 'passed')
+    self.assertEqual(report['gpu_execution'], 'not-run')
+
+  def test_shared_dino_mixed_case_library_still_requires_matching_hash(self):
+    name = 'torch/lib/nvJitLink_120_0.dll'
+    path, _ = self.configureSharedDinoRuntime([name])
+    self.write(name, 'changed')  # Same size as the original fixture.
+    with self.assertRaisesRegex(BuildConfigError, 'shared library hash mismatch'):
+      runtime.validateDinoRuntime(path.parent)
+
+  def test_shared_dino_mixed_case_library_must_exist(self):
+    name = 'torch/lib/nvJitLink_120_0.dll'
+    path, _ = self.configureSharedDinoRuntime([name])
+    (self.internal / name).unlink()
+    with self.assertRaises(FileNotFoundError):
+      runtime.validateDinoRuntime(path.parent)
+
+  def test_shared_dino_filename_case_does_not_relax_path_or_library_allowlist(self):
+    path, document = self.configureSharedDinoRuntime()
+    for name in ('torch/lib/../nvJitLink_120_0.dll', 'torch/lib/sub/nvJitLink_120_0.dll',
+                 'torch\\lib\\nvJitLink_120_0.dll', '/torch/lib/nvJitLink_120_0.dll',
+                 'TORCH/lib/nvJitLink_120_0.dll', 'torch/lib/unrelated.dll',
+                 'torch/lib/nvJitLink_120_0.exe', 'torch/lib/nvJitLink_120_0.dll:stream',
+                 'torch/lib/nvJitLink_\u0130.dll'):
+      with self.subTest(name=name):
+        document['shared_files'][name] = document['binding']
+        path.write_text(json.dumps(document))
+        with self.assertRaisesRegex(BuildConfigError, 'Unexpected DINO'):
+          runtime.validateDinoRuntime(path.parent)
+        del document['shared_files'][name]
 
   def test_missing_dino_runtime_blocks_packaging(self):
     (self.internal / 'dino_runtime/python.exe').unlink()

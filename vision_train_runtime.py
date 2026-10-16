@@ -237,8 +237,10 @@ def validateDinoRuntime(root: Path) -> None:
         or shared[binding] != document.get('binding')):
       raise BuildConfigError('DINO shared runtime is not finalized')
     for name, expected in shared.items():
+      # Windows DLL names are case-insensitive; keep the manifest directory exact.
       allowed = (name in required or re.fullmatch(
-        r'torch/lib/(?:cublas|cudnn|cudart|cufft|curand|cusolver|cusparse|nvrtc|nvjitlink)[A-Za-z0-9_.-]*\.dll', name))
+        r'torch/lib/(?ai:(?:cublas|cudnn|cudart|cufft|curand|cusolver|cusparse|nvrtc|nvjitlink)'
+        r'[a-z0-9_.-]*\.dll)', name))
       if not allowed:
         raise BuildConfigError('Unexpected DINO shared library: ' + name)
       path = root.parent / name
