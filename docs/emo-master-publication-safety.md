@@ -84,8 +84,9 @@ publication. Failed frozen plugin, migration, CPU ONNX, spawn, project-package,
 custom-page or stop/restart checks fail the build. This synthetic check is not
 camera/PLC, real-model, long-duration, clean-OS or field acceptance.
 
-Runtime ZIPs use `archive_compression=deflate` for Explorer/PowerShell extraction.
-All other targets retain their existing compression policy and installer settings.
+Both Emo Master ZIPs use `archive_compression=deflate` for Explorer/PowerShell
+extraction. Designer retains its extracted-package custom-icon rendering gate.
+Other product targets retain their existing compression policy and installer settings.
 
 For Runtime, the cloud workflow records the actual source and packager commits in
 `runtime-build.json`, retains source JUnit/build/process logs, verifies the manifest

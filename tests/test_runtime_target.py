@@ -30,6 +30,7 @@ class RuntimeTargetTests(unittest.TestCase):
     self.assertTrue(designer['installer']['enabled'])
     self.assertEqual(runtime['verification_script'], '${SOURCE_ROOT}/scripts/verify_runtime_package.ps1')
     self.assertEqual(runtime['archive_compression'], 'deflate')
+    self.assertEqual(designer['archive_compression'], 'deflate')
 
   def testWorkflowRuntimeAutoBuildsOnly(self):
     text = (ROOT / '.github/workflows/release-windows.yml').read_text()

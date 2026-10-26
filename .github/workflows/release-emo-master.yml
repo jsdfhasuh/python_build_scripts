@@ -192,6 +192,11 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.11'
+      - name: Verify Designer custom icons from the extracted package
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ needs.prepare.outputs.release_tag }}
+        run: ./source/scripts/verify_windows_package.ps1 -Archive "packages/emo-master/emo-master-windows-$env:RELEASE_TAG.zip"
       - name: Verify six public files and publish only after both builds pass
         working-directory: packager
         env:

@@ -167,6 +167,11 @@ class MasterReleaseTests(unittest.TestCase):
     self.assertEqual(package['with']['source_ref'], '${{ needs.prepare.outputs.source_sha }}')
     self.assertEqual(package['with']['packager_ref'], '${{ needs.prepare.outputs.packager_sha }}')
     self.assertEqual(workflow['jobs']['release']['needs'], ['prepare', 'package'])
+    steps = workflow['jobs']['release']['steps']
+    iconGate = next(step for step in steps if 'custom icons' in step.get('name', ''))
+    publisher = next(step for step in steps if 'Verify six public files' in step.get('name', ''))
+    self.assertIn('verify_windows_package.ps1', iconGate['run'])
+    self.assertLess(steps.index(iconGate), steps.index(publisher))
 
   @unittest.skipUnless(shutil.which('pwsh') or shutil.which('powershell'), 'PowerShell unavailable')
   def testRuntimePublishSwitchReachesLegacyPublisher(self):

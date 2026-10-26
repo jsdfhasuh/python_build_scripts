@@ -5,6 +5,7 @@
   "pyinstaller_version": "6.22.2",
   "release_asset_name": "emo-master-windows-${RELEASE_TAG}.zip",
   "source_version_file": "${SOURCE_ROOT}/src/emo_master/__init__.py",
+  "archive_compression": "deflate",
   "ci_extra_packages": [
     "pyinstaller==6.22.2"
   ],
