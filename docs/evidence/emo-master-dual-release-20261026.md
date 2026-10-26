@@ -61,7 +61,7 @@ Date: 2026-10-26, Asia/Shanghai. Published at 18:03:22.
   names, URLs and SHA256, plus Runtime archive/native evidence.
 - After publication, both public manifests were downloaded and checked against
   GitHub asset digests. Their source, version, asset URLs and SHA256 match the
-  six public assets. The release body matches the prepared fingerprint:
+  six public assets. The initial release body matched the prepared fingerprint:
   `475399e15d9916b8cdd4469713d4eced1a7c565f939a51a721fd661ebd767b45`.
 - Final Windows and Ubuntu packager CI is green:
   https://github.com/jsdfhasuh/python_build_scripts/actions/runs/40303306789
@@ -83,6 +83,33 @@ Date: 2026-10-26, Asia/Shanghai. Published at 18:03:22.
   tests then passed and that temporary checkout was removed. This was not a
   product build failure and no application working-tree changes were discarded.
 
+## Separate source CI result
+
+The application-wide CI triggered by the source push, and the automatic source
+tag workflow triggered by Release creation, stopped at a preexisting stale
+catalog-count assertion: `testAllBuiltinParameterTitlesSurviveRegistration`
+expected 77 builtins while the source already contained and registered 78.
+The relevant plugin and test files were unchanged by the version-migration commit.
+Each failed attempt reported 79 passed and one failed, then stopped; none is a
+full-suite pass. The automatic tag workflow did not reach its publish job and
+did not overwrite the successfully published central-workflow assets.
+
+- Source CI: https://github.com/jsdfhasuh/emo_master/actions/runs/40302724324
+- Automatic tag workflow: https://github.com/jsdfhasuh/emo_master/actions/runs/40304379943
+- Raw logs: `artifacts/master-source-ci-failed.log` and
+  `artifacts/master-source-tag-workflow-failed.log`.
+- Follow-up test-only source commit: `331c4d3586cb5cd5141871fbe3da353bca9a56b6`.
+  It preserves the exact catalog-count assertion at 78 and reads the current
+  application version. The focused test passed (one test, 1.02 seconds).
+- Full source CI rerun was still in progress at this report update:
+  https://github.com/jsdfhasuh/emo_master/actions/runs/40305371867
+
+A body-only Release update explicitly discloses this distinction and links the
+full source CI rerun. The six asset records were verified unchanged. The updated
+body SHA256 is `ac05a8edd734e59a61fd6ad095789520cf497adc93a8b1b6899da98a03663a46`.
+The released source tag remains `da072110c227ab8043c7bf8955101baba246af56`;
+the test-only follow-up is not a replacement binary release.
+
 ## Evidence and boundaries
 
 Local raw outputs remain under `artifacts/`: `master-release-unit-tests.log`,
@@ -93,7 +120,8 @@ Local raw outputs remain under `artifacts/`: `master-release-unit-tests.log`,
 `master-release-public-manifests/`. Product logs and reports also remain in the
 linked Actions run; they are not public Release assets.
 
-Not run: full application pytest suite in this task, manual product GUI acceptance,
-real camera/PLC/hardware tests, field-model accuracy, long-duration operation,
-clean consumer-Windows installation acceptance and update-transition acceptance.
-Synthetic and fixture results must not be reported as those checks passing.
+Not completed: the full application pytest suite, as detailed above. Not run:
+manual product GUI acceptance, real camera/PLC/hardware tests, field-model accuracy,
+long-duration operation, clean consumer-Windows installation acceptance and
+update-transition acceptance. Synthetic and fixture results must not be reported
+as those checks passing.
