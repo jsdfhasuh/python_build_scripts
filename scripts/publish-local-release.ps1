@@ -31,6 +31,7 @@ foreach ($field in $brandingFields) {
 }
 $hasPortableArgument = $hasBranding
 foreach ($field in @('DryRun', 'Publish', 'BuildRecordPath', 'PythonExecutable')) {
+  if ($field -eq 'Publish' -and $Target -eq 'emo-master-runtime') { continue }
   if ($PSBoundParameters.ContainsKey($field)) { $hasPortableArgument = $true }
 }
 if ($NotesOnly -and ($hasPortableArgument -or $BuildOnly -or $SkipBuild)) {

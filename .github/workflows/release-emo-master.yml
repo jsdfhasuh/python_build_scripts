@@ -1,0 +1,206 @@
+name: Release Emo Master Designer and Runtime
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: Source branch, tag or commit (without origin/)
+        required: true
+        type: string
+      release_tag:
+        description: Release tag (blank reads the application version)
+        default: ''
+        type: string
+      packager_ref:
+        description: Packager revision (blank uses this workflow commit)
+        default: ''
+        type: string
+      publish_release:
+        description: Publish both verified installers and portable packages
+        default: false
+        type: boolean
+      previous_source_ref:
+        description: Optional source base for release notes
+        default: ''
+        type: string
+      release_title:
+        description: Optional release title
+        default: ''
+        type: string
+      notes:
+        description: Short release description
+        default: ''
+        type: string
+      release_body_path:
+        description: Optional Markdown file in the packager repository
+        default: ''
+        type: string
+      changelog_all:
+        description: Include all source history instead of the previous release range
+        default: false
+        type: boolean
+  workflow_call:
+    inputs:
+      source_ref:
+        required: true
+        type: string
+      release_tag:
+        default: ''
+        type: string
+      packager_ref:
+        required: true
+        type: string
+      publish_release:
+        default: false
+        type: boolean
+      previous_source_ref:
+        default: ''
+        type: string
+      release_title:
+        default: ''
+        type: string
+      notes:
+        default: ''
+        type: string
+      release_body_path:
+        default: ''
+        type: string
+      changelog_all:
+        default: false
+        type: boolean
+    secrets:
+      SOURCE_REPO_TOKEN:
+        required: false
+      RELEASE_REPO_TOKEN:
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: emo-master-${{ inputs.release_tag || inputs.source_ref }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    outputs:
+      release_tag: ${{ steps.prepare.outputs.release_tag }}
+      source_sha: ${{ steps.prepare.outputs.source_sha }}
+      packager_sha: ${{ steps.prepare.outputs.packager_sha }}
+    steps:
+      - name: Select packager revision
+        id: revision
+        shell: pwsh
+        env:
+          REQUESTED_REF: ${{ inputs.packager_ref }}
+          CALLER_REPOSITORY: ${{ github.repository }}
+          CALLER_SHA: ${{ github.sha }}
+        run: |
+          $ref = $env:REQUESTED_REF
+          if (-not $ref) {
+            if ($env:CALLER_REPOSITORY -ne 'jsdfhasuh/python_build_scripts') {
+              throw 'Cross-repository callers must supply packager_ref explicitly'
+            }
+            $ref = $env:CALLER_SHA
+          }
+          if ($ref -match '[\r\n]' -or $ref.StartsWith('-')) { throw 'Invalid packager_ref' }
+          Add-Content $env:GITHUB_OUTPUT "ref=$ref"
+      - uses: actions/checkout@v7
+        with:
+          repository: jsdfhasuh/python_build_scripts
+          ref: ${{ steps.revision.outputs.ref }}
+          path: packager
+          persist-credentials: false
+      - uses: actions/checkout@v7
+        with:
+          repository: jsdfhasuh/emo_master
+          ref: ${{ inputs.source_ref }}
+          path: source
+          fetch-depth: 0
+          token: ${{ secrets.SOURCE_REPO_TOKEN || github.token }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: Resolve version, check publication and prepare release notes
+        id: prepare
+        working-directory: packager
+        env:
+          MASTER_RELEASE_INPUTS: ${{ toJSON(inputs) }}
+          GH_TOKEN: ${{ secrets.RELEASE_REPO_TOKEN || github.token }}
+          RELEASE_REPO_TOKEN: ${{ secrets.RELEASE_REPO_TOKEN || (github.repository == 'jsdfhasuh/emo_master' && github.token) || '' }}
+          PYTHONUTF8: '1'
+        run: python master_release.py prepare --source-root ../source --state ../release-state
+      - uses: actions/upload-artifact@v4
+        with:
+          name: emo-master-release-request
+          path: release-state/
+          if-no-files-found: error
+
+  package:
+    needs: prepare
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [emo-master, emo-master-runtime]
+    uses: ./.github/workflows/release-windows.yml
+    permissions:
+      contents: write
+    with:
+      target: ${{ matrix.target }}
+      source_ref: ${{ needs.prepare.outputs.source_sha }}
+      packager_ref: ${{ needs.prepare.outputs.packager_sha }}
+      release_tag: ${{ needs.prepare.outputs.release_tag }}
+      release_repo: jsdfhasuh/emo_master
+      publish_release: false
+    secrets: inherit
+
+  release:
+    needs: [prepare, package]
+    runs-on: windows-latest
+    timeout-minutes: 40
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          repository: jsdfhasuh/python_build_scripts
+          ref: ${{ needs.prepare.outputs.packager_sha }}
+          path: packager
+          persist-credentials: false
+      - uses: actions/checkout@v7
+        with:
+          repository: jsdfhasuh/emo_master
+          ref: ${{ needs.prepare.outputs.source_sha }}
+          path: source
+          token: ${{ secrets.SOURCE_REPO_TOKEN || github.token }}
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: emo-master-release-request
+          path: release-state
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-release-emo-master-${{ needs.prepare.outputs.release_tag }}
+          path: packages/emo-master
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-release-emo-master-runtime-${{ needs.prepare.outputs.release_tag }}
+          path: packages/emo-master-runtime
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: Verify six public files and publish only after both builds pass
+        working-directory: packager
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_REPO_TOKEN || github.token }}
+          RELEASE_REPO_TOKEN: ${{ secrets.RELEASE_REPO_TOKEN || (github.repository == 'jsdfhasuh/emo_master' && github.token) || '' }}
+          PYTHONUTF8: '1'
+        run: python master_release.py release --source-root ../source --state ../release-state --artifacts ../packages --output ../public
+      - uses: actions/upload-artifact@v4
+        with:
+          name: emo-master-public-${{ needs.prepare.outputs.release_tag }}
+          path: public/
+          if-no-files-found: error

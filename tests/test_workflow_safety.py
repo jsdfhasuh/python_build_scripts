@@ -69,7 +69,8 @@ class WorkflowSafetyTests(unittest.TestCase):
         data, _ = loadWorkflow(path.name)
         self.assertEqual(data['permissions'], {'contents': 'read'})
         for jobName, job in data['jobs'].items():
-          if path.name == 'release-windows.yml' and jobName == 'build':
+          if ((path.name == 'release-windows.yml' and jobName == 'build') or
+              (path.name == 'release-emo-master.yml' and jobName in ('package', 'release'))):
             self.assertEqual(job['permissions'], {'contents': 'write'})
           else:
             self.assertEqual(job.get('permissions', data['permissions']), {'contents': 'read'})

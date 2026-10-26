@@ -20,6 +20,10 @@ param(
 $ErrorActionPreference = 'Stop'
 if ($Target -eq 'emo-master-runtime' -and -not $Publish) { $BuildOnly = $true }
 if ($Publish -and $BuildOnly) { throw 'Publish and BuildOnly cannot be combined' }
+if ($Target -eq 'emo-master-runtime' -and -not $BuildOnly -and
+    -not $PSBoundParameters.ContainsKey('ManifestName')) {
+  $ManifestName = 'runtime-manifest.json'
+}
 $MaxGithubReleaseAssetBytes = 2147483647
 
 function Get-AssetSha256 {
@@ -657,15 +661,12 @@ function Assert-SourceVersionMatchesTag {
   if (-not (Test-Path -LiteralPath $versionFile -PathType Leaf)) {
     throw "Source version file not found: $versionFile"
   }
-  $versionContent = Get-Content -LiteralPath $versionFile -Raw
-  $versionMatch = [regex]::Match(
-    $versionContent,
-    '__version__\s*=\s*["''](?<version>[^"'']+)["'']'
-  )
-  if (-not $versionMatch.Success) {
-    throw "Unable to read __version__ from $versionFile"
+  $readVersion = 'import sys; from pathlib import Path; sys.path.insert(0, sys.argv[1]); from release_wizard_common import getSourceVersion; print(getSourceVersion(dict(source_version_file=sys.argv[2]), Path(sys.argv[3])))'
+  $actualVersion = & python -c $readVersion $PSScriptRoot $versionFile $SourceRootPath
+  if ($LASTEXITCODE -ne 0 -or -not $actualVersion) {
+    throw "Unable to read application version from $versionFile"
   }
-  $actualVersion = $versionMatch.Groups['version'].Value
+  $actualVersion = $actualVersion.Trim()
   if ($actualVersion -ne $ExpectedVersion) {
     throw "Release tag version $ExpectedVersion does not match application version $actualVersion"
   }

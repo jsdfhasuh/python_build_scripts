@@ -244,6 +244,7 @@ def generateBody(
   *, title: str, notes: str, programName: str, sourceRepo: str, sourceRoot: Path,
   head: str, base: str = '', allHistory: bool = False, assetName: str = '',
   legacyNames: tuple[str, ...] = (),
+  downloadNotes: tuple[str, ...] = (),
 ) -> str:
   changes = getChanges(sourceRoot, head, base, allHistory)
   fixes, other = [], []
@@ -256,9 +257,13 @@ def generateBody(
                     else '- 尚未指定更新范围；请确认日志起点或编辑正文。']
   lines += ['', '## 修复与改进', '']
   lines += fixes or ['- 本范围内未按提交标题识别到修复项，请人工核对。']
-  if assetName:
-    lines += ['', '## 下载与升级', '', f'- 下载并完整解压 {escapeMarkdown(assetName)}。',
-              f'- 启动 {escapeMarkdown(programName)}.exe。']
+  if assetName or downloadNotes:
+    lines += ['', '## 下载与升级', '']
+    if downloadNotes:
+      lines += ['- ' + note for note in downloadNotes]
+    else:
+      lines += [f'- 下载并完整解压 {escapeMarkdown(assetName)}。',
+                f'- 启动 {escapeMarkdown(programName)}.exe。']
     if legacyNames:
       lines += ['- 保留旧名兼容入口：' + '、'.join(escapeMarkdown(name) + '.exe'
                                                 for name in legacyNames) + '。']

@@ -16,7 +16,12 @@ class RuntimeTargetTests(unittest.TestCase):
     self.assertEqual(runtime['name'], 'EmoMasterRuntime')
     self.assertFalse(runtime['onefile'])
     self.assertFalse(runtime['console'])
-    self.assertFalse(runtime['installer']['enabled'])
+    self.assertTrue(runtime['installer']['enabled'])
+    self.assertTrue(runtime['installer']['smoke_test'])
+    self.assertEqual(runtime['installer']['executable'], 'EmoMasterRuntime.exe')
+    for field in ('app_id', 'default_dir_name', 'start_menu_name', 'desktop_shortcut_name'):
+      self.assertNotEqual(runtime['installer'][field], designer['installer'][field])
+    self.assertEqual(runtime['installer']['compiler_version'], designer['installer']['compiler_version'])
     self.assertIn('emo_master.apps.designer', runtime['excludes'])
     self.assertTrue(all('/designer/' not in value for value in runtime['add_data']))
     self.assertEqual(runtime['ci_extra_packages'], designer['ci_extra_packages'])

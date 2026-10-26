@@ -153,6 +153,7 @@ jobs:
     if: inputs.target != 'emo-vision-train'
     name: Build ${{ inputs.target }} for Windows
     runs-on: windows-latest
+    timeout-minutes: 60
     permissions:
       contents: write
     outputs:

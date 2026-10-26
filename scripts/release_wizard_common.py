@@ -1,3 +1,4 @@
+import ast
 import argparse
 import json
 import os
@@ -115,13 +116,29 @@ def getSourceVersion(config: dict[str, object], sourceRoot: Path) -> str:
   if not versionFile.is_file():
     raise SystemExit(f'源码版本文件不存在：{versionFile}')
 
-  versionMatch = re.search(
-    r'''__version__\s*=\s*["'](?P<version>[^"']+)["']''',
-    versionFile.read_text(encoding='utf-8'),
-  )
-  if not versionMatch:
-    raise SystemExit(f'无法从源码版本文件读取 __version__：{versionFile}')
-  return versionMatch.group('version')
+  tree = ast.parse(versionFile.read_text(encoding='utf-8-sig'), filename=str(versionFile))
+  versionName = '__version__'
+  # Follow Emo Master's version re-export without importing Qt or ONNX Runtime.
+  if versionFile.name == '__init__.py' and any(
+    isinstance(node, ast.ImportFrom) and node.level == 1 and node.module == 'app_version'
+    and any(alias.name == 'APP_VERSION' and alias.asname == '__version__'
+            for alias in node.names)
+    for node in tree.body
+  ):
+    versionFile = versionFile.with_name('app_version.py')
+    tree = ast.parse(versionFile.read_text(encoding='utf-8-sig'), filename=str(versionFile))
+    versionName = 'APP_VERSION'
+
+  version = None
+  for node in tree.body:
+    targets = node.targets if isinstance(node, ast.Assign) else []
+    if isinstance(node, ast.AnnAssign):
+      targets = [node.target]
+    if any(isinstance(target, ast.Name) and target.id == versionName for target in targets):
+      version = node.value.value if isinstance(node.value, ast.Constant) else None
+  if not isinstance(version, str) or not version:
+    raise SystemExit(f'无法从源码版本文件读取 {versionName}：{versionFile}')
+  return version
 
 
 def getTargets(repoRoot: Path) -> list[str]:
