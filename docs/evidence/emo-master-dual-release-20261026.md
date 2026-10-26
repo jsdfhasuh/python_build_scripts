@@ -101,12 +101,29 @@ did not overwrite the successfully published central-workflow assets.
 - Follow-up test-only source commit: `331c4d3586cb5cd5141871fbe3da353bca9a56b6`.
   It preserves the exact catalog-count assertion at 78 and reads the current
   application version. The focused test passed (one test, 1.02 seconds).
-- Full source CI rerun was still in progress at this report update:
+- Full source CI rerun completed with both platforms failing after 454 passed
+  and one failed (Ubuntu: 26.91 seconds; Windows: 50.05 seconds):
   https://github.com/jsdfhasuh/emo_master/actions/runs/40305371867
+- The next failure is
+  `tests/core/project/test_device_resources.py::testProductionReopenUsesCommittedVersionAndRefusesInPlacePackageUpdate`
+  at line 391: the test expects `ValueError` containing `no files changed`,
+  but `ProductionRuntime.installPackage` does not raise it.
+- Existing source commit `f4fc44b6006bfa66f9279f9606a4075ea169e9d2` deliberately
+  introduced explicit stopped package updates and removed that blanket rejection.
+  Neither the controller nor this old test changed between the previous source
+  delivery `633de0e197f5553168a7786440199f68f3410bed` and the released source.
+  This is an outstanding source test/behavior contract mismatch, not a full-suite
+  pass. No business-code change, test skip or second baseline rewrite was made
+  as part of this publication task. The remaining suite did not execute.
+- The rerun failure log is retained as
+  `artifacts/master-source-ci-40305371867-failed.log`.
 
 A body-only Release update explicitly discloses this distinction and links the
-full source CI rerun. The six asset records were verified unchanged. The updated
-body SHA256 is `ac05a8edd734e59a61fd6ad095789520cf497adc93a8b1b6899da98a03663a46`.
+full source CI rerun. Its first disclosure body SHA256 was
+`ac05a8edd734e59a61fd6ad095789520cf497adc93a8b1b6899da98a03663a46`.
+The final body also records the rerun failure and has SHA256
+`a57e965eab57718c39767f045cfda10163b6c720f52e6dff2fc1d0281cd95458`.
+Both body-only updates verified all six asset records unchanged.
 The released source tag remains `da072110c227ab8043c7bf8955101baba246af56`;
 the test-only follow-up is not a replacement binary release.
 
