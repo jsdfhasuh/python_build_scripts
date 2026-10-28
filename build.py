@@ -562,9 +562,25 @@ def _find_python_dll() -> str | None:
     return None
 
 
+def getBuildEnvironment(cmd: List[str]) -> dict[str, str] | None:
+  parser = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
+  parser.add_argument('-p', '--paths', action='append', default=[])
+  options, _ = parser.parse_known_args(cmd[3:])
+  paths = [os.path.abspath(path) for value in options.paths
+           for path in value.split(os.pathsep) if path]
+  if not paths:
+    return None
+  # Spec-level collectors run before Analysis adds --paths to sys.path.
+  environment = os.environ.copy()
+  if environment.get('PYTHONPATH'):
+    paths.append(environment['PYTHONPATH'])
+  environment['PYTHONPATH'] = os.pathsep.join(paths)
+  return environment
+
+
 def run_command(cmd: List[str]) -> int:
     print('Running:', ' '.join(shlex.quote(x) for x in cmd))
-    proc = subprocess.run(cmd)
+    proc = subprocess.run(cmd, env=getBuildEnvironment(cmd))
     return proc.returncode
 
 
