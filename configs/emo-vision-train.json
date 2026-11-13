@@ -99,6 +99,8 @@
     "--copy-metadata",
     "torchvision",
     "--copy-metadata",
+    "torchmetrics",
+    "--copy-metadata",
     "timm",
     "--copy-metadata",
     "safetensors",
