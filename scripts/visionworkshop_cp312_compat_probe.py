@@ -22,7 +22,7 @@ OVERRIDES = {
     "onnxruntime", "onnxruntime-gpu",
     "opencv-python", "opencv-python-headless",
     "opencv-contrib-python", "opencv-contrib-python-headless",
-    "tokenizers", "huggingface-hub", "transformers", "kaggle", "kagglesdk", "sympy",
+    "tokenizers", "huggingface-hub", "transformers", "kaggle", "kagglesdk", "sympy", "lapx",
 }
 DEV_ONLY = {
     "notebook", "notebook-shim", "jupyterlab", "jupyterlab-server",
@@ -48,6 +48,7 @@ PINNED_OVERRIDES = [
     "onnxruntime==1.23.2",
     "opencv-python-headless==4.11.0.86",
     "sympy==1.14.0",
+    "lapx==0.5.9.post1",
     "numpy==2.0.2",
     "opencv-contrib-python-headless==4.11.0.86",
     "onnxruntime-gpu==1.23.2",
@@ -59,7 +60,7 @@ PINNED_OVERRIDES = [
 ]
 EXPECTED_VERSIONS = {
     "torch": "2.10.0+cu128", "torchvision": "0.25.0+cu128", "torchaudio": "2.10.0+cu128",
-    "sympy": "1.14.0", "onnxruntime": "1.23.2",
+    "sympy": "1.14.0", "lapx": "0.5.9.post1", "onnxruntime": "1.23.2",
     "opencv-python-headless": "4.11.0.86",
     "numpy": "2.0.2", "onnx": "1.16.0", "onnxruntime-gpu": "1.23.2",
     "opencv-contrib-python-headless": "4.11.0.86", "anomalib": "2.5.1",
@@ -277,6 +278,31 @@ def smoke(source_root: Path) -> dict:
             "traceback": traceback.format_exc(limit=8),
         }
         report["failures"].append(f"CPU/native smoke: {type(exc).__name__}: {exc}")
+
+    try:
+        import lap
+        import numpy as np
+        costs = np.array([[4., 1., 3.], [2., 0., 5.], [3., 2., 2.]], dtype=np.float64)
+        total, rows, columns = lap.lapjv(costs)
+        np.testing.assert_allclose(total, 5.0)
+        np.testing.assert_array_equal(rows, [1, 0, 2])
+        np.testing.assert_array_equal(columns, [1, 0, 2])
+        rectangular = np.array([[0.1, 4., 3.], [4., 0.2, 3.]], dtype=np.float64)
+        limited, matched, reverse = lap.lapjv(rectangular, extend_cost=True, cost_limit=0.5)
+        np.testing.assert_allclose(limited, 0.3)
+        np.testing.assert_array_equal(matched, [0, 1])
+        np.testing.assert_array_equal(reverse, [0, 1, -1])
+        report["runtime_checks"]["lap_assignment"] = {
+            "status": "PASS", "distribution": version_of("lapx"),
+            "square_cost": float(total), "square_assignment": rows.tolist(),
+            "rectangular_cost": float(limited), "unmatched_columns": reverse.tolist(),
+        }
+    except Exception as exc:
+        report["runtime_checks"]["lap_assignment"] = {
+            "status": "FAIL", "error": type(exc).__name__ + ": " + str(exc),
+            "traceback": traceback.format_exc(limit=4),
+        }
+        report["failures"].append(f"LAP assignment: {type(exc).__name__}: {exc}")
 
     owners = inspectBinaryOwners(EXPECTED_VERSIONS)
     report["runtime_checks"]["binary_owners"] = owners
