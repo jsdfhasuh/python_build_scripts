@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import argparse
+import base64
+import hashlib
 import importlib
 import importlib.metadata as metadata
 import json
@@ -20,7 +22,7 @@ OVERRIDES = {
     "onnxruntime", "onnxruntime-gpu",
     "opencv-python", "opencv-python-headless",
     "opencv-contrib-python", "opencv-contrib-python-headless",
-    "tokenizers", "huggingface-hub", "transformers", "kaggle", "kagglesdk",
+    "tokenizers", "huggingface-hub", "transformers", "kaggle", "kagglesdk", "sympy",
 }
 DEV_ONLY = {
     "notebook", "notebook-shim", "jupyterlab", "jupyterlab-server",
@@ -40,6 +42,12 @@ DEV_ONLY = {
     "isoduration", "uri-template", "webencodings",
 }
 PINNED_OVERRIDES = [
+    "torch==2.10.0+cu128",
+    "torchvision==0.25.0+cu128",
+    "torchaudio==2.10.0+cu128",
+    "onnxruntime==1.23.2",
+    "opencv-python-headless==4.11.0.86",
+    "sympy==1.14.0",
     "numpy==2.0.2",
     "opencv-contrib-python-headless==4.11.0.86",
     "onnxruntime-gpu==1.23.2",
@@ -50,7 +58,9 @@ PINNED_OVERRIDES = [
     "kagglesdk==0.1.37",
 ]
 EXPECTED_VERSIONS = {
-    "torch": "2.10.0", "torchvision": "0.25.0", "torchaudio": "2.10.0",
+    "torch": "2.10.0+cu128", "torchvision": "0.25.0+cu128", "torchaudio": "2.10.0+cu128",
+    "sympy": "1.14.0", "onnxruntime": "1.23.2",
+    "opencv-python-headless": "4.11.0.86",
     "numpy": "2.0.2", "onnx": "1.16.0", "onnxruntime-gpu": "1.23.2",
     "opencv-contrib-python-headless": "4.11.0.86", "anomalib": "2.5.1",
     "transformers": "4.46.3", "huggingface-hub": "0.26.5",
@@ -69,7 +79,7 @@ IMPORTS = [
     "safetensors.torch", "transformers", "huggingface_hub", "tokenizers",
     "polars", "av", "kaggle", "kagglesdk", "imagecodecs",
     "PyQt5.QtCore", "PyQt5.QtWebEngineWidgets", "qimage2ndarray",
-    "natsort", "termcolor", "lapx", "shapely", "pyclipper",
+    "natsort", "termcolor", "lap", "shapely", "pyclipper",
     "jsonlines", "json_repair", "onnxslim", "ultralytics", "anylabeling",
 ]
 
@@ -108,21 +118,96 @@ def version_of(name):
     except metadata.PackageNotFoundError:
         return None
 
+def inspectNativeRecords(distributionName: str, prefix: str) -> list:
+  distribution = metadata.distribution(distributionName)
+  records = [entry for entry in distribution.files or []
+             if str(entry).replace('\\', '/').startswith(prefix)
+             and str(entry).lower().endswith('.pyd')]
+  if not records:
+    raise RuntimeError(f'{distributionName}: no native extension in wheel RECORD')
+  checks = []
+  for entry in records:
+    path = Path(distribution.locate_file(entry)).resolve()
+    if not entry.hash:
+      raise RuntimeError(f'{distributionName}: missing RECORD hash for {entry}')
+    with path.open('rb') as stream:
+      digest = hashlib.file_digest(stream, entry.hash.mode).digest()
+    actual = base64.urlsafe_b64encode(digest).rstrip(b'=').decode('ascii')
+    checks.append({'path': str(path), 'algorithm': entry.hash.mode,
+                   'expected_hash': entry.hash.value, 'actual_hash': actual,
+                   'status': 'PASS' if actual == entry.hash.value else 'FAIL'})
+  return checks
+
+
+def inspectBinaryOwners(expectedVersions: dict) -> dict:
+  aliases = ('onnxruntime', 'onnxruntime-gpu', 'opencv-python',
+             'opencv-python-headless', 'opencv-contrib-python',
+             'opencv-contrib-python-headless')
+  versions = {name: version_of(name) for name in aliases if version_of(name) is not None}
+  result = {
+    'status': 'PASS', 'distribution_versions': versions,
+    'coinstalled_metadata': [name for name in versions
+                            if name not in ('onnxruntime-gpu',
+                                            'opencv-contrib-python-headless')],
+    'note': 'Dependency metadata may coexist; native files must match the final owners.',
+    'owners': {},
+  }
+  owners = (
+    ('onnxruntime-gpu', 'onnxruntime', 'onnxruntime/capi/onnxruntime_pybind11_state'),
+    ('opencv-contrib-python-headless', 'cv2', 'cv2/'),
+  )
+  for distributionName, moduleName, nativePrefix in owners:
+    try:
+      module = importlib.import_module(moduleName)
+      nativeChecks = inspectNativeRecords(distributionName, nativePrefix)
+      packageDir = Path(metadata.distribution(distributionName).locate_file(moduleName)).resolve()
+      modulePath = Path(module.__file__).resolve()
+      expected = expectedVersions[distributionName]
+      if moduleName == 'cv2':
+        expected = '.'.join(expected.split('.')[:3])
+        capabilities = {'ximgproc': hasattr(module, 'ximgproc')}
+        capabilityMatches = capabilities['ximgproc']
+      else:
+        capabilities = {'providers': module.get_available_providers()}
+        capabilityMatches = 'CUDAExecutionProvider' in capabilities['providers']
+      matches = (module.__version__ == expected and modulePath.parent == packageDir
+                 and capabilityMatches
+                 and all(check['status'] == 'PASS' for check in nativeChecks))
+      result['owners'][distributionName] = {
+        'status': 'PASS' if matches else 'FAIL', 'module_path': str(modulePath),
+        'expected_module_version': expected, 'actual_module_version': module.__version__,
+        'package_path_matches': modulePath.parent == packageDir,
+        'capabilities': capabilities, 'native_record_checks': nativeChecks,
+      }
+      if not matches:
+        result['status'] = 'FAIL'
+    except Exception as exc:
+      result['status'] = 'FAIL'
+      result['owners'][distributionName] = {
+        'status': 'FAIL', 'error': type(exc).__name__ + ': ' + str(exc),
+        'traceback': traceback.format_exc(limit=4),
+      }
+  return result
+
+
 def smoke(source_root: Path) -> dict:
     source_root = source_root.resolve()
     for path in (source_root / "ultralytics", source_root / "X-AnyLabeling"):
         if path.is_dir():
             sys.path.insert(0, str(path))
+    sys.path.insert(0, str(source_root))
     report = {
         "python": sys.version, "platform": platform.platform(),
         "executable": sys.executable, "versions": {}, "version_checks": {},
+        "scope": "SOURCE_RUNTIME_PROBE_NOT_PRODUCT_ACCEPTANCE",
+        "frozen_execution": "NOT_RUN",
         "imports": {}, "runtime_checks": {}, "expected_migration_blockers": [],
         "failures": [],
     }
     for name, expected in EXPECTED_VERSIONS.items():
         actual = version_of(name)
         report["versions"][name] = actual
-        ok = (actual or "").split("+")[0] == expected
+        ok = actual == expected
         report["version_checks"][name] = {
             "expected": expected, "actual": actual, "status": "PASS" if ok else "FAIL"
         }
@@ -133,7 +218,7 @@ def smoke(source_root: Path) -> dict:
         try:
             importlib.import_module(module)
             report["imports"][module] = "PASS"
-        except Exception as exc:
+        except (Exception, SystemExit) as exc:
             report["imports"][module] = {
                 "status": "FAIL", "error": type(exc).__name__ + ": " + str(exc),
                 "traceback": traceback.format_exc(limit=4),
@@ -193,46 +278,55 @@ def smoke(source_root: Path) -> dict:
         }
         report["failures"].append(f"CPU/native smoke: {type(exc).__name__}: {exc}")
 
-    installed = {canonicalize_name(d.metadata.get("Name", "")) for d in metadata.distributions()}
-    conflicting = [
-        name for name in ("onnxruntime", "opencv-python", "opencv-python-headless", "opencv-contrib-python")
-        if name in installed
-    ]
-    report["runtime_checks"]["single_binary_owners"] = {
-        "status": "FAIL" if conflicting else "PASS",
-        "onnxruntime_gpu": "onnxruntime-gpu" in installed,
-        "opencv_contrib_headless": "opencv-contrib-python-headless" in installed,
-        "conflicting_distributions": conflicting,
-    }
-    if conflicting or "onnxruntime-gpu" not in installed:
-        report["failures"].append("conflicting/missing ONNX Runtime or OpenCV binary owner")
+    owners = inspectBinaryOwners(EXPECTED_VERSIONS)
+    report["runtime_checks"]["binary_owners"] = owners
+    if owners["status"] != "PASS":
+        report["failures"].append("ONNX Runtime or OpenCV native owner verification failed")
 
     try:
-        from anomaly_func import dinov2_main_runtime
-        from anomaly_func.dinov2_execution import CPU
-        try:
-            dinov2_main_runtime.environment(CPU)
-            status = "UNEXPECTEDLY_ACCEPTED"
-        except RuntimeError as exc:
-            status = "EXPECTED_MIGRATION_BLOCKER" if "Python 3.11" in str(exc) else "FAIL"
-        report["runtime_checks"]["dino_main_python_gate"] = status
-        if status == "EXPECTED_MIGRATION_BLOCKER":
+        code = """
+import sys
+from anomaly_func import dinov2_main_runtime
+from anomaly_func.dinov2_execution import CPU
+dinov2_main_runtime.enable()
+from anomaly_func.dinov2_onnx_session import lightweight_environment
+assert 'torch' not in sys.modules
+try:
+    lightweight_environment('windows', CPU)
+except RuntimeError as exc:
+    assert 'Python 3.11' in str(exc)
+    print('EXPECTED_PYTHON_VERSION_BLOCKER')
+else:
+    raise AssertionError('legacy main runtime unexpectedly accepted Python 3.12')
+"""
+        child = subprocess.run([sys.executable, "-c", code], cwd=source_root,
+                               capture_output=True, text=True, timeout=60)
+        if child.returncode == 0 and "EXPECTED_PYTHON_VERSION_BLOCKER" in child.stdout:
+            report["runtime_checks"]["dino_main_python_gate"] = "EXPECTED_MIGRATION_BLOCKER"
+            report["expected_migration_blockers"].append(
+                "DINO main runtime worker is already routed through the shared sys.executable, "
+                "but dinov2_main_runtime.py still hard-codes Python 3.11; changed CORE pins "
+                "also require numerical acceptance."
+            )
             from anomaly_func.dinov2_main_runtime import CORE
             actual_core = {name: version_of(name) for name in CORE}
             mismatches = {name: {"expected": expected, "actual": actual_core.get(name)}
                           for name, expected in CORE.items() if actual_core.get(name) != expected}
             report["runtime_checks"]["dino_main_core_pins"] = {
                 "status": "EXPECTED_MIGRATION_REQUIRED" if mismatches else "PASS",
-                "mismatches": mismatches,
+                "actual": actual_core, "mismatches": mismatches,
             }
-            report["expected_migration_blockers"].append(
-                "DINO main runtime still hard-codes Python 3.11; any changed CORE pin must be updated only after numerical acceptance."
-            )
-        elif status == "FAIL":
-            report["failures"].append("DINO main runtime failed for an unexpected reason")
+        else:
+            report["runtime_checks"]["dino_main_python_gate"] = {
+                "status": "FAIL", "stdout": child.stdout, "stderr": child.stderr,
+                "returncode": child.returncode,
+            }
+            report["failures"].append("DINO main-runtime Python gate probe did not match")
+
     except Exception as exc:
         report["runtime_checks"]["dino_main_python_gate"] = {
-            "status": "FAIL", "error": type(exc).__name__ + ": " + str(exc)
+            "status": "FAIL", "error": type(exc).__name__ + ": " + str(exc),
+            "traceback": traceback.format_exc(limit=4),
         }
         report["failures"].append(f"DINO main runtime probe: {type(exc).__name__}: {exc}")
 
@@ -282,3 +376,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
