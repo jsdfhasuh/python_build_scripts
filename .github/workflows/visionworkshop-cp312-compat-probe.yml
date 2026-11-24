@@ -29,6 +29,7 @@ jobs:
           repository: jsdfhasuh/emo-vision-train
           ref: 39ee980f8179e81d1ad90cafcec1e65d3b944c81
           path: source
+          token: ${{ secrets.SOURCE_REPO_TOKEN || github.token }}
           submodules: recursive
           fetch-depth: 1
           persist-credentials: false
@@ -38,6 +39,7 @@ jobs:
         with:
           python-version: "3.12.14"
           cache: pip
+          cache-dependency-path: source/requirements.txt
 
       - name: Prepare test tooling
         shell: pwsh
@@ -88,7 +90,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: visionworkshop-cp312-compat-\${{ github.run_id }}-\${{ github.run_attempt }}
+          name: visionworkshop-cp312-compat-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             reports/visionworkshop-cp312-candidate.txt
             reports/visionworkshop-cp312-runtime-report.json
