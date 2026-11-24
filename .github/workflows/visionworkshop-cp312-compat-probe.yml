@@ -37,12 +37,22 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
+      - name: Checkout exact production packager revision
+        uses: actions/checkout@v7
+        with:
+          repository: jsdfhasuh/python_build_scripts
+          ref: e0204fe6fe83b0f31818d88e4f296c70e230d172
+          path: packager-main
+          persist-credentials: false
+
       - name: Set up exact CPython 3.12 patch release
         uses: actions/setup-python@v6
         with:
           python-version: "3.12.10"
           cache: pip
-          cache-dependency-path: source/requirements.txt
+          cache-dependency-path: |
+            source/requirements.txt
+            packager-main/ci/vision-train-runtime.json
 
       - name: Create isolated probe environment and prepare tooling
         shell: pwsh
@@ -100,6 +110,72 @@ jobs:
         run: |
           & $env:PROBE_PYTHON -m pytest -q tests/test_dinov2_251_core.py tests/test_patchcore_dinov2_features.py tests/test_patchcore_dinov2_loader.py tests/test_patchcore_dinov2_preprocess.py tests/test_dinov2_shared_runtime.py tests/test_patchcore_ckpt_loading.py tests/test_patchcore_backend.py tests/test_kaggle_startup.py tests/test_dino_main_runtime.py tests/test_patchcore_single_file_ckpt.py tests/test_dinov2_onnx.py tests/test_dinov2_deployment_calibration.py tests/test_patchcore_onnx.py tests/test_dinov2_p6.py tests/test_dinov2_progress.py tests/test_patchcore_export_runtime.py tests/test_patchcore_export_ui.py tests/test_update_contract.py tests/test_update_file_transaction.py tests/test_update_v3_runtime.py --junitxml=../reports/visionworkshop-cp312-focused-tests.xml
           if ($LASTEXITCODE -ne 0) { throw "Focused first-party regression tests failed" }
+
+      - name: Install preflight-only ICO validator
+        if: ${{ !cancelled() && steps.consistency.outcome == 'success' }}
+        shell: pwsh
+        working-directory: packager-main
+        run: |
+          python -m pip install Pillow
+          if ($LASTEXITCODE -ne 0) { throw "ICO validator installation failed" }
+
+      - name: Prepare non-publishing portable build
+        if: ${{ !cancelled() && steps.consistency.outcome == 'success' }}
+        shell: pwsh
+        working-directory: packager-main
+        env:
+          RELEASE_INPUTS_JSON: '{"source_ref":"35822aa83f2e096b189c5a324e3ca3e261cd1fe6","release_tag":"","branding_profile":"profiles/visionworkshop.json","publish_release":false,"release_repo":"jsdfhasuh/emo-vision-train-release","delta_base_tag":"none","mandatory":false,"changelog_all":true}'
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_REPO_TOKEN: ''
+        run: |
+          python -X utf8 actions_release.py prepare `
+            --source-root (Join-Path $env:GITHUB_WORKSPACE 'source') `
+            --state (Join-Path $env:RUNNER_TEMP 'vision-train-release-cp312') `
+            --output (Join-Path $env:GITHUB_WORKSPACE 'packager-main/release-output/cp312-probe')
+          if ($LASTEXITCODE -ne 0) { throw "Portable build preflight failed" }
+
+      - name: Install exact production CP312 runtime
+        if: ${{ !cancelled() && steps.consistency.outcome == 'success' }}
+        shell: pwsh
+        working-directory: packager-main
+        run: |
+          python -X utf8 vision_train_runtime.py install --source-root ../source
+          if ($LASTEXITCODE -ne 0) { throw "Production CP312 runtime installation failed" }
+
+      - name: Build frozen VisionWorkshop without publishing
+        if: ${{ !cancelled() && steps.consistency.outcome == 'success' }}
+        shell: pwsh
+        working-directory: packager-main
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_REPO_TOKEN: ''
+        run: |
+          python -X utf8 actions_release.py build --state (Join-Path $env:RUNNER_TEMP 'vision-train-release-cp312')
+          if ($LASTEXITCODE -ne 0) { throw "Frozen CP312 package build failed" }
+
+      - name: Verify and stage non-public package assets
+        if: ${{ !cancelled() && steps.consistency.outcome == 'success' }}
+        shell: pwsh
+        working-directory: packager-main
+        run: |
+          python -X utf8 actions_release.py stage `
+            --state (Join-Path $env:RUNNER_TEMP 'vision-train-release-cp312') `
+            --destination (Join-Path $env:RUNNER_TEMP 'vision-train-public-cp312')
+          if ($LASTEXITCODE -ne 0) { throw "CP312 package staging failed" }
+          Get-ChildItem (Join-Path $env:RUNNER_TEMP 'vision-train-public-cp312') -File |
+            Select-Object Name,Length | Format-Table -AutoSize
+          $bytes = (Get-ChildItem (Join-Path $env:RUNNER_TEMP 'vision-train-public-cp312') -File |
+            Measure-Object -Property Length -Sum).Sum
+          "STAGED_ASSET_BYTES=$bytes" | Out-File $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+
+      - name: Upload non-publishing CP312 package artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visionworkshop-cp312-portable-probe-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/vision-train-public-cp312/
+          if-no-files-found: error
+          compression-level: 0
 
       - name: Record installed environment even after probe failures
         if: ${{ !cancelled() && env.PROBE_PYTHON != '' }}
