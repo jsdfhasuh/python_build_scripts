@@ -98,7 +98,7 @@ jobs:
 
       - name: Run actual CP312 imports and first-party runtime probes
         id: runtime_probe
-        if: ${{ !cancelled() && steps.consistency.outcome == 'success' && steps.runtime_probe.outcome == 'success' && steps.focused_tests.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.consistency.outcome == 'success' }}
         shell: pwsh
         run: |
           & $env:PROBE_PYTHON packager/scripts/visionworkshop_cp312_compat_probe.py --source-root source --report reports/visionworkshop-cp312-runtime-report.json
