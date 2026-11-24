@@ -156,5 +156,11 @@
     "extra_args": []
   },
   "launcher_min_capability": 1,
-  "layout_version": 1
+  "layout_version": 1,
+  "runtime_excludes": [
+    "pyqt5-tools",
+    "pyqt5-plugins",
+    "qt5-tools",
+    "qt5-applications"
+  ]
 }
