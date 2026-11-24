@@ -255,6 +255,8 @@ def smoke(source_root: Path) -> dict:
         providers = ort.get_available_providers()
         if "CUDAExecutionProvider" not in providers:
             report["failures"].append("onnxruntime-gpu does not expose CUDAExecutionProvider")
+        torch_lib = Path(torch.__file__).resolve().parent / "lib"
+        report["runtime_checks"]["torch_dlls"] = sorted(path.name for path in torch_lib.glob("*.dll"))
         report["runtime_checks"]["cpu_ops"] = {
             "status": "PASS", "torchvision_nms": nms,
             "torchaudio_resample_shape": list(audio.shape),
@@ -311,44 +313,42 @@ def smoke(source_root: Path) -> dict:
 
     try:
         code = """
-import sys
+import json, sys
 from anomaly_func import dinov2_main_runtime
 from anomaly_func.dinov2_execution import CPU
 dinov2_main_runtime.enable()
 from anomaly_func.dinov2_onnx_session import lightweight_environment
 assert 'torch' not in sys.modules
-try:
-    lightweight_environment('windows', CPU)
-except RuntimeError as exc:
-    assert 'Python 3.11' in str(exc)
-    print('EXPECTED_PYTHON_VERSION_BLOCKER')
-else:
-    raise AssertionError('legacy main runtime unexpectedly accepted Python 3.12')
+environment = lightweight_environment('windows', CPU)
+assert environment['runtime_profile'] == 'dino_main_runtime_v1'
+assert environment['python'].startswith('3.12.')
+assert environment['packages']['numpy'] == '2.0.2'
+assert 'torch' not in sys.modules
+print(json.dumps(environment))
 """
         child = subprocess.run([sys.executable, "-c", code], cwd=source_root,
                                capture_output=True, text=True, timeout=60)
-        if child.returncode == 0 and "EXPECTED_PYTHON_VERSION_BLOCKER" in child.stdout:
-            report["runtime_checks"]["dino_main_python_gate"] = "EXPECTED_MIGRATION_BLOCKER"
-            report["expected_migration_blockers"].append(
-                "DINO main runtime worker is already routed through the shared sys.executable, "
-                "but dinov2_main_runtime.py still hard-codes Python 3.11; changed CORE pins "
-                "also require numerical acceptance."
-            )
-            from anomaly_func.dinov2_main_runtime import CORE
-            actual_core = {name: version_of(name) for name in CORE}
+        if child.returncode == 0:
+            environment = json.loads(child.stdout.strip().splitlines()[-1])
+            report["runtime_checks"]["dino_main_python_gate"] = "PASS"
+            report["runtime_checks"]["dino_main_environment"] = environment
+            actual_core = {name: version_of(name) for name in ("onnx", "numpy", "Pillow", "psutil")}
             mismatches = {name: {"expected": expected, "actual": actual_core.get(name)}
-                          for name, expected in CORE.items() if actual_core.get(name) != expected}
+                          for name, expected in {"onnx": "1.16.0", "numpy": "2.0.2",
+                                                 "Pillow": "12.0.0", "psutil": "7.2.1"}.items()
+                          if actual_core.get(name) != expected}
             report["runtime_checks"]["dino_main_core_pins"] = {
-                "status": "EXPECTED_MIGRATION_REQUIRED" if mismatches else "PASS",
+                "status": "FAIL" if mismatches else "PASS",
                 "actual": actual_core, "mismatches": mismatches,
             }
+            if mismatches:
+                report["failures"].append("DINO main-runtime core pins differ from CP312 unified profile")
         else:
             report["runtime_checks"]["dino_main_python_gate"] = {
                 "status": "FAIL", "stdout": child.stdout, "stderr": child.stderr,
                 "returncode": child.returncode,
             }
-            report["failures"].append("DINO main-runtime Python gate probe did not match")
-
+            report["failures"].append("DINO main runtime did not accept the CP312 unified environment")
     except Exception as exc:
         report["runtime_checks"]["dino_main_python_gate"] = {
             "status": "FAIL", "error": type(exc).__name__ + ": " + str(exc),
