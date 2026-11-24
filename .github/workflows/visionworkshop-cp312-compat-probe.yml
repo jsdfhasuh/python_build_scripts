@@ -12,7 +12,7 @@ permissions:
 jobs:
   windows-cp312:
     runs-on: windows-latest
-    timeout-minutes: 120
+    timeout-minutes: 180
     env:
       PYTHONDONTWRITEBYTECODE: "1"
       QT_QPA_PLATFORM: offscreen
@@ -97,14 +97,16 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "pip check reported dependency conflicts" }
 
       - name: Run actual CP312 imports and first-party runtime probes
-        if: ${{ !cancelled() && steps.consistency.outcome == 'success' }}
+        id: runtime_probe
+        if: ${{ !cancelled() && steps.consistency.outcome == 'success' && steps.runtime_probe.outcome == 'success' && steps.focused_tests.outcome == 'success' }}
         shell: pwsh
         run: |
           & $env:PROBE_PYTHON packager/scripts/visionworkshop_cp312_compat_probe.py --source-root source --report reports/visionworkshop-cp312-runtime-report.json
           if ($LASTEXITCODE -ne 0) { throw "Runtime compatibility probe failed" }
 
       - name: Run focused first-party regression tests
-        if: ${{ !cancelled() && steps.consistency.outcome == 'success' }}
+        id: focused_tests
+        if: ${{ !cancelled() && steps.consistency.outcome == 'success' && steps.runtime_probe.outcome == 'success' }}
         shell: pwsh
         working-directory: source
         run: |
@@ -112,7 +114,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Focused first-party regression tests failed" }
 
       - name: Install preflight-only ICO validator
-        if: ${{ !cancelled() && steps.consistency.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.consistency.outcome == 'success' && steps.runtime_probe.outcome == 'success' && steps.focused_tests.outcome == 'success' }}
         shell: pwsh
         working-directory: packager-main
         run: |
@@ -120,7 +122,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "ICO validator installation failed" }
 
       - name: Prepare non-publishing portable build
-        if: ${{ !cancelled() && steps.consistency.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.consistency.outcome == 'success' && steps.runtime_probe.outcome == 'success' && steps.focused_tests.outcome == 'success' }}
         shell: pwsh
         working-directory: packager-main
         env:
@@ -135,7 +137,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Portable build preflight failed" }
 
       - name: Install exact production CP312 runtime
-        if: ${{ !cancelled() && steps.consistency.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.consistency.outcome == 'success' && steps.runtime_probe.outcome == 'success' && steps.focused_tests.outcome == 'success' }}
         shell: pwsh
         working-directory: packager-main
         run: |
@@ -143,7 +145,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Production CP312 runtime installation failed" }
 
       - name: Build frozen VisionWorkshop without publishing
-        if: ${{ !cancelled() && steps.consistency.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.consistency.outcome == 'success' && steps.runtime_probe.outcome == 'success' && steps.focused_tests.outcome == 'success' }}
         shell: pwsh
         working-directory: packager-main
         env:
@@ -154,7 +156,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Frozen CP312 package build failed" }
 
       - name: Verify and stage non-public package assets
-        if: ${{ !cancelled() && steps.consistency.outcome == 'success' }}
+        id: stage_package
+        if: ${{ !cancelled() && steps.consistency.outcome == 'success' && steps.runtime_probe.outcome == 'success' && steps.focused_tests.outcome == 'success' }}
         shell: pwsh
         working-directory: packager-main
         run: |
@@ -169,7 +172,7 @@ jobs:
           "STAGED_ASSET_BYTES=$bytes" | Out-File $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
 
       - name: Upload non-publishing CP312 package artifact
-        if: success()
+        if: ${{ steps.stage_package.outcome == 'success' }}
         uses: actions/upload-artifact@v4
         with:
           name: visionworkshop-cp312-portable-probe-${{ github.run_id }}-${{ github.run_attempt }}
