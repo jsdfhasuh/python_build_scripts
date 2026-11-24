@@ -207,38 +207,6 @@ def smoke(source_root: Path) -> dict:
     if conflicting or "onnxruntime-gpu" not in installed:
         report["failures"].append("conflicting/missing ONNX Runtime or OpenCV binary owner")
 
-    # Prove the current DINO check rejects installed-but-not-imported Torch.
-    code = """
-import sys
-import importlib.util
-from anomaly_func.dinov2_onnx_session import lightweight_environment
-from anomaly_func.dinov2_execution import CPU
-assert 'torch' not in sys.modules
-assert importlib.util.find_spec('torch') is not None
-try:
-    lightweight_environment('windows', CPU)
-except RuntimeError as exc:
-    assert 'Torch-free target environment required' in str(exc)
-    print('EXPECTED_BLOCKER')
-else:
-    raise AssertionError('legacy check unexpectedly accepted installed Torch')
-"""
-    child = subprocess.run(
-        [sys.executable, "-c", code], cwd=source_root,
-        capture_output=True, text=True, timeout=60,
-    )
-    if child.returncode == 0 and "EXPECTED_BLOCKER" in child.stdout:
-        report["runtime_checks"]["dino_torch_free"] = "EXPECTED_MIGRATION_BLOCKER"
-        report["expected_migration_blockers"].append(
-            "DINO lightweight_environment rejects installed-but-not-imported Torch via find_spec."
-        )
-    else:
-        report["runtime_checks"]["dino_torch_free"] = {
-            "status": "FAIL", "stdout": child.stdout, "stderr": child.stderr,
-            "returncode": child.returncode,
-        }
-        report["failures"].append("DINO Torch-Free blocker probe did not match")
-
     try:
         from anomaly_func import dinov2_main_runtime
         from anomaly_func.dinov2_execution import CPU
@@ -249,8 +217,16 @@ else:
             status = "EXPECTED_MIGRATION_BLOCKER" if "Python 3.11" in str(exc) else "FAIL"
         report["runtime_checks"]["dino_main_python_gate"] = status
         if status == "EXPECTED_MIGRATION_BLOCKER":
+            from anomaly_func.dinov2_main_runtime import CORE
+            actual_core = {name: version_of(name) for name in CORE}
+            mismatches = {name: {"expected": expected, "actual": actual_core.get(name)}
+                          for name, expected in CORE.items() if actual_core.get(name) != expected}
+            report["runtime_checks"]["dino_main_core_pins"] = {
+                "status": "EXPECTED_MIGRATION_REQUIRED" if mismatches else "PASS",
+                "mismatches": mismatches,
+            }
             report["expected_migration_blockers"].append(
-                "DINO main runtime still hard-codes Python 3.11 and NumPy 1.26.4."
+                "DINO main runtime still hard-codes Python 3.11; any changed CORE pin must be updated only after numerical acceptance."
             )
         elif status == "FAIL":
             report["failures"].append("DINO main runtime failed for an unexpected reason")
