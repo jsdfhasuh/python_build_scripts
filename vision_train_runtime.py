@@ -57,7 +57,7 @@ def readRequirements(path: Path) -> str:
   return data.decode(encoding)
 
 
-def makeRequirements(sourceText: str, extras: list[str], profile: dict) -> list[str]:
+def makeRequirements(sourceText: str, extras: list[str], profile: dict,\n                     runtimeExcludes: list[str] | None = None) -> list[str]:
   from packaging.requirements import Requirement
   from packaging.utils import canonicalize_name
 
