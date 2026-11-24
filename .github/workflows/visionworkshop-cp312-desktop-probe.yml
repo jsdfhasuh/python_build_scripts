@@ -16,6 +16,7 @@ jobs:
     env:
       PYTHONDONTWRITEBYTECODE: "1"
       QT_QPA_PLATFORM: offscreen
+      PYTHONNOUSERSITE: "1"
     steps:
       - name: Checkout packager probe
         uses: actions/checkout@v7
@@ -41,58 +42,80 @@ jobs:
           cache: pip
           cache-dependency-path: source/requirements.txt
 
-      - name: Prepare test tooling
+      - name: Create isolated probe environment and prepare tooling
         shell: pwsh
         run: |
-          python -m pip install --upgrade pip packaging==25.0 pytest==8.3.5
+          $venv = Join-Path $env:RUNNER_TEMP "visionworkshop-cp312-probe"
+          python -m venv $venv
+          if ($LASTEXITCODE -ne 0) { throw "Probe virtual environment creation failed" }
+          $probePython = Join-Path $venv "Scripts/python.exe"
+          "PROBE_PYTHON=$probePython" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+          & $probePython -c "import sys; assert sys.prefix != sys.base_prefix; print(sys.executable)"
+          if ($LASTEXITCODE -ne 0) { throw "Probe environment is not isolated" }
+          & $probePython -m pip install --upgrade pip packaging==25.0 pytest==8.3.5
           if ($LASTEXITCODE -ne 0) { throw "Test tooling installation failed" }
 
       - name: Install current desktop Torch CUDA 12.1 stack on CP312
         shell: pwsh
         run: |
-          python -m pip install --index-url https://download.pytorch.org/whl/cu121 --extra-index-url https://pypi.org/simple torch==2.5.1+cu121 torchvision==0.20.1+cu121 torchaudio==2.5.1+cu121
+          & $env:PROBE_PYTHON -m pip install --no-deps --index-url https://download.pytorch.org/whl/cu121 torch==2.5.1+cu121 torchvision==0.20.1+cu121 torchaudio==2.5.1+cu121
           if ($LASTEXITCODE -ne 0) { throw "Desktop Torch CUDA 12.1 stack installation failed" }
 
       - name: Generate CP312 desktop candidate from current requirements
         shell: pwsh
         run: |
-          python packager/scripts/visionworkshop_cp312_desktop_probe.py --source-root source --requirements-out reports/visionworkshop-cp312-desktop-candidate.txt
+          & $env:PROBE_PYTHON packager/scripts/visionworkshop_cp312_desktop_probe.py --source-root source --requirements-out reports/visionworkshop-cp312-desktop-candidate.txt
           if ($LASTEXITCODE -ne 0) { throw "Desktop candidate requirements generation failed" }
 
       - name: Install candidate desktop dependencies
         shell: pwsh
         run: |
-          python -m pip install -r reports/visionworkshop-cp312-desktop-candidate.txt
+          & $env:PROBE_PYTHON -m pip install --report reports/candidate-install.json -r reports/visionworkshop-cp312-desktop-candidate.txt
           if ($LASTEXITCODE -ne 0) { throw "Desktop dependency resolution/installation failed" }
-          python -m pip install pyinstaller==6.18.0 pyinstaller-hooks-contrib==2026.0 pefile==2024.8.26
+          & $env:PROBE_PYTHON -m pip install -c reports/visionworkshop-cp312-desktop-candidate.txt pyinstaller==6.18.0 pyinstaller-hooks-contrib==2026.0 pefile==2024.8.26
           if ($LASTEXITCODE -ne 0) { throw "Pinned PyInstaller toolchain installation failed" }
+          & $env:PROBE_PYTHON -m pip install --force-reinstall --no-deps onnxruntime-gpu==1.23.2 opencv-contrib-python-headless==4.11.0.86
+          if ($LASTEXITCODE -ne 0) { throw "Restoring GPU ORT and contrib OpenCV binary owners failed" }
 
       - name: Verify dependency consistency
+        id: consistency
         shell: pwsh
         run: |
-          python -m pip check
+          & $env:PROBE_PYTHON -m pip check 2>&1 | Tee-Object reports/pip-check.txt
           if ($LASTEXITCODE -ne 0) { throw "pip check reported dependency conflicts" }
 
       - name: Run desktop CP312 imports and runtime probes
+        if: ${{ !cancelled() && steps.consistency.outcome == 'success' }}
         shell: pwsh
         run: |
-          python packager/scripts/visionworkshop_cp312_desktop_probe.py --source-root source --report reports/visionworkshop-cp312-desktop-report.json
+          & $env:PROBE_PYTHON packager/scripts/visionworkshop_cp312_desktop_probe.py --source-root source --report reports/visionworkshop-cp312-desktop-report.json
           if ($LASTEXITCODE -ne 0) { throw "Desktop runtime compatibility probe failed" }
 
       - name: Run focused first-party desktop regressions
+        if: ${{ !cancelled() && steps.consistency.outcome == 'success' }}
         shell: pwsh
         working-directory: source
         run: |
-          python -m pytest -q tests/test_patchcore_ckpt_loading.py tests/test_patchcore_backend.py tests/test_patchcore_single_file_ckpt.py tests/test_dinov2_onnx.py tests/test_dinov2_deployment_calibration.py tests/test_patchcore_onnx.py tests/test_kaggle_startup.py tests/test_dinov2_p6.py tests/test_dinov2_progress.py tests/test_dinov2_shared_runtime.py --junitxml=../reports/visionworkshop-cp312-desktop-tests.xml
+          & $env:PROBE_PYTHON -m pytest -q tests/test_patchcore_ckpt_loading.py tests/test_patchcore_backend.py tests/test_patchcore_single_file_ckpt.py tests/test_dinov2_onnx.py tests/test_dinov2_deployment_calibration.py tests/test_patchcore_onnx.py tests/test_kaggle_startup.py tests/test_dinov2_p6.py tests/test_dinov2_progress.py tests/test_dinov2_shared_runtime.py tests/test_dino_main_runtime.py --junitxml=../reports/visionworkshop-cp312-desktop-tests.xml
           if ($LASTEXITCODE -ne 0) { throw "Focused desktop regression tests failed" }
+
+      - name: Record installed environment even after probe failures
+        if: ${{ !cancelled() && env.PROBE_PYTHON != '' }}
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force reports | Out-Null
+          & $env:PROBE_PYTHON -m pip list --format=json | Out-File reports/installed-packages.json -Encoding utf8
+          if ($LASTEXITCODE -ne 0) { throw "Installed package list collection failed" }
+          & $env:PROBE_PYTHON -m pip freeze --all | Out-File reports/installed-freeze.txt -Encoding utf8
+          if ($LASTEXITCODE -ne 0) { throw "Installed freeze collection failed" }
+          & $env:PROBE_PYTHON -m pip inspect | Out-File reports/pip-inspect.json -Encoding utf8
+          if ($LASTEXITCODE -ne 0) { throw "Installed environment evidence collection failed" }
 
       - name: Upload desktop compatibility evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: visionworkshop-cp312-desktop-${{ github.run_id }}-${{ github.run_attempt }}
-          path: |
-            reports/visionworkshop-cp312-desktop-candidate.txt
-            reports/visionworkshop-cp312-desktop-report.json
-            reports/visionworkshop-cp312-desktop-tests.xml
+          path: reports/
           if-no-files-found: warn
+
