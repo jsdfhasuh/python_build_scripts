@@ -30,7 +30,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: jsdfhasuh/emo-vision-train
-          ref: 39ee980f8179e81d1ad90cafcec1e65d3b944c81
+          ref: 5dfd65a2d9fdbbcd6172fa2cb2617c875c791cbd
           path: source
           token: ${{ secrets.SOURCE_REPO_TOKEN || github.token }}
           submodules: recursive
