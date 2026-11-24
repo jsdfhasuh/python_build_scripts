@@ -37,6 +37,21 @@ class RequirementsTests(unittest.TestCase):
     self.assertNotIn('kagglesdk==0.1.31', result)
     self.assertEqual(result.count('kaggle==2.2.4'), 1)
 
+
+  def test_runtime_excludes_remove_qt_designer_tools_but_keep_qt_runtime(self):
+    config = json.loads((runtime.ROOT / 'configs/emo-vision-train.json').read_text(encoding='utf-8'))
+    result = runtime.makeRequirements(
+      'PyQt5==5.15.9\\nPyQt5-Qt5==5.15.2\\nPyQt5_sip==12.18.0\\n'
+      'PyQtWebEngine==5.15.7\\nPyQtWebEngine-Qt5==5.15.2\\n'
+      'pyqt5-tools==5.15.9.3.3\\nqt5-tools==5.15.2.1.3\\n'
+      'qt5-applications==5.15.2.2.3\\n',
+      [], runtime.loadProfile(), config.get('runtime_excludes', []))
+    for name in ('PyQt5==5.15.9', 'PyQt5-Qt5==5.15.2', 'PyQt5_sip==12.18.0',
+                 'PyQtWebEngine==5.15.7', 'PyQtWebEngine-Qt5==5.15.2'):
+      self.assertIn(name, result)
+    for name in ('pyqt5-tools', 'pyqt5-plugins', 'qt5-tools', 'qt5-applications'):
+      self.assertFalse(any(line.lower().startswith(name + '==') for line in result), name)
+
   def test_unrecognized_pip_directives_fail_instead_of_reading_wrong_relative_files(self):
     for text in ('-r other.txt', '--index-url https://example.invalid', './local-wheel.whl'):
       with self.subTest(text=text), self.assertRaises(BuildConfigError):
