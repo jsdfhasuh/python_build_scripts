@@ -75,8 +75,10 @@ IMPORTS = [
 
 def build_requirements(source_root: Path, output: Path) -> dict:
     source_file = source_root / "requirements.txt"
+    raw_bytes = source_file.read_bytes()
+    source_text = raw_bytes.decode("utf-16") if raw_bytes.startswith((b"\xff\xfe", b"\xfe\xff")) else raw_bytes.decode("utf-8-sig")
     kept, removed, unparsed = [], [], []
-    for raw in source_file.read_text(encoding="utf-8-sig").splitlines():
+    for raw in source_text.splitlines():
         line = raw.strip()
         if not line or line.startswith("#"):
             continue
