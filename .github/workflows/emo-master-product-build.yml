@@ -1,0 +1,339 @@
+name: EmoMaster product build only
+on:
+  workflow_call:
+    inputs:
+      target:
+        type: string
+        required: true
+      source_ref:
+        type: string
+        required: true
+      packager_ref:
+        type: string
+        required: true
+      release_tag:
+        type: string
+        required: true
+    outputs:
+      artifact_name:
+        value: ${{ jobs.build.outputs.artifact_name }}
+permissions:
+  contents: read
+jobs:
+  build:
+    name: Build ${{ inputs.target }} for Windows
+    runs-on: windows-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    outputs:
+      artifact_name: ${{ steps.artifact.outputs.name }}
+      source_sha: ${{ steps.identity.outputs.source_sha }}
+      packager_sha: ${{ steps.identity.outputs.packager_sha }}
+
+    steps:
+      - name: Enforce trusted product caller and fixed inputs
+        shell: pwsh
+        env:
+          CALLER: ${{ github.repository }}
+          CALLER_PRIVATE: ${{ github.event.repository.private }}
+          TARGET: ${{ inputs.target }}
+          SRC: ${{ inputs.source_ref }}
+          PACK: ${{ inputs.packager_ref }}
+          TAG: ${{ inputs.release_tag }}
+        run: |
+          if ($env:CALLER -cne 'jsdfhasuh/emo_master' -or $env:CALLER_PRIVATE -ne 'true') { throw 'Only the private product repository may call this workflow' }
+          if ($env:TARGET -cnotin @('emo-master', 'emo-master-runtime')) { throw 'Invalid target' }
+          if ($env:SRC -cnotmatch '\A[a-f0-9]{40}\z' -or $env:PACK -cnotmatch '\A[a-f0-9]{40}\z') { throw 'Full fixed SHAs are required' }
+          if ($env:TAG -cnotmatch '\Av[0-9]+(\.[0-9]+){1,3}\z') { throw 'Invalid product version tag' }
+      - name: Set artifact name
+        id: artifact
+        shell: pwsh
+        env:
+          TARGET_INPUT: ${{ inputs.target }}
+          RELEASE_TAG_INPUT: ${{ inputs.release_tag }}
+        run: |
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "name=windows-release-$env:TARGET_INPUT-$env:RELEASE_TAG_INPUT"
+      - name: Select the packager revision
+        id: revision
+        shell: pwsh
+        env:
+          REQUESTED_REF: ${{ inputs.packager_ref }}
+          CALLER_REPOSITORY: ${{ github.repository }}
+          CALLER_SHA: ${{ github.sha }}
+        run: |
+          $ref = $env:REQUESTED_REF
+          if (-not $ref) {
+            if ($env:CALLER_REPOSITORY -ne 'jsdfhasuh/python_build_scripts') {
+              throw 'Cross-repository callers must supply packager_ref explicitly'
+            }
+            $ref = $env:CALLER_SHA
+          }
+          if ($ref -match '[\r\n]' -or $ref.StartsWith('-')) { throw 'Invalid packager_ref' }
+          Add-Content $env:GITHUB_OUTPUT "ref=$ref"
+      - name: Checkout packager
+        uses: actions/checkout@v7
+        with:
+          repository: jsdfhasuh/python_build_scripts
+          ref: ${{ steps.revision.outputs.ref }}
+          path: packager
+          persist-credentials: false
+
+      - name: Load target config
+        id: config
+        shell: pwsh
+        working-directory: packager
+        env:
+          TARGET: ${{ inputs.target }}
+          SOURCE_REF: ${{ inputs.source_ref }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          RELEASE_REPO_INPUT: jsdfhasuh/emo_master
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:SOURCE_REF) -or $env:SOURCE_REF -match '[\r\n]' -or $env:SOURCE_REF.StartsWith('-')) {
+            throw 'source_ref must be an explicit branch, tag, or commit'
+          }
+          if ($env:TARGET -notmatch '^[A-Za-z0-9_.-]+$') {
+            throw "Invalid target name: $env:TARGET"
+          }
+          if ($env:RELEASE_TAG -notmatch '^v[0-9]+(\.[0-9]+){1,3}([-.][A-Za-z0-9._-]+)?$') {
+            throw "release_tag must look like v1.2.3, got: $env:RELEASE_TAG"
+          }
+
+          $configPath = Join-Path 'configs' "$env:TARGET.json"
+          if (-not (Test-Path -LiteralPath $configPath)) {
+            throw "Target config not found: $configPath"
+          }
+
+          $config = Get-Content -LiteralPath $configPath -Raw | ConvertFrom-Json
+          foreach ($field in @('source_repo', 'python_version', 'release_asset_name', 'name')) {
+            if (-not $config.$field) {
+              throw "Missing required config field: $field"
+            }
+          }
+
+          if ($config.source_repo -notmatch '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$') {
+            throw 'Invalid source repository in target configuration'
+          }
+          if ($config.python_version -notmatch '^\d+\.\d+(\.\d+)?$') {
+            throw 'Invalid Python version in target configuration'
+          }
+
+          $releaseRepo = $env:RELEASE_REPO_INPUT.Trim()
+          if (-not $releaseRepo -and $config.PSObject.Properties.Name -contains 'release_repo') {
+            $releaseRepo = [string]$config.release_repo
+            $releaseRepo = $releaseRepo.Trim()
+          }
+          if (-not $releaseRepo) {
+            $releaseRepo = $env:GITHUB_REPOSITORY
+          }
+          if ($releaseRepo -notmatch '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$') {
+            throw "release_repo must look like owner/repo, got: $releaseRepo"
+          }
+
+          $ciExtraPackages = @()
+          if ($config.PSObject.Properties.Name -contains 'ci_extra_packages') {
+            if ($null -ne $config.ci_extra_packages -and $config.ci_extra_packages -isnot [array]) {
+              throw 'ci_extra_packages must be a list'
+            }
+            $ciExtraPackages = @($config.ci_extra_packages)
+          }
+
+          $installerEnabled = $false
+          $innoVersion = ''
+          if ($config.PSObject.Properties.Name -contains 'installer' -and $config.installer) {
+            $installerEnabled = [bool]$config.installer.enabled
+            if ($installerEnabled) {
+              $innoVersion = [string]$config.installer.compiler_version
+            }
+          }
+
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "source_repo=$($config.source_repo)"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "python_version=$($config.python_version)"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "release_repo=$releaseRepo"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "ci_extra_packages=$($ciExtraPackages -join ' ')"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "installer_enabled=$($installerEnabled.ToString().ToLowerInvariant())"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "inno_version=$innoVersion"
+
+      - name: Checkout source
+        uses: actions/checkout@v7
+        with:
+          repository: ${{ steps.config.outputs.source_repo }}
+          ref: ${{ inputs.source_ref }}
+          path: source
+          submodules: recursive
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify staged revisions
+        shell: pwsh
+        env:
+          EXPECTED_SOURCE: ${{ inputs.source_ref }}
+          EXPECTED_PACKAGER: ${{ inputs.packager_ref }}
+        run: |
+          $actualSource = (git -C source rev-parse HEAD).Trim()
+          if ($LASTEXITCODE -ne 0 -or $actualSource -cne $env:EXPECTED_SOURCE) { throw 'Source SHA mismatch' }
+          $actualPackager = (git -C packager rev-parse HEAD).Trim()
+          if ($LASTEXITCODE -ne 0 -or $actualPackager -cne $env:EXPECTED_PACKAGER) { throw 'Packager SHA mismatch' }
+
+      - name: Record Runtime build identity
+        if: inputs.target == 'emo-master-runtime'
+        id: identity
+        shell: pwsh
+        env:
+          SOURCE_REPO: ${{ steps.config.outputs.source_repo }}
+          REQUESTED_SOURCE_REF: ${{ inputs.source_ref }}
+          REQUESTED_PACKAGER_REF: ${{ steps.revision.outputs.ref }}
+          PUBLISH_RELEASE_INPUT: 'false'
+        run: |
+          $sourceSha = git -C source rev-parse HEAD
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot resolve source SHA' }
+          $packagerSha = git -C packager rev-parse HEAD
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot resolve packager SHA' }
+          $output = Join-Path $env:GITHUB_WORKSPACE 'packager/release-output'
+          New-Item -ItemType Directory -Path $output -Force | Out-Null
+          [ordered]@{
+            source_repo = $env:SOURCE_REPO
+            source_commit = $sourceSha.Trim()
+            packager_repo = 'jsdfhasuh/python_build_scripts'
+            packager_commit = $packagerSha.Trim()
+            requested_source_ref = $env:REQUESTED_SOURCE_REF
+            requested_packager_ref = $env:REQUESTED_PACKAGER_REF
+            workflow_sha = $env:GITHUB_WORKFLOW_SHA
+            workflow_ref = $env:GITHUB_WORKFLOW_REF
+            run_url = "https://github.com/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID"
+            publish_requested = ($env:PUBLISH_RELEASE_INPUT -eq 'true')
+            fieldAcceptance = 'NOT_RUN'
+          } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $output 'runtime-build.json') -Encoding utf8
+          Add-Content $env:GITHUB_OUTPUT "source_sha=$($sourceSha.Trim())"
+          Add-Content $env:GITHUB_OUTPUT "packager_sha=$($packagerSha.Trim())"
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ steps.config.outputs.python_version }}
+          cache: pip
+          cache-dependency-path: source/requirements.txt
+
+      - name: Install source dependencies
+        shell: pwsh
+        working-directory: source
+        env:
+          CI_EXTRA_PACKAGES: ${{ steps.config.outputs.ci_extra_packages }}
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          if ($env:CI_EXTRA_PACKAGES.Trim()) {
+            $packages = $env:CI_EXTRA_PACKAGES -split ' '
+            python -m pip install @packages
+          }
+
+      - name: Runtime source regression
+        if: inputs.target == 'emo-master-runtime'
+        shell: pwsh
+        working-directory: source
+        env:
+          QT_QPA_PLATFORM: offscreen
+          PYTHONUTF8: '1'
+        run: |
+          python -m pip install -r requirements-dev.txt
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot install Runtime test dependencies' }
+          ./scripts/validate_runtime_source.ps1 -ReportDirectory ../packager/release-output/source-check
+
+      - name: Install pinned Inno Setup
+        if: steps.config.outputs.installer_enabled == 'true'
+        shell: pwsh
+        env:
+          INNO_VERSION: ${{ steps.config.outputs.inno_version }}
+        run: |
+          $versionSlug = $env:INNO_VERSION.Replace('.', '_')
+          $downloadUrl = "https://github.com/jrsoftware/issrc/releases/download/is-$versionSlug/innosetup-$env:INNO_VERSION.exe"
+          $installerPath = Join-Path $env:RUNNER_TEMP "innosetup-$env:INNO_VERSION.exe"
+          $installDir = Join-Path $env:RUNNER_TEMP "InnoSetup-$versionSlug"
+          Invoke-WebRequest -Uri $downloadUrl -OutFile $installerPath
+          $signature = Get-AuthenticodeSignature -LiteralPath $installerPath
+          if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch 'Pyrsys B\.V\.') {
+            throw "Invalid Inno Setup Authenticode signature: $($signature.Status) $($signature.SignerCertificate.Subject)"
+          }
+          $process = Start-Process `
+            -FilePath $installerPath `
+            -ArgumentList @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/SP-', "/DIR=$installDir") `
+            -WindowStyle Hidden `
+            -Wait `
+            -PassThru
+          if ($process.ExitCode -ne 0) {
+            throw "Inno Setup installation failed with exit code $($process.ExitCode)"
+          }
+          $isccPath = Join-Path $installDir 'ISCC.exe'
+          if (-not (Test-Path -LiteralPath $isccPath -PathType Leaf)) {
+            throw "ISCC.exe was not installed: $isccPath"
+          }
+          Add-Content -Path $env:GITHUB_ENV -Value "ISCC_PATH=$isccPath"
+
+      - name: Build Windows artifacts
+        shell: pwsh
+        working-directory: packager
+        env:
+          TARGET_INPUT: ${{ inputs.target }}
+          RELEASE_TAG_INPUT: ${{ inputs.release_tag }}
+          RELEASE_REPO_INPUT: ${{ steps.config.outputs.release_repo }}
+          SOURCE_REF_INPUT: ${{ inputs.source_ref }}
+        run: |
+          $sourceRoot = Join-Path $env:GITHUB_WORKSPACE 'source'
+          $outputDirectory = Join-Path $env:GITHUB_WORKSPACE 'packager\release-output'
+          $publishArgs = @{
+            Target = $env:TARGET_INPUT
+            ReleaseTag = $env:RELEASE_TAG_INPUT
+            ReleaseRepo = $env:RELEASE_REPO_INPUT
+            SourceRoot = $sourceRoot
+            SourceRef = $env:SOURCE_REF_INPUT
+            OutputDirectory = $outputDirectory
+            PreviousSourceRef = $env:SOURCE_REF_INPUT
+            BuildOnly = $true
+          }
+
+          if ($env:TARGET_INPUT -eq 'emo-master-runtime') {
+            Start-Transcript -Path (Join-Path $outputDirectory 'build.log')
+            try { .\scripts\publish-local-release.ps1 @publishArgs }
+            finally { Stop-Transcript }
+          } else {
+            .\scripts\publish-local-release.ps1 @publishArgs
+          }
+
+      - name: Verify Runtime archive and native cycles
+        if: inputs.target == 'emo-master-runtime'
+        shell: pwsh
+        env:
+          SOURCE_SHA: ${{ steps.identity.outputs.source_sha }}
+          PACKAGER_SHA: ${{ steps.identity.outputs.packager_sha }}
+          RELEASE_TAG_INPUT: ${{ inputs.release_tag }}
+        run: |
+          ./source/scripts/verify_runtime_artifacts.ps1 -ArtifactDirectory ./packager/release-output `
+            -ReleaseTag $env:RELEASE_TAG_INPUT -SourceCommit $env:SOURCE_SHA -PackagerCommit $env:PACKAGER_SHA
+
+      - name: Stage exact package evidence, no raw logs
+        shell: pwsh
+        env:
+          TARGET: ${{ inputs.target }}
+          TAG: ${{ inputs.release_tag }}
+        run: |
+          if (Test-Path -LiteralPath "./retained-package") { throw "Retained package staging must be new" }
+          $files = if ($env:TARGET -eq 'emo-master') {
+            @("emo-master-windows-$env:TAG.zip", "emo-master-setup-$env:TAG.exe", 'manifest.json')
+          } else {
+            @("emo-master-runtime-windows-$env:TAG.zip", "emo-master-runtime-setup-$env:TAG.exe", 'manifest.json',
+              'runtime-build.json', 'archive-check/validation.json')
+          }
+          foreach ($rel in $files) {
+            $src = Join-Path './packager/release-output' $rel
+            if (-not (Test-Path -LiteralPath $src -PathType Leaf)) { throw 'Required package file is absent' }
+            if ((Get-Item -LiteralPath $src).Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'Linked package file rejected' }
+            $dst = Join-Path './retained-package' $rel
+            New-Item -ItemType Directory -Force -Path (Split-Path -Parent $dst) | Out-Null
+            Copy-Item -LiteralPath $src -Destination $dst
+          }
+      - name: Upload only verified package and release records
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.artifact.outputs.name }}
+          path: retained-package/
+          if-no-files-found: error

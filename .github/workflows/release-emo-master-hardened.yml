@@ -1,0 +1,209 @@
+name: Release EmoMaster from trusted product
+
+on:
+  workflow_call:
+    inputs:
+      source_ref:
+        required: true
+        type: string
+      release_tag:
+        default: ''
+        type: string
+      packager_ref:
+        required: true
+        type: string
+      publish_release:
+        default: false
+        type: boolean
+      previous_source_ref:
+        default: ''
+        type: string
+      release_title:
+        default: ''
+        type: string
+      notes:
+        default: ''
+        type: string
+      release_body_path:
+        default: ''
+        type: string
+      changelog_all:
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: emo-master-${{ inputs.release_tag || inputs.source_ref }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    outputs:
+      release_tag: ${{ steps.prepare.outputs.release_tag }}
+      source_sha: ${{ steps.prepare.outputs.source_sha }}
+      packager_sha: ${{ steps.prepare.outputs.packager_sha }}
+    steps:
+      - name: Validate product caller and release intent
+        id: revision
+        shell: pwsh
+        env:
+          CALLER_REPOSITORY: ${{ github.repository }}
+          CALLER_PRIVATE: ${{ github.event.repository.private }}
+          CALLER_SHA: ${{ github.sha }}
+          CALLER_REF: ${{ github.ref }}
+          CALLER_EVENT: ${{ github.event_name }}
+          REQUESTED_REF: ${{ inputs.packager_ref }}
+          SOURCE_REF: ${{ inputs.source_ref }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          PUBLISH: ${{ inputs.publish_release }}
+        run: |
+          if ($env:CALLER_REPOSITORY -cne 'jsdfhasuh/emo_master' -or $env:CALLER_PRIVATE -ne 'true') { throw 'Only the private product repository may call this workflow' }
+          if ($env:REQUESTED_REF -cnotmatch '\A[a-f0-9]{40}\z' -or $env:SOURCE_REF -cnotmatch '\A[a-f0-9]{40}\z') { throw 'Full packager and source SHAs required' }
+          if ($env:PUBLISH -eq 'true' -and ($env:CALLER_EVENT -cne 'push' -or
+              $env:RELEASE_TAG -cnotmatch '\Av[0-9]+(\.[0-9]+){1,3}\z' -or
+              $env:CALLER_REF -cne "refs/tags/$env:RELEASE_TAG" -or $env:CALLER_SHA -cne $env:SOURCE_REF)) {
+            throw 'Publication requires the matching product tag push and source SHA'
+          }
+          Add-Content $env:GITHUB_OUTPUT "ref=$env:REQUESTED_REF"
+      - uses: actions/checkout@v7
+        with:
+          repository: jsdfhasuh/python_build_scripts
+          ref: ${{ steps.revision.outputs.ref }}
+          path: packager
+          persist-credentials: false
+      - uses: actions/checkout@v7
+        with:
+          repository: jsdfhasuh/emo_master
+          ref: ${{ inputs.source_ref }}
+          path: source
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: Resolve version, check publication and prepare release notes
+        id: prepare
+        working-directory: packager
+        env:
+          MASTER_RELEASE_INPUTS: ${{ toJSON(inputs) }}
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_REPO_TOKEN: ${{ github.token }}
+          PYTHONUTF8: '1'
+        run: python master_release.py prepare --source-root ../source --state ../release-state
+      - uses: actions/upload-artifact@v4
+        with:
+          name: emo-master-release-request
+          path: release-state/
+          if-no-files-found: error
+
+  package:
+    needs: prepare
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [emo-master, emo-master-runtime]
+    uses: ./.github/workflows/emo-master-product-build.yml
+    permissions:
+      contents: read
+    with:
+      target: ${{ matrix.target }}
+      source_ref: ${{ needs.prepare.outputs.source_sha }}
+      packager_ref: ${{ needs.prepare.outputs.packager_sha }}
+      release_tag: ${{ needs.prepare.outputs.release_tag }}
+
+  verify:
+    needs: [prepare, package]
+    runs-on: windows-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          repository: jsdfhasuh/python_build_scripts
+          ref: ${{ needs.prepare.outputs.packager_sha }}
+          path: packager
+          persist-credentials: false
+      - uses: actions/checkout@v7
+        with:
+          repository: jsdfhasuh/emo_master
+          ref: ${{ needs.prepare.outputs.source_sha }}
+          path: source
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: emo-master-release-request
+          path: release-state
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-release-emo-master-${{ needs.prepare.outputs.release_tag }}
+          path: packages/emo-master
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-release-emo-master-runtime-${{ needs.prepare.outputs.release_tag }}
+          path: packages/emo-master-runtime
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: Verify Designer custom icons from the extracted package
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ needs.prepare.outputs.release_tag }}
+        run: ./source/scripts/verify_windows_package.ps1 -Archive "packages/emo-master/emo-master-windows-$env:RELEASE_TAG.zip"
+      - name: Verify and stage exactly six allowlisted files without release credentials
+        working-directory: packager
+        env:
+          PYTHONUTF8: '1'
+        run: python master_release.py verify --source-root ../source --state ../release-state --artifacts ../packages --output ../public
+      - uses: actions/upload-artifact@v4
+        with:
+          name: emo-master-public-${{ needs.prepare.outputs.release_tag }}
+          path: public/
+          if-no-files-found: error
+
+  publish:
+    if: inputs.publish_release == true
+    needs: [prepare, verify]
+    runs-on: windows-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          repository: jsdfhasuh/python_build_scripts
+          ref: ${{ needs.prepare.outputs.packager_sha }}
+          path: packager
+          persist-credentials: false
+      - uses: actions/checkout@v7
+        with:
+          repository: jsdfhasuh/emo_master
+          ref: ${{ needs.prepare.outputs.source_sha }}
+          path: source
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: emo-master-release-request
+          path: release-state
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-release-emo-master-${{ needs.prepare.outputs.release_tag }}
+          path: packages/emo-master
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-release-emo-master-runtime-${{ needs.prepare.outputs.release_tag }}
+          path: packages/emo-master-runtime
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: Reverify all files and publish using only the product workflow token
+        working-directory: packager
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_REPO_TOKEN: ${{ github.token }}
+          PYTHONUTF8: '1'
+        run: python master_release.py release --source-root ../source --state ../release-state --artifacts ../packages --output ../public

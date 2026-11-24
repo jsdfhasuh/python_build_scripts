@@ -238,7 +238,7 @@ def publishAssets(request: dict, body: str, output: Path, records: dict[str, dic
 
 def main() -> int:
   parser = argparse.ArgumentParser(description=__doc__)
-  parser.add_argument('command', choices=('prepare', 'release'))
+  parser.add_argument('command', choices=('prepare', 'verify', 'release'))
   parser.add_argument('--source-root', type=Path, required=True)
   parser.add_argument('--state', type=Path, required=True)
   parser.add_argument('--artifacts', type=Path)
@@ -250,7 +250,7 @@ def main() -> int:
     print(json.dumps(request, indent=2))
     return 0
   if args.artifacts is None or args.output is None:
-    parser.error('release requires --artifacts and --output')
+    parser.error('verify and release require --artifacts and --output')
   request = readObject(args.state / 'request.json')
   if (content.resolveCommit(ROOT, 'HEAD') != request['packager_commit']
       or content.resolveCommit(args.source_root, 'HEAD') != request['source_commit']):
@@ -260,7 +260,7 @@ def main() -> int:
     raise BuildConfigError('Application version changed after preparation')
   body = content.readBody(args.state / 'release-notes.md', request['body_sha256'])
   records = stageAssets(collectAssets(args.artifacts, request), args.output)
-  if request['publish']:
+  if args.command == 'release' and request['publish']:
     print(publishAssets(request, body, args.output, records))
   else:
     print('Both Windows packages verified; build-only, no Release was created.')
