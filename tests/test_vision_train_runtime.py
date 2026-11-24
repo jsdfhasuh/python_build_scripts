@@ -18,9 +18,10 @@ class RequirementsTests(unittest.TestCase):
       '# source\ntorch==2.5.1\nnumpy<=1.26.4\nplatformdirs==4.5.1\nkaggle\n',
       ['torchvision==0.20.1', 'kagglesdk==0.1.31', 'onnxruntime-gpu==1.23.2'],
       runtime.loadProfile())
-    for text in ('numpy<=1.26.4', 'torch==2.5.1+cu121', 'torchvision==0.20.1+cu121',
+    for text in ('numpy==2.0.2', 'torch==2.10.0+cu128', 'torchvision==0.25.0+cu128',
+                 'torchaudio==2.10.0+cu128', 'sympy==1.14.0', 'lapx==0.5.9.post1',
                  'kaggle==2.2.4', 'kagglesdk==0.1.37', 'platformdirs==4.10.0',
-                 'onnxruntime-gpu==1.23.2'):
+                 'onnxruntime-gpu==1.23.2'): 
       self.assertIn(text, result)
     self.assertNotIn('torch==2.5.1', result)
     self.assertNotIn('kagglesdk==0.1.31', result)
@@ -53,7 +54,9 @@ class RequirementsTests(unittest.TestCase):
       with patch.object(runtime, 'checkPlatform'), patch.object(runtime, 'runCommand', record):
         runtime.installRuntime(root)
       self.assertIn('--index-url', commands[0])
-      self.assertIn('torch==2.5.1+cu121', commands[0])
+      self.assertIn('torch==2.10.0+cu128', commands[0])
+      self.assertIn('torchvision==0.25.0+cu128', commands[0])
+      self.assertIn('torchaudio==2.10.0+cu128', commands[0])
       self.assertIn('-r', commands[1])
       self.assertIn('--force-reinstall', commands[2])
       self.assertIn('onnxruntime-gpu==1.23.2', commands[2])
@@ -79,7 +82,7 @@ class RequirementsTests(unittest.TestCase):
 
 class EnvironmentTests(unittest.TestCase):
   def test_cpu_environment_cannot_reach_functional_import_check(self):
-    cpu = SimpleNamespace(__version__='2.5.1+cpu', version=SimpleNamespace(cuda=None))
+    cpu = SimpleNamespace(__version__='2.10.0+cpu', version=SimpleNamespace(cuda=None))
     with patch.object(runtime, 'checkPlatform'), patch.object(runtime, 'runCommand') as run, \
          patch.object(runtime.importlib, 'import_module', return_value=cpu):
       with self.assertRaisesRegex(BuildConfigError, 'Expected torch'):
@@ -92,7 +95,7 @@ class EnvironmentTests(unittest.TestCase):
     packages = (profile['torch_packages'] + profile['packages'] + profile['binary_owners']
                 + list(profile['overrides'].values()))
     versions = dict(text.split('==', 1) for text in packages)
-    gpu = SimpleNamespace(__version__='2.5.1+cu121', version=SimpleNamespace(cuda='12.1'),
+    gpu = SimpleNamespace(__version__='2.10.0+cu128', version=SimpleNamespace(cuda='12.8'),
                           __file__='site-packages/torch/__init__.py')
     with patch.object(runtime, 'checkPlatform'), \
          patch.object(runtime.importlib, 'import_module', return_value=gpu), \
@@ -115,7 +118,7 @@ class PackageTests(unittest.TestCase):
     self.app = Path(temporary.name)
     self.internal = self.app / '_internal'
     self.profile = runtime.loadProfile()
-    self.write('torch/version.py', "__version__ = '2.5.1+cu121'\ncuda: str = '12.1'\n")
+    self.write('torch/version.py', "__version__ = '2.10.0+cu128'\ncuda: str = '12.8'\n")
     self.write('onnxruntime/capi/onnxruntime_providers_cuda.dll')
     self.write('_polars_runtime_32/_polars_runtime.pyd')
     for name in self.profile['torch_dlls']:
@@ -127,7 +130,7 @@ class PackageTests(unittest.TestCase):
                  f'Metadata-Version: 2.1\nName: {name}\nVersion: 1.0\n')
     for name in runtime.KAGGLE_SOURCE_FILES:
       self.write(name)
-    for name in ('python311.dll', 'onnxruntime/capi/onnxruntime_pybind11_state.pyd',
+    for name in ('python312.dll', 'onnxruntime/capi/onnxruntime_pybind11_state.pyd',
                  'onnxruntime/capi/onnxruntime_providers_shared.dll'):
       self.write(name)
     stack = contextlib.ExitStack()
@@ -148,7 +151,7 @@ class PackageTests(unittest.TestCase):
     self.readModules.assert_called_once_with(self.app / 'VisionWorkshop.exe')
 
   def test_cpu_build_is_rejected_before_archive_inspection(self):
-    self.write('torch/version.py', "__version__ = '2.5.1+cpu'\ncuda = None\n")
+    self.write('torch/version.py', "__version__ = '2.10.0+cpu'\ncuda = None\n")
     with self.assertRaisesRegex(BuildConfigError, 'Expected torch'):
       runtime.validatePackage(self.app, 'VisionWorkshop')
     self.readModules.assert_not_called()
@@ -253,6 +256,12 @@ class PackageTests(unittest.TestCase):
     with self.assertRaisesRegex(BuildConfigError, 'Obsolete DINO'):
       runtime.validatePackage(self.app, 'VisionWorkshop')
 
+  def test_main_runtime_requires_python312_dll(self):
+    (self.internal / 'python312.dll').unlink()
+    self.write('python311.dll')
+    with self.assertRaisesRegex(BuildConfigError, 'python312.dll'):
+      runtime.validatePackage(self.app, 'VisionWorkshop')
+
   def test_main_runtime_requires_worker_modules(self):
     self.readModules.return_value.remove('dino_onnx_entry')
     with self.assertRaisesRegex(BuildConfigError, 'dino_onnx_entry'):
@@ -327,7 +336,7 @@ class PackageTests(unittest.TestCase):
 
   def test_version_file_is_parsed_not_executed(self):
     self.write('torch/version.py', "raise RuntimeError('must not execute')\n"
-               "__version__ = '2.5.1+cu121'\ncuda = '12.1'\n")
+               "__version__ = '2.10.0+cu128'\ncuda = '12.8'\n")
     runtime.validatePackage(self.app, 'VisionWorkshop')
 
 

@@ -1,15 +1,18 @@
 {
-  "python": "3.11",
-  "cuda": "12.1",
-  "torch_index": "https://download.pytorch.org/whl/cu121",
+  "python": "3.12",
+  "cuda": "12.8",
+  "torch_index": "https://download.pytorch.org/whl/cu128",
   "torch_packages": [
-    "torch==2.5.1+cu121",
-    "torchvision==0.20.1+cu121",
-    "torchaudio==2.5.1+cu121"
+    "torch==2.10.0+cu128",
+    "torchvision==0.25.0+cu128",
+    "torchaudio==2.10.0+cu128"
   ],
   "overrides": {
     "platformdirs": "platformdirs==4.10.0",
-    "kagglesdk": "kagglesdk==0.1.37"
+    "kagglesdk": "kagglesdk==0.1.37",
+    "numpy": "numpy==2.0.2",
+    "sympy": "sympy==1.14.0",
+    "lapx": "lapx==0.5.9.post1"
   },
   "binary_owners": [
     "onnxruntime-gpu==1.23.2",
@@ -28,9 +31,20 @@
     "imagecodecs==2025.3.30"
   ],
   "modules": [
-    "torch", "torchvision", "polars", "_polars_runtime_32",
-    "anomalib", "kornia", "lightning", "lightning_fabric",
-    "timm", "safetensors.torch", "sklearn", "skimage", "av", "kaggle.api.kaggle_api_extended"
+    "torch",
+    "torchvision",
+    "polars",
+    "_polars_runtime_32",
+    "anomalib",
+    "kornia",
+    "lightning",
+    "lightning_fabric",
+    "timm",
+    "safetensors.torch",
+    "sklearn",
+    "skimage",
+    "av",
+    "kaggle.api.kaggle_api_extended"
   ],
   "imports": [
     "from anomalib.data import Folder, PredictDataset",
@@ -41,16 +55,30 @@
     "from kagglesdk.competitions.types.competition_api_service import ApiGetSubmissionLimitsRequest"
   ],
   "torch_dlls": [
-    "torch_cuda.dll", "c10_cuda.dll", "cudart64_12.dll",
-    "cublas64_12.dll", "cublasLt64_12.dll", "cudnn64_9.dll",
-    "cudnn_adv64_9.dll", "cudnn_cnn64_9.dll", "cudnn_graph64_9.dll",
-    "cudnn_ops64_9.dll", "cudnn_engines_precompiled64_9.dll",
-    "cudnn_engines_runtime_compiled64_9.dll", "cudnn_heuristic64_9.dll",
-    "cufft64_11.dll", "curand64_10.dll", "cusolver64_11.dll",
-    "cusparse64_12.dll", "nvrtc64_120_0.dll", "nvJitLink_120_0.dll"
+    "torch_cuda.dll",
+    "c10_cuda.dll",
+    "cudart64_12.dll",
+    "cublas64_12.dll",
+    "cublasLt64_12.dll",
+    "cudnn64_9.dll",
+    "cudnn_adv64_9.dll",
+    "cudnn_cnn64_9.dll",
+    "cudnn_graph64_9.dll",
+    "cudnn_ops64_9.dll",
+    "cudnn_engines_precompiled64_9.dll",
+    "cudnn_engines_runtime_compiled64_9.dll",
+    "cudnn_heuristic64_9.dll",
+    "cufft64_11.dll",
+    "curand64_10.dll",
+    "cusolver64_11.dll",
+    "cusparse64_12.dll",
+    "nvrtc64_120_0.dll",
+    "nvJitLink_120_0.dll"
   ],
   "models": [
-    "edge_sam_encoder.onnx", "edge_sam_decoder.onnx", "yolo11n-pose.pt",
+    "edge_sam_encoder.onnx",
+    "edge_sam_decoder.onnx",
+    "yolo11n-pose.pt",
     "image_simplification/dinov2_vits14/model.safetensors"
   ]
 }

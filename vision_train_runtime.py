@@ -228,7 +228,7 @@ def validateDinoMainRuntime(internal: Path, modules: set[str]) -> None:
   if ioPath(internal / 'dino_runtime').exists():
     raise BuildConfigError('Obsolete DINO sub-environment must not be bundled')
   validateModules(modules, DINO_MAIN_MODULES)
-  requireFiles(internal, ['python311.dll',
+  requireFiles(internal, ['python312.dll',
     'onnxruntime/capi/onnxruntime_pybind11_state.pyd',
     'onnxruntime/capi/onnxruntime_providers_shared.dll'])
   available = {re.sub(r'[-_.]+', '-', item.metadata.get('Name', '')).casefold()
