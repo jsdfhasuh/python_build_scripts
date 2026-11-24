@@ -30,7 +30,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: jsdfhasuh/emo-vision-train
-          ref: 5dfd65a2d9fdbbcd6172fa2cb2617c875c791cbd
+          ref: 5b6d45fbd384a108afc320350dcc251f59617094
           path: source
           token: ${{ secrets.SOURCE_REPO_TOKEN || github.token }}
           submodules: recursive
@@ -98,7 +98,7 @@ jobs:
         shell: pwsh
         working-directory: source
         run: |
-          & $env:PROBE_PYTHON -m pytest -q tests/test_dinov2_251_core.py tests/test_patchcore_dinov2_features.py tests/test_patchcore_dinov2_loader.py tests/test_patchcore_dinov2_preprocess.py tests/test_dinov2_shared_runtime.py tests/test_patchcore_ckpt_loading.py tests/test_patchcore_backend.py tests/test_kaggle_startup.py tests/test_dino_main_runtime.py tests/test_patchcore_single_file_ckpt.py tests/test_dinov2_onnx.py tests/test_dinov2_deployment_calibration.py tests/test_patchcore_onnx.py tests/test_dinov2_p6.py tests/test_dinov2_progress.py --junitxml=../reports/visionworkshop-cp312-focused-tests.xml
+          & $env:PROBE_PYTHON -m pytest -q tests/test_dinov2_251_core.py tests/test_patchcore_dinov2_features.py tests/test_patchcore_dinov2_loader.py tests/test_patchcore_dinov2_preprocess.py tests/test_dinov2_shared_runtime.py tests/test_patchcore_ckpt_loading.py tests/test_patchcore_backend.py tests/test_kaggle_startup.py tests/test_dino_main_runtime.py tests/test_patchcore_single_file_ckpt.py tests/test_dinov2_onnx.py tests/test_dinov2_deployment_calibration.py tests/test_patchcore_onnx.py tests/test_dinov2_p6.py tests/test_dinov2_progress.py tests/test_patchcore_export_runtime.py tests/test_patchcore_export_ui.py tests/test_update_contract.py tests/test_update_file_transaction.py tests/test_update_v3_runtime.py --junitxml=../reports/visionworkshop-cp312-focused-tests.xml
           if ($LASTEXITCODE -ne 0) { throw "Focused first-party regression tests failed" }
 
       - name: Record installed environment even after probe failures
