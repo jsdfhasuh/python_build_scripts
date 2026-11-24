@@ -12,6 +12,16 @@ import vision_train_runtime as runtime
 from build_config import BuildConfigError
 
 
+class PlatformTests(unittest.TestCase):
+  def test_build_requires_the_exact_unified_cpython_patch(self):
+    profile = runtime.loadProfile()
+    with patch.object(runtime.sys, 'platform', 'win32'), patch.object(runtime.sys, 'version_info', (3, 12, 10)):
+      runtime.checkPlatform(profile)
+    with patch.object(runtime.sys, 'platform', 'win32'), patch.object(runtime.sys, 'version_info', (3, 12, 11)):
+      with self.assertRaisesRegex(BuildConfigError, 'Python 3.12.10'):
+        runtime.checkPlatform(profile)
+
+
 class RequirementsTests(unittest.TestCase):
   def test_ci_overrides_are_resolved_together_without_changing_unrelated_pins(self):
     result = runtime.makeRequirements(

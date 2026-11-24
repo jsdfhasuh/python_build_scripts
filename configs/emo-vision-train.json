@@ -1,7 +1,7 @@
 {
   "source_repo": "jsdfhasuh/emo-vision-train",
   "release_repo": "jsdfhasuh/emo-vision-train-release",
-  "python_version": "3.12",
+  "python_version": "3.12.10",
   "release_asset_name": "emo-vision-train-windows-${RELEASE_TAG}.zip",
   "ci_extra_packages": [
     "torchvision==0.25.0",

@@ -89,7 +89,7 @@ def runCommand(command: list[str], *, cwd: Path | None = None) -> None:
 
 
 def checkPlatform(profile: dict) -> None:
-  version = '.'.join(str(part) for part in sys.version_info[:2])
+  version = '.'.join(str(part) for part in sys.version_info[:3])
   if sys.platform != 'win32' or version != profile['python'] or sys.maxsize <= 2**32:
     raise BuildConfigError(f'Vision Train CI requires Windows x64 Python {profile["python"]}')
 
