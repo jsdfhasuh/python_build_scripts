@@ -141,6 +141,8 @@ jobs:
         shell: pwsh
         working-directory: packager-main
         run: |
+          python -m pip install packaging==25.0
+          if ($LASTEXITCODE -ne 0) { throw "Dependency parser installation failed" }
           python -X utf8 vision_train_runtime.py install --source-root ../source
           if ($LASTEXITCODE -ne 0) { throw "Production CP312 runtime installation failed" }
 
