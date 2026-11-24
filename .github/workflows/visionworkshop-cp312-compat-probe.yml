@@ -1,0 +1,96 @@
+name: VisionWorkshop CPython 3.12 compatibility probe
+
+on:
+  push:
+    branches:
+      - test/visionworkshop-cp312-compat-probe
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-cp312:
+    runs-on: windows-latest
+    timeout-minutes: 120
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - name: Checkout packager probe
+        uses: actions/checkout@v7
+        with:
+          path: packager
+          persist-credentials: false
+
+      - name: Checkout exact application baseline and submodules
+        uses: actions/checkout@v7
+        with:
+          repository: jsdfhasuh/emo-vision-train
+          ref: 39ee980f8179e81d1ad90cafcec1e65d3b944c81
+          path: source
+          submodules: recursive
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up exact CPython 3.12 patch release
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12.14"
+          cache: pip
+
+      - name: Prepare test tooling
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip packaging==25.0 pytest==8.3.5
+          if ($LASTEXITCODE -ne 0) { throw "Test tooling installation failed" }
+
+      - name: Install matched PyTorch CUDA 12.8 wheels
+        shell: pwsh
+        run: |
+          python -m pip install --index-url https://download.pytorch.org/whl/cu128 --extra-index-url https://pypi.org/simple torch==2.10.0+cu128 torchvision==0.25.0+cu128 torchaudio==2.10.0+cu128
+          if ($LASTEXITCODE -ne 0) { throw "Matched Torch CUDA 12.8 installation failed" }
+
+      - name: Generate unified candidate requirements from application requirements
+        shell: pwsh
+        run: |
+          python packager/scripts/visionworkshop_cp312_compat_probe.py --source-root source --requirements-out reports/visionworkshop-cp312-candidate.txt
+          if ($LASTEXITCODE -ne 0) { throw "Candidate requirements generation failed" }
+
+      - name: Install candidate product dependencies
+        shell: pwsh
+        run: |
+          python -m pip install -r reports/visionworkshop-cp312-candidate.txt
+          if ($LASTEXITCODE -ne 0) { throw "Candidate product dependency resolution/installation failed" }
+          python -m pip install pyinstaller==6.18.0 pyinstaller-hooks-contrib==2026.0 pefile==2024.8.26
+          if ($LASTEXITCODE -ne 0) { throw "Pinned PyInstaller toolchain installation failed" }
+
+      - name: Verify dependency consistency
+        shell: pwsh
+        run: |
+          python -m pip check
+          if ($LASTEXITCODE -ne 0) { throw "pip check reported dependency conflicts" }
+
+      - name: Run actual CP312 imports and first-party runtime probes
+        shell: pwsh
+        run: |
+          python packager/scripts/visionworkshop_cp312_compat_probe.py --source-root source --report reports/visionworkshop-cp312-runtime-report.json
+          if ($LASTEXITCODE -ne 0) { throw "Runtime compatibility probe failed" }
+
+      - name: Run focused first-party regression tests
+        shell: pwsh
+        working-directory: source
+        run: |
+          python -m pytest -q tests/test_dinov2_251_core.py tests/test_patchcore_dinov2_features.py tests/test_patchcore_dinov2_loader.py tests/test_patchcore_dinov2_preprocess.py tests/test_dinov2_shared_runtime.py tests/test_patchcore_ckpt_loading.py tests/test_patchcore_backend.py tests/test_kaggle_startup.py --junitxml=../reports/visionworkshop-cp312-focused-tests.xml
+          if ($LASTEXITCODE -ne 0) { throw "Focused first-party regression tests failed" }
+
+      - name: Upload compatibility evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visionworkshop-cp312-compat-\${{ github.run_id }}-\${{ github.run_attempt }}
+          path: |
+            reports/visionworkshop-cp312-candidate.txt
+            reports/visionworkshop-cp312-runtime-report.json
+            reports/visionworkshop-cp312-focused-tests.xml
+          if-no-files-found: warn
