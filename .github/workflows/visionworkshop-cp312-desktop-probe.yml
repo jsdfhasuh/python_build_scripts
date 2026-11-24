@@ -1,0 +1,98 @@
+name: VisionWorkshop CPython 3.12 desktop baseline probe
+
+on:
+  push:
+    branches:
+      - test/visionworkshop-cp312-desktop-probe
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-cp312-desktop:
+    runs-on: windows-latest
+    timeout-minutes: 120
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - name: Checkout packager probe
+        uses: actions/checkout@v7
+        with:
+          path: packager
+          persist-credentials: false
+
+      - name: Checkout exact application baseline and submodules
+        uses: actions/checkout@v7
+        with:
+          repository: jsdfhasuh/emo-vision-train
+          ref: 39ee980f8179e81d1ad90cafcec1e65d3b944c81
+          path: source
+          token: ${{ secrets.SOURCE_REPO_TOKEN || github.token }}
+          submodules: recursive
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up CPython 3.12.10 x64
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12.10"
+          cache: pip
+          cache-dependency-path: source/requirements.txt
+
+      - name: Prepare test tooling
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip packaging==25.0 pytest==8.3.5
+          if ($LASTEXITCODE -ne 0) { throw "Test tooling installation failed" }
+
+      - name: Install current desktop Torch CUDA 12.1 stack on CP312
+        shell: pwsh
+        run: |
+          python -m pip install --index-url https://download.pytorch.org/whl/cu121 --extra-index-url https://pypi.org/simple torch==2.5.1+cu121 torchvision==0.20.1+cu121 torchaudio==2.5.1+cu121
+          if ($LASTEXITCODE -ne 0) { throw "Desktop Torch CUDA 12.1 stack installation failed" }
+
+      - name: Generate CP312 desktop candidate from current requirements
+        shell: pwsh
+        run: |
+          python packager/scripts/visionworkshop_cp312_desktop_probe.py --source-root source --requirements-out reports/visionworkshop-cp312-desktop-candidate.txt
+          if ($LASTEXITCODE -ne 0) { throw "Desktop candidate requirements generation failed" }
+
+      - name: Install candidate desktop dependencies
+        shell: pwsh
+        run: |
+          python -m pip install -r reports/visionworkshop-cp312-desktop-candidate.txt
+          if ($LASTEXITCODE -ne 0) { throw "Desktop dependency resolution/installation failed" }
+          python -m pip install pyinstaller==6.18.0 pyinstaller-hooks-contrib==2026.0 pefile==2024.8.26
+          if ($LASTEXITCODE -ne 0) { throw "Pinned PyInstaller toolchain installation failed" }
+
+      - name: Verify dependency consistency
+        shell: pwsh
+        run: |
+          python -m pip check
+          if ($LASTEXITCODE -ne 0) { throw "pip check reported dependency conflicts" }
+
+      - name: Run desktop CP312 imports and runtime probes
+        shell: pwsh
+        run: |
+          python packager/scripts/visionworkshop_cp312_desktop_probe.py --source-root source --report reports/visionworkshop-cp312-desktop-report.json
+          if ($LASTEXITCODE -ne 0) { throw "Desktop runtime compatibility probe failed" }
+
+      - name: Run focused first-party desktop regressions
+        shell: pwsh
+        working-directory: source
+        run: |
+          python -m pytest -q tests/test_patchcore_ckpt_loading.py tests/test_patchcore_backend.py tests/test_patchcore_single_file_ckpt.py tests/test_dinov2_onnx.py tests/test_dinov2_deployment_calibration.py tests/test_patchcore_onnx.py tests/test_kaggle_startup.py tests/test_dinov2_p6.py tests/test_dinov2_progress.py tests/test_dinov2_shared_runtime.py --junitxml=../reports/visionworkshop-cp312-desktop-tests.xml
+          if ($LASTEXITCODE -ne 0) { throw "Focused desktop regression tests failed" }
+
+      - name: Upload desktop compatibility evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visionworkshop-cp312-desktop-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            reports/visionworkshop-cp312-desktop-candidate.txt
+            reports/visionworkshop-cp312-desktop-report.json
+            reports/visionworkshop-cp312-desktop-tests.xml
+          if-no-files-found: warn
