@@ -6,7 +6,9 @@ import marshal
 import os
 from pathlib import Path
 import struct
+import sys
 import tempfile
+import types
 import unittest
 from unittest import mock
 import zlib
@@ -180,6 +182,33 @@ class ModularProbeTests(unittest.TestCase):
     other = self.root / 'runtime/site-packages-other/numpy/__init__.py'
     self.assertFalse(probe.isInside(other, self.runtime))
     self.assertFalse(probe.isInside(self.runtime / '../../outside.py', self.runtime))
+
+  def testTorchGeneratedNamespacesRequireExactExternalImplementationIdentity(self):
+    torch = types.ModuleType('torch')
+    torch.__file__ = str(self.runtime / 'torch/__init__.py')
+    for name, className, attribute, filename in (
+        ('torch.ops', '_Ops', 'ops', '_ops.py'),
+        ('torch.classes', '_Classes', 'classes', '_classes.py')):
+      with self.subTest(name=name):
+        implementationName = 'torch.' + filename[:-3]
+        implementation = types.ModuleType(implementationName)
+        implementation.__file__ = str(self.runtime / 'torch' / filename)
+        namespaceClass = type(className, (types.ModuleType,), {
+          '__module__': implementationName, '__file__': filename})
+        namespace = namespaceClass(name)
+        setattr(implementation, className, namespaceClass)
+        setattr(implementation, attribute, namespace)
+        setattr(torch, attribute, namespace)
+        with mock.patch.dict(sys.modules, {'torch': torch, implementationName: implementation,
+                                          name: namespace}):
+          evidence = coreProbe.generatedTorchOrigin(name, namespace, self.runtime)
+          self.assertEqual(evidence['implementation_file'], implementation.__file__)
+          replacement = namespaceClass(name)
+          with self.assertRaisesRegex(RuntimeError, 'identity was replaced'):
+            coreProbe.generatedTorchOrigin(name, replacement, self.runtime)
+          implementation.__file__ = str(self.root / filename)
+          with self.assertRaisesRegex(RuntimeError, 'implementation escaped'):
+            coreProbe.generatedTorchOrigin(name, namespace, self.runtime)
 
   def testExternalRuntimeRejectsBundledPythonInterpreter(self):
     source = self.root / 'staging'

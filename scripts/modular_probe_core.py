@@ -176,6 +176,31 @@ def loadedLibraries() -> list[str]:
   return sorted(set(paths), key=str.casefold)
 
 
+def generatedTorchOrigin(name: str, module, runtimeRoot: Path) -> dict:
+  descriptions = {'torch.ops': ('torch._ops', '_Ops', 'ops', '_ops.py'),
+                  'torch.classes': ('torch._classes', '_Classes', 'classes', '_classes.py')}
+  require(name in descriptions, 'Unreviewed generated module: ' + name)
+  implementationName, className, attribute, filename = descriptions[name]
+  implementation = sys.modules.get(implementationName)
+  torch = sys.modules.get('torch')
+  require(implementation is not None and torch is not None,
+          'Generated Torch namespace has no implementation module: ' + name)
+  implementationFile = vars(implementation).get('__file__')
+  torchFile = vars(torch).get('__file__')
+  require(bool(implementationFile) and Path(implementationFile).is_absolute()
+          and Path(implementationFile).resolve() == (runtimeRoot / 'torch' / filename).resolve()
+          and bool(torchFile) and Path(torchFile).is_absolute()
+          and isWithin(Path(torchFile), runtimeRoot),
+          'Generated Torch namespace implementation escaped external runtime: ' + name)
+  require(type(module) is vars(implementation).get(className)
+          and vars(implementation).get(attribute) is module and vars(torch).get(attribute) is module
+          and getattr(module, '__file__', None) == filename,
+          'Generated Torch namespace identity was replaced: ' + name)
+  return {'kind': 'generated_module', 'module_file': filename,
+          'implementation_module': implementationName, 'implementation_class': className,
+          'implementation_file': str(Path(implementationFile).resolve())}
+
+
 def recordOrigins(report: dict, runtimeRoot: Path, sourceRoot: Path | None) -> None:
   bootstrap = recordBootstrapOrigins(report)
   coreRoot = Path(sys.executable).resolve().parent
@@ -186,9 +211,13 @@ def recordOrigins(report: dict, runtimeRoot: Path, sourceRoot: Path | None) -> N
   external = {}
   unexpected = {}
   embedded = {}
+  generated = {}
   for name, module in tuple(sys.modules.items()):
     if name in bootstrap:
       embedded[name] = 'carchive'
+      continue
+    if name in ('torch.ops', 'torch.classes'):
+      generated[name] = generatedTorchOrigin(name, module, runtimeRoot)
       continue
     specification = getattr(module, '__spec__', None)
     if getattr(specification, 'origin', None) in ('built-in', 'frozen'):
@@ -207,6 +236,7 @@ def recordOrigins(report: dict, runtimeRoot: Path, sourceRoot: Path | None) -> N
   report['module_origins'] = origins
   report['external_module_origins'] = external
   report['embedded_module_origins'] = embedded
+  report['generated_module_origins'] = generated
   report['unexpected_module_origins'] = unexpected
   report['sys_path'] = list(sys.path)
   report['loaded_libraries'] = loadedLibraries()

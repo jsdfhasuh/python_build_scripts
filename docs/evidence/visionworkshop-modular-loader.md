@@ -158,6 +158,22 @@ Core DLL 与官方 3.12.10 embeddable ZIP 中的 DLL 完全一致，也与第二
 安装后的 wheel 和 Core DLL 执行资格检查通过。此后把输入资格预检放到冻结编译之前，
 并在依赖准备成功后立即保存下载缓存，避免后续验收失败丢失缓存而重复下载。
 
+### 第四轮：外置原生运算通过，补充 Torch 动态命名空间来源
+
+[运行 45583434693](https://github.com/jsdfhasuh/python_build_scripts/actions/runs/45583434693)
+绑定 `d8666d31b8c3a478e631f430b77d37500e2fbf3f`。Core、外置纯 Python/metadata、
+NumPy/psutil/Qt 原生矩阵均通过。`torch-external.json` 的 Torch CPU 矩阵、TorchVision NMS、
+PNG 原生编码/解码均为 PASS；但进程最终来源记录拒绝 `torch.ops` 与 `torch.classes`，因此
+本轮整体仍为 FAIL，ORT、DINO 和重启矩阵尚未执行。runner 未提供 NVIDIA 驱动，GPU NOT_RUN。
+
+这两个对象由固定 Torch 2.10 自行创建，分别是
+[`_Ops`](https://github.com/pytorch/pytorch/blob/v2.10.0/torch/_ops.py) 和
+[`_Classes`](https://github.com/pytorch/pytorch/blob/v2.10.0/torch/_classes.py) 的单例；它们的
+`__file__` 是人为设置的 `_ops.py` / `_classes.py`，不是工作目录中的文件。
+来源记录现仅针对这两个名称核对实现类、实现模块和 Torch 属性的**同一对象身份**，以及
+实现文件确实位于外置 `torch` 目录，单独报告为 `generated_module_origins`。普通模块仍要求
+真实绝对来源，不把工作目录加入允许范围。17 项定向检查通过，下一轮继续完整冻结矩阵。
+
 ## 后续依赖
 
 实验结果用于确定 A4/B3 的模块布局与公共依赖归属，再实现 A5/B4 的离线安装、更新、
