@@ -72,6 +72,8 @@ class WorkflowSafetyTests(unittest.TestCase):
           if ((path.name == 'release-windows.yml' and jobName == 'build') or
               (path.name == 'release-emo-master.yml' and jobName in ('package', 'release'))):
             self.assertEqual(job['permissions'], {'contents': 'write'})
+          elif path.name == 'visionworkshop-dino-dll-probe.yml' and jobName == 'windows-dll':
+            self.assertEqual(job['permissions'], {'contents': 'read', 'actions': 'read'})
           else:
             self.assertEqual(job.get('permissions', data['permissions']), {'contents': 'read'})
 

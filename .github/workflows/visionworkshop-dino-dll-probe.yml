@@ -1,0 +1,247 @@
+name: VisionWorkshop frozen DINO DLL artifact diagnostic
+
+on:
+  push:
+    branches:
+      - test/visionworkshop-dino-dll-probe
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-dll:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      actions: read
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONNOUSERSITE: "1"
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: utf-8
+      QT_QPA_PLATFORM: offscreen
+      EXPECTED_SOURCE_COMMIT: bb3772003f0b8cbd872d9342a48aa4a82d5bb861
+      EXPECTED_PACKAGER_COMMIT: 673273ad204a45cfdc4eac7b89910be1ce42f577
+      ANALYSIS_CODE_COMMIT: ${{ github.sha }}
+    steps:
+      - name: Checkout exact diagnostic code revision
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          path: packager
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Checkout unchanged production packager helpers
+        uses: actions/checkout@v7
+        with:
+          repository: jsdfhasuh/python_build_scripts
+          ref: ${{ env.EXPECTED_PACKAGER_COMMIT }}
+          path: packager-main
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Checkout exact application source for inspection
+        uses: actions/checkout@v7
+        with:
+          repository: jsdfhasuh/emo-vision-train
+          ref: ${{ env.EXPECTED_SOURCE_COMMIT }}
+          path: source
+          token: ${{ secrets.SOURCE_REPO_TOKEN || github.token }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up matching CPython
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12.10"
+
+      - name: Prepare isolated diagnostic controller without Torch or ORT
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force reports | Out-Null
+          $venv = Join-Path $env:RUNNER_TEMP 'visionworkshop-dino-dll-controller'
+          python -m venv $venv
+          if ($LASTEXITCODE -ne 0) { throw 'Diagnostic virtual environment creation failed' }
+          $python = Join-Path $venv 'Scripts/python.exe'
+          "DIAG_PYTHON=$python" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+          & $python -m pip install --only-binary=:all: Pillow==12.0.0 packaging==25.0 PyYAML==6.0.3 psutil==7.2.1 numpy==2.0.2 onnx==1.16.0 pefile==2024.8.26 2>&1 | Tee-Object reports/controller-install.log
+          if ($LASTEXITCODE -ne 0) { throw 'Diagnostic controller dependency installation failed' }
+          & $python -m pip check 2>&1 | Tee-Object reports/controller-pip-check.txt
+          if ($LASTEXITCODE -ne 0) { throw 'Diagnostic controller dependencies conflict' }
+          & $python -c "import importlib.util,sys; assert sys.version_info[:3] == (3,12,10); assert sys.prefix != sys.base_prefix; assert importlib.util.find_spec('torch') is None; assert importlib.util.find_spec('onnxruntime') is None; print(sys.executable)"
+          if ($LASTEXITCODE -ne 0) { throw 'Controller must be isolated Python 3.12.10 without Torch/ORT' }
+          & $python -m pip freeze --all | Out-File reports/controller-freeze.txt -Encoding utf8
+          if ($LASTEXITCODE -ne 0) { throw 'Controller environment snapshot failed' }
+
+      - name: Download fixed nonpublishing diagnostic ZIP artifact
+        uses: actions/download-artifact@v4
+        with:
+          repository: jsdfhasuh/python_build_scripts
+          run-id: '45532992462'
+          name: visionworkshop-cp312-nonpublishing-size-diagnostic-45532992462-1
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/dino-dll-input/diagnostic
+
+      - name: Download matching lightweight build evidence
+        uses: actions/download-artifact@v4
+        with:
+          repository: jsdfhasuh/python_build_scripts
+          run-id: '45532992462'
+          name: visionworkshop-cp312-compat-45532992462-1
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/dino-dll-input/evidence
+
+      - name: Verify original archive and exact build provenance
+        id: inputs
+        shell: pwsh
+        run: |
+          @'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          import re
+          import subprocess
+          import zipfile
+
+          def require(condition, message):
+              if not condition:
+                  raise RuntimeError(message)
+
+          def unique(root, pattern):
+              paths = [path for path in root.rglob(pattern) if path.is_file()]
+              require(len(paths) == 1, f'Expected one {pattern} under {root}; found {len(paths)}')
+              return paths[0]
+
+          def read(path):
+              require(not path.is_symlink() and path.stat().st_size <= 32 * 1024 * 1024,
+                      'Unsafe or unexpectedly large evidence file: ' + str(path))
+              return json.loads(path.read_text(encoding='utf-8-sig'))
+
+          def file_hash(path):
+              digest = hashlib.sha256()
+              with path.open('rb') as stream:
+                  for chunk in iter(lambda: stream.read(4 * 1024 * 1024), b''):
+                      digest.update(chunk)
+              return digest.hexdigest()
+
+          def object_hash(value):
+              return hashlib.sha256(json.dumps(value, ensure_ascii=False, sort_keys=True,
+                                                separators=(',', ':')).encode()).hexdigest()
+
+          def head(path):
+              return subprocess.check_output(['git', '-C', str(path), 'rev-parse', 'HEAD'],
+                                             text=True).strip()
+
+          workspace = Path(os.environ['GITHUB_WORKSPACE'])
+          inputRoot = Path(os.environ['RUNNER_TEMP']) / 'dino-dll-input'
+          diagnosticRoot, evidenceRoot = inputRoot / 'diagnostic', inputRoot / 'evidence'
+          metadataPath = unique(diagnosticRoot, 'oversize-archive.json')
+          metadata = read(metadataPath)
+          require(metadata == read(unique(evidenceRoot, 'oversize-archive.json')),
+                  'Large and lightweight artifacts contain different diagnostic provenance')
+          require(type(metadata.get('schema_version')) is int and metadata['schema_version'] == 1,
+                  'Unsupported diagnostic metadata schema')
+          require(metadata.get('status') == 'blocked-size' and metadata.get('published') is False
+                  and metadata.get('publishable') is False, 'Only the original nonpublishing oversize artifact is allowed')
+          require(metadata.get('target') == 'emo-vision-train' and
+                  metadata.get('program_name') == 'VisionWorkshop', 'Unexpected diagnostic target')
+          sourceCommit = os.environ['EXPECTED_SOURCE_COMMIT']
+          packagerCommit = os.environ['EXPECTED_PACKAGER_COMMIT']
+          analysisCommit = os.environ['ANALYSIS_CODE_COMMIT']
+          require(metadata.get('source_commit') == sourceCommit == head(workspace / 'source'),
+                  'Application source identity mismatch')
+          require(metadata.get('packager_commit') == packagerCommit == head(workspace / 'packager-main'),
+                  'Original packager/helper identity mismatch')
+          require(analysisCommit == head(workspace / 'packager'), 'Diagnostic code revision mismatch')
+          buildId = metadata.get('build_id')
+          require(isinstance(buildId, str) and re.fullmatch(r'\d{8}T\d{6}Z-[a-f0-9]{12}', buildId),
+                  'Malformed build identity')
+          assetName = f'VisionWorkshop-windows-x86_64-{buildId}-full.zip'
+          require(metadata.get('asset_name') == assetName, 'Unexpected archive basename')
+          archive = unique(diagnosticRoot, '*.zip')
+          require(archive.name == assetName and archive.parent == metadataPath.parent
+                  and not archive.is_symlink(), 'Unexpected diagnostic archive path')
+          for key in ('asset_sha256', 'files_sha256'):
+              require(isinstance(metadata.get(key), str) and re.fullmatch('[a-f0-9]{64}', metadata[key]),
+                      'Malformed ' + key)
+          require(type(metadata.get('maximum_asset_size')) is int and
+                  metadata['maximum_asset_size'] == 2147483647, 'Original release size limit differs')
+          require(type(metadata.get('asset_size')) is int and
+                  archive.stat().st_size == metadata['asset_size'] > metadata['maximum_asset_size'],
+                  'Diagnostic ZIP size does not match the original oversize classification')
+          require(file_hash(archive) == metadata['asset_sha256'], 'Original ZIP SHA-256 mismatch')
+          recordPath = unique(evidenceRoot, 'build-record.json')
+          record = read(recordPath)
+          require(record.get('status') == 'complete' and record.get('build_id') == buildId,
+                  'Matching complete private build record is required')
+          require(record['inputs']['source'].get('commit') == sourceCommit and
+                  record['inputs']['packager'].get('commit') == packagerCommit,
+                  'Private build record source/packager mismatch')
+          require(object_hash(record['files']) == record.get('files_sha256') == metadata['files_sha256'],
+                  'Full installation inventory hash mismatch')
+          protocol = metadata.get('update_protocol', {})
+          require(protocol == record.get('update_protocol') and protocol.get('protocol_version') == 3
+                  and protocol.get('build_id') == buildId, 'Protocol build evidence mismatch')
+          with zipfile.ZipFile(archive) as bundle:
+              for filename, hashKey in (('release_identity.json', 'identity_sha256'),
+                                        ('package_files.json', 'files_sha256')):
+                  member = bundle.getinfo('VisionWorkshop/app/' + filename)
+                  require(0 < member.file_size <= 16 * 1024 * 1024, 'Invalid embedded metadata size')
+                  raw = bundle.read(member)
+                  require(hashlib.sha256(raw).hexdigest() == protocol.get(hashKey),
+                          'Embedded protocol metadata hash mismatch: ' + filename)
+                  if filename == 'release_identity.json':
+                      identity = json.loads(raw)
+                      require(identity.get('build_id') == buildId and
+                              identity.get('source', {}).get('commit') == sourceCommit and
+                              identity.get('entrypoint') == 'VisionWorkshopApp.exe',
+                              'Embedded application identity mismatch')
+          provenance = {'status': 'PASS', 'scope': 'Original artifact provenance validation only',
+                        'source_run_id': 45532992462, 'source_run_attempt': 1,
+                        'analysis_code_commit': analysisCommit, 'source_commit': sourceCommit,
+                        'packager_commit': packagerCommit, 'build_id': buildId,
+                        'archive_path': str(archive), 'asset_sha256': metadata['asset_sha256'],
+                        'asset_size': metadata['asset_size'], 'files_sha256': metadata['files_sha256'],
+                        'build_record': str(recordPath), 'build_record_sha256': file_hash(recordPath),
+                        'build_identity': identity, 'release_status': 'blocked-size',
+                        'published': False, 'publishable': False,
+                        'product_acceptance': 'NOT_RUN', 'GPU_execution': 'NOT_RUN'}
+          (workspace / 'reports/artifact-provenance.json').write_text(
+              json.dumps(provenance, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as result:
+              result.write('archive_path=' + str(archive) + '\nbuild_record=' + str(recordPath) + '\n')
+          print(json.dumps(provenance, ensure_ascii=False, indent=2))
+          '@ | & $env:DIAG_PYTHON -X utf8 -
+          if ($LASTEXITCODE -ne 0) { throw 'Original artifact identity validation failed' }
+
+      - name: Collect fresh-process DLL initialization diagnostics
+        id: dll_probe
+        shell: pwsh
+        env:
+          DIAGNOSTIC_ARCHIVE: ${{ steps.inputs.outputs.archive_path }}
+          DIAGNOSTIC_BUILD_RECORD: ${{ steps.inputs.outputs.build_record }}
+        run: |
+          & $env:DIAG_PYTHON -X utf8 (Join-Path $env:GITHUB_WORKSPACE 'packager/scripts/diagnose_vision_train_dino_dll.py') `
+            --zip $env:DIAGNOSTIC_ARCHIVE `
+            --source-root (Join-Path $env:GITHUB_WORKSPACE 'source') `
+            --packager-root (Join-Path $env:GITHUB_WORKSPACE 'packager-main') `
+            --output (Join-Path $env:GITHUB_WORKSPACE 'reports/dll-diagnostic') `
+            --build-record $env:DIAGNOSTIC_BUILD_RECORD `
+            2>&1 | Tee-Object reports/dll-diagnostic-run.log
+          if ($LASTEXITCODE -ne 0) { throw 'DLL diagnostic collection could not complete; inspect the retained reports' }
+          'DLL cases retain their individual PASS/FAIL results. Collection completion is not product acceptance.' | Out-File $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+
+      - name: Upload lightweight DLL diagnostic evidence only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visionworkshop-dino-dll-diagnostic-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            reports/**/*.json
+            reports/**/*.txt
+            reports/**/*.log
+          if-no-files-found: warn
