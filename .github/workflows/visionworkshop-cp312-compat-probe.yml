@@ -41,7 +41,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: jsdfhasuh/python_build_scripts
-          ref: 673273ad204a45cfdc4eac7b89910be1ce42f577
+          ref: a63f320f86ca6dbfaf48d57afbd9853b8333ddc2
           path: packager-main
           persist-credentials: false
 
@@ -309,6 +309,7 @@ jobs:
         working-directory: packager-main
         env:
           FROZEN_ARCHIVE: ${{ steps.select_archive.outputs.archive_path }}
+          PYI_TORCH_DLL_DEBUG: "1"
         run: |
           & $env:BUILD_PYTHON -X utf8 scripts/verify_vision_train_frozen.py `
             --zip $env:FROZEN_ARCHIVE `
