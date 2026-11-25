@@ -31,13 +31,18 @@ from build_records import rejectLinks
 from build_records import scanFiles
 from scripts import verify_vision_train_modules as loader
 from vision_train_modular_archive import compressPackage
+from vision_train_modular_crt import loadRuntimeProfile
+from vision_train_modular_crt import prepareRuntime
+from vision_train_modular_crt import qualifyVendorCrt
 from vision_train_module_inventory import buildDependencyLock
 from vision_train_module_inventory import inventoryPayload
+from vision_train_module_inventory import importRoot
 from vision_train_module_inventory import normalizedName
 from vision_train_module_inventory import readConstraints
 from vision_train_module_inventory import readDistributions
 from vision_train_module_inventory import readProvenance
 from vision_train_module_inventory import resolveOwnership
+from vision_train_module_inventory import verifyRecordHash
 
 
 ROOT = Path(__file__).resolve().parent
@@ -190,6 +195,13 @@ def prepareAssets(args) -> dict:
     return result
   finally:
     sys.path.remove(str(source))
+
+
+def prepareCrt(args) -> dict:
+  profile, _pins = loadProfile(args.profile)
+  contract = loadContract(args.source_root.resolve())
+  declaration = loadRuntimeProfile(ROOT / profile['crt_profile'], contract)
+  return prepareRuntime(args.output.resolve(), declaration)
 
 
 def verifyPreparedCoreResource(path: Path, declaration: dict) -> None:
@@ -415,8 +427,75 @@ def makeCatalog(profile: dict, ownership: dict, distributions: dict, resources: 
   return catalog
 
 
+def validateReadlineProvider(site: Path, distributions: dict, provenance: dict,
+                             ownership: dict, declaration: dict) -> dict:
+  name, namespace = declaration['distribution'], declaration['namespace']
+  relative = declaration['path'].removeprefix('site-packages/')
+  item, origin = distributions.get(name, {}), provenance.get(name, {})
+  providers = [distribution for distribution in ownership['distribution_owners']
+               if namespace in distributions[distribution]['import_roots']]
+  if (providers != [name] or item.get('version') != declaration['version']
+      or origin.get('version') != declaration['version']
+      or origin.get('sha256') != declaration['wheel_sha256']
+      or ownership['distribution_owners'].get(name) != declaration['owner']
+      or any(ownership['import_owners'].get(root) != declaration['owner']
+             for root in (namespace, name))):
+    raise BuildConfigError('The Windows readline compatibility provider differs from its reviewed owner/wheel')
+  variants = [path for path in item['records'] if (root := importRoot(path)) is not None
+               and root.casefold() == namespace.casefold()]
+  # Keep the original wheel shim, without a renamed module or replacement implementation.
+  if variants != [relative]:
+    raise BuildConfigError('Unexpected readline namespace payload in the Windows compatibility provider')
+  path = site / relative
+  rejectLinks(path)
+  row = item['records'][relative]
+  digest = base64.urlsafe_b64encode(bytes.fromhex(declaration['sha256'])).decode().rstrip('=')
+  if row[1:] != ['sha256=' + digest, str(declaration['size'])]:
+    raise BuildConfigError('Windows readline shim RECORD does not declare its reviewed original bytes')
+  verifyRecordHash(path, row)
+  if path.stat().st_size != declaration['size'] or fileHash(path) != declaration['sha256']:
+    raise BuildConfigError('Windows readline shim differs from its reviewed original bytes')
+  return {'declaration': declaration, 'wheel_provenance': origin,
+          'installed_record': row, 'record_sha256': item['record_sha256'],
+          'installed_path': str(path.resolve()), 'payload_unchanged': True}
+
+
+def qualifyReadlineCompatibility(python: Path, info: dict, site: Path, distributions: dict,
+                                 provenance: dict, ownership: dict, contract, reports: Path) -> dict:
+  declaration = contract.READLINE_COMPATIBILITY
+  record = {'status': 'FAIL', 'declaration': declaration}
+  try:
+    record.update(validateReadlineProvider(site, distributions, provenance, ownership, declaration))
+    program = (
+      'import importlib.util,json,sys; name=sys.argv[1]; spec=importlib.util.find_spec(name); '
+      'print(json.dumps({"namespace":name,"version":sys.version.split()[0],'
+      '"platform":sys.platform,"executable":sys.executable,"base_prefix":sys.base_prefix,'
+      '"isolated":sys.flags.isolated,"no_site":sys.flags.no_site,'
+      '"listed_in_stdlib_names":name in sys.stdlib_module_names,'
+      '"builtin":name in sys.builtin_module_names,'
+      '"spec":None if spec is None else {"origin":spec.origin,"loader":type(spec.loader).__name__}}))'
+    )
+    observed = json.loads(loader.runCommand(
+      [str(python), '-I', '-S', '-B', '-c', program, declaration['namespace']], reports,
+      'compiler-readline-absence', timeout=60, cwd=reports,
+      env=loader.cleanBuildEnvironment(info, reports.parent)))
+    record['compiler_observation'] = observed
+    if (observed.get('namespace') != declaration['namespace']
+        or observed.get('version') != '3.12.10' or observed.get('platform') != 'win32'
+        or observed.get('isolated') != 1 or observed.get('no_site') != 1
+        or observed.get('spec') is not None or observed.get('builtin') is not False
+        or observed.get('listed_in_stdlib_names') is not True
+        or Path(observed.get('executable', '')).resolve() != python.resolve()
+        or Path(observed.get('base_prefix', '')).resolve() != Path(info['base_prefix']).resolve()):
+      raise BuildConfigError('The fixed Windows compiler does not prove that native readline is absent')
+    record.update(status='PASS', scope='One reviewed Windows-only compatibility shim; no general stdlib override')
+    return record
+  finally:
+    loader.writeReport(reports / 'readline-compatibility.json', record)
+
+
 def buildFrozenCore(python: Path, info: dict, core: Path, metadata: dict,
-                    output: Path, reports: Path, icon: Path) -> None:
+                    output: Path, reports: Path, icon: Path, crtRoot: Path, crtProfile: dict) -> None:
   compiler = output / 'compiler-input'
   compiler.mkdir()
   template = (ROOT / 'scripts/modular_product_launcher.py').read_text(encoding='utf-8')
@@ -427,8 +506,10 @@ def buildFrozenCore(python: Path, info: dict, core: Path, metadata: dict,
   embedded = (core / 'core.json').read_bytes()
   entry.write_text(template.replace(marker, 'EMBEDDED_CORE_JSON = '
                    + repr(embedded.decode('utf-8'))), encoding='utf-8')
-  native = [(str(Path(info['base_prefix']) / name), '.') for name in
-             ('python3.dll', 'vcruntime140.dll', 'vcruntime140_1.dll')]
+  replacements = {name: str(crtRoot / 'dlls' / name)
+                   for name in ('vcruntime140.dll', 'vcruntime140_1.dll')}
+  native = [(str(Path(info['base_prefix']) / 'python3.dll'), '.')]
+  native.extend((path, '.') for path in replacements.values())
   excluded = set(loader.STDLIB_EXCLUDED) | set(metadata['import_roots'])
   excluded.update(root for item in metadata['catalog'].values() for root in item['import_roots'])
   hidden = loader.collectStdlibModules(info)
@@ -438,8 +519,14 @@ def buildFrozenCore(python: Path, info: dict, core: Path, metadata: dict,
     'a = Analysis(' + repr([str(entry)]) + ', pathex=[], binaries=' + repr(native) + ', datas=[],\n'
     '  hiddenimports=' + pprint.pformat(hidden) + ',\n'
     '  hookspath=[], runtime_hooks=[], excludes=' + repr(sorted(excluded)) + ', noarchive=False)\n'
+    'original_binaries = list(a.binaries)\n'
+    'replacements = ' + repr(replacements) + '\n'
+    'for name, source in replacements.items():\n'
+    '  a.binaries = [row for row in a.binaries if row[0].lower() != name]\n'
+    '  a.binaries.append((name, source, "BINARY"))\n'
     'Path(' + repr(str(reports / 'core-analysis.json')) + ').write_text(json.dumps({\n'
-    '  "pure": list(a.pure), "binaries": list(a.binaries), "datas": list(a.datas)\n'
+    '  "pure": list(a.pure), "binaries": list(a.binaries), "datas": list(a.datas),\n'
+    '  "original_binaries": original_binaries, "reviewed_crt_replacements": replacements\n'
     '}), encoding="utf-8")\n'
     'pyz = PYZ(a.pure)\n'
     'exe = EXE(pyz, a.scripts, [], exclude_binaries=True, name="VisionWorkshop",\n'
@@ -457,11 +544,35 @@ def buildFrozenCore(python: Path, info: dict, core: Path, metadata: dict,
                     '--workpath', str(output / 'compiler-work'), str(specification)],
                    reports, 'core-build', timeout=900, cwd=compiler, env=environment)
   analysis = json.loads((reports / 'core-analysis.json').read_text(encoding='utf-8'))
-  sources = loader.validateBinarySources(analysis, info, Path(os.environ['SystemRoot']).resolve())
+  sourceSets = {}
+  for key in ('original_binaries', 'binaries'):
+    ordinary, reviewed = [], []
+    for destination, source, kind in analysis[key]:
+      expected = replacements.get(destination.lower())
+      if expected and Path(source).resolve() == Path(expected).resolve():
+        declared = crtProfile['files'][destination.lower()]
+        if fileHash(Path(source)) != declared['sha256'] or Path(source).stat().st_size != declared['bytes']:
+          raise BuildConfigError('A frozen official CRT input changed after preparation')
+        reviewed.append({'destination': destination, 'path': str(Path(source).resolve()),
+                         'owner': 'fixed-microsoft-redist', 'kind': kind,
+                         'bytes': declared['bytes'], 'sha256': declared['sha256']})
+      else:
+        if expected and Path(source).resolve() != (Path(info['base_prefix']) / destination).resolve():
+          raise BuildConfigError('PyInstaller initially selected an unreviewed VCRUNTIME source')
+        ordinary.append((destination, source, kind))
+    sourceSets[key] = reviewed + loader.validateBinarySources({'binaries': ordinary}, info,
+      Path(os.environ['SystemRoot']).resolve())
+  sources = sourceSets['binaries']
+  for name, path in replacements.items():
+    matches = [item for item in sources if item['destination'].lower() == name]
+    if len(matches) != 1 or matches[0]['path'] != str(Path(path).resolve()):
+      raise BuildConfigError('The frozen Core did not select its exact official VCRUNTIME input')
   compilerSite = Path(info['purelib']).resolve()
   leaked = [record['path'] for record in sources if Path(record['path']).is_relative_to(compilerSite)]
   loader.writeReport(reports / 'core-binary-sources.json', {
-    'status': 'FAIL' if leaked else 'PASS', 'files': sources, 'compiler_site_packages_leaks': leaked})
+    'status': 'FAIL' if leaked else 'PASS', 'files': sources,
+    'original_analysis_files': sourceSets['original_binaries'],
+    'reviewed_crt_replacements': replacements, 'compiler_site_packages_leaks': leaked})
   if leaked:
     raise BuildConfigError('Third-party compiler test dependencies leaked into the frozen stdlib Core')
   optional = set(metadata['import_roots'])
@@ -502,6 +613,7 @@ def buildCandidate(args) -> dict:
     if contract.stable_version(minimum) >= contract.stable_version(maximum):
       raise BuildConfigError('Core compatibility interval must be nonempty')
     profile, pins = loadProfile(args.profile)
+    crtProfile = loadRuntimeProfile(ROOT / profile['crt_profile'], contract)
     vendor = readVendor(source, profile)
     buildInfo = loader.inspectPython(args.build_python.resolve(), reports, 'build-python')
     runtimeInfo = loader.inspectPython(args.runtime_python.resolve(), reports, 'runtime-python')
@@ -526,6 +638,8 @@ def buildCandidate(args) -> dict:
     for name, digest in profile['extra_archives'].items():
       if provenance.get(name, {}).get('sha256') != digest:
         raise BuildConfigError('Added dependency archive differs from its reviewed digest: ' + name)
+    readline = qualifyReadlineCompatibility(args.build_python.resolve(), buildInfo, site,
+      distributions, provenance, ownership, contract, reports)
     inventory = inventoryPayload(site, distributions, ownership,
                                  namespaceProviders=profile['namespace_providers'], omittedPython=omitted)
     loader.writeReport(reports / 'installed-distributions.json', {'distributions': distributions,
@@ -541,26 +655,32 @@ def buildCandidate(args) -> dict:
     copyInstalled(site, inventory, core, modules)
     sourcePackage = copyUltralytics(source, modules, vendor['ultralytics'])
     resources = copyResources(args.assets_root.resolve(), modules, profile)
-    native = core / 'native'
-    native.mkdir()
-    crt = loader.extractCrt(args.crt_wheel.resolve(), native)
-    loader.writeReport(reports / 'core-crt-source.json', crt)
+    crtRoot = args.crt_root.resolve()
+    crt = qualifyVendorCrt(site, distributions, provenance, ownership, crtRoot,
+                           crtProfile, contract, reports)
+    for name, destination in crtProfile['core_files'].items():
+      if destination.startswith('native/'):
+        copyFile(crtRoot / 'dlls' / name, core / destination)
+    copyTree(crtRoot / 'licenses', core / 'native/msvc-licenses')
+    loader.writeReport(reports / 'core-crt-source.json', {'profile': crtProfile,
+      'profile_sha256': fileHash(ROOT / profile['crt_profile']), 'shared_compatibility': crt})
     lock = buildDependencyLock(distributions, provenance, ownership, inventory, inputs={
       'dependency_recipe_sha256': objectHash(dependencyRecipe(profile)),
       'constraints_sha256': fileHash(ROOT / profile['constraints']),
       'vendor_sources': {name: item for name, item in vendor.items() if item['owner'] != 'core'},
       'namespace_providers': profile['namespace_providers'],
       'distribution_providers': profile['distribution_providers'],
-      'core_crt_sha256': loader.CRT_SHA256})
+      'windows_stdlib_compatibility': contract.READLINE_COMPATIBILITY,
+      'msvcp_compatibility': contract.MSVCP140_COMPATIBILITY,
+      'core_crt_profile_sha256': fileHash(ROOT / profile['crt_profile'])})
     lock['distributions']['ultralytics'] = sourcePackage
     writeCanonical(core / contract.LOCK_FILE, lock, encoder=contract.canonical_json,
                     maximumBytes=contract.MAX_METADATA)
     records = fileRecords(core)
     build = {'app_sha': sourceState['commit'], 'packager_sha': packagerState['commit'],
              'build_id': args.build_id}
-    preloads = [{'path': '_internal/' + name, 'sha256': fileHash(Path(buildInfo['base_prefix']) / name)}
-                for name in ('vcruntime140.dll', 'vcruntime140_1.dll')]
-    preloads.append({'path': 'native/msvcp140.dll', 'sha256': loader.CRT_SHA256})
+    preloads = [{'path': crtProfile['core_files'][name], 'sha256': crtProfile['files'][name]['sha256']}
+                 for name in crtProfile['preload_order']]
     metadata = {
       'protocol_version': contract.PROTOCOL_VERSION, 'module_api': contract.MODULE_API,
       'type': 'visionworkshop-core', 'version': args.core_version,
@@ -604,7 +724,7 @@ def buildCandidate(args) -> dict:
     contract.validate_module_set(metadata, manifests)
     loader.writeReport(reports / 'module-manifests.json', manifests)
     buildFrozenCore(args.build_python.resolve(), buildInfo, core, metadata, output, reports,
-                     Path(branding['icon_source']))
+                     Path(branding['icon_source']), crtRoot, crtProfile)
     records = fileRecords(core)
     pythonFiles = [record for record in records if loader.isInterpreterFile(Path(record['path']))]
     if {record['path'] for record in pythonFiles} != {'_internal/python312.dll', '_internal/python3.dll'}:
@@ -634,6 +754,7 @@ def buildCandidate(args) -> dict:
                   core_bytes=sum(record['size'] for record in records),
                   unique_python_files=pythonFiles, source=sourceState, vendor_sources=vendor,
                   profile_sha256=fileHash(args.profile),
+                  readline_compatibility=readline,
                   packager=packagerState, branding=branding)
     return result
   except Exception as error:
@@ -646,7 +767,7 @@ def buildCandidate(args) -> dict:
 
 def parseArgs(argv=None):
   parser = argparse.ArgumentParser(description=__doc__)
-  parser.add_argument('operation', choices=('prepare', 'assets', 'build'))
+  parser.add_argument('operation', choices=('prepare', 'crt', 'assets', 'build'))
   parser.add_argument('--profile', type=Path, default=PROFILE)
   parser.add_argument('--source-root', type=Path)
   parser.add_argument('--assets-root', type=Path)
@@ -655,22 +776,24 @@ def parseArgs(argv=None):
   parser.add_argument('--runtime-python', type=Path)
   parser.add_argument('--install-report', type=Path, action='append', default=[])
   parser.add_argument('--torch-install-report', type=Path)
-  parser.add_argument('--crt-wheel', type=Path)
+  parser.add_argument('--crt-root', type=Path)
   parser.add_argument('--core-version', default='0.0.0')
   parser.add_argument('--max-core-version', default='0.0.1')
   parser.add_argument('--build-id', default=time.strftime('%Y%m%dT%H%M%SZ', time.gmtime()))
   args = parser.parse_args(argv)
-  if args.operation != 'prepare' and (args.source_root is None or args.assets_root is None):
+  if args.operation in ('assets', 'build') and (args.source_root is None or args.assets_root is None):
     parser.error('--source-root and an isolated --assets-root are required for assets/build')
+  if args.operation == 'crt' and args.source_root is None:
+    parser.error('--source-root is required to verify the shared CRT contract')
   if args.operation == 'build' and (not args.install_report or any(getattr(args, field) is None
-      for field in ('build_python', 'runtime_python', 'torch_install_report', 'crt_wheel'))):
-    parser.error('build requires build/runtime Python, installation reports and the reviewed CRT wheel')
+      for field in ('build_python', 'runtime_python', 'torch_install_report', 'crt_root'))):
+    parser.error('build requires build/runtime Python, installation reports and the prepared official CRT')
   return args
 
 
 def main(argv=None) -> int:
   args = parseArgs(argv)
-  operations = {'prepare': prepareInputs, 'assets': prepareAssets, 'build': buildCandidate}
+  operations = {'prepare': prepareInputs, 'crt': prepareCrt, 'assets': prepareAssets, 'build': buildCandidate}
   result = operations[args.operation](args)
   print(json.dumps({'operation': args.operation, 'status': result.get('status', 'PREPARED'),
                     'output': str(args.output)}, ensure_ascii=False), flush=True)

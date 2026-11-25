@@ -1,0 +1,166 @@
+{
+  "schema_version": 1,
+  "version": "14.52.37029.0",
+  "source": {
+    "resolved_url": "https://download.visualstudio.microsoft.com/download/pr/78d061c5-9ef3-42ab-98ed-3309d1095dc4/9C02C9ED120F671B900E6B9471D890E3B2414117A7E53F4AE2E855466FA2B7C9/VC_redist.x64.exe",
+    "bytes": 18863624,
+    "sha256": "9c02c9ed120f671b900e6b9471d890e3b2414117a7e53f4ae2e855466fa2b7c9"
+  },
+  "license": {
+    "installer_declared_url": "https://aka.ms/VCRedistLicense",
+    "official_page": "https://visualstudio.microsoft.com/license-terms/vs2026-ga-visualcpp-v14-redist-runtime/",
+    "resolved_url": "https://visualstudio.microsoft.com/wp-content/uploads/2025/10/Visual-C-V14-License-Redistributable_and_Runtime_ENU.docx",
+    "filename": "Visual-C-V14-License-Redistributable_and_Runtime_ENU.docx",
+    "bytes": 39553,
+    "sha256": "08651651a7602fc7c0e2763de0fde1ff9f868df2780597cd1775ee9d6441c783"
+  },
+  "containers": {
+    "bootstrapper": {
+      "offset": 479744,
+      "bytes": 140057,
+      "sha256": "72a6fc8771b0b377e93cf230ea84f295658ddf920ae720e841607f28f5bc26f2"
+    },
+    "WixAttachedContainer": {
+      "offset": 629952,
+      "bytes": 18223522,
+      "sha256": "f83ea8d07474846b64c6d8ea3dd3dc4aacba9bfc6d09a0cf2400a847c0ff29e0"
+    }
+  },
+  "embedded_cab": {
+    "container_offset": 629952,
+    "container_bytes": 18223522,
+    "embedded_name": "a4",
+    "burn_metadata": {
+      "Id": "cab5046A8AB272BF37297BB7928664C9503",
+      "FilePath": "packages\\vcRuntimeMinimum_amd64\\cab1.cab",
+      "FileSize": "1060683",
+      "Hash": "05A3A4715A878757186492956CEADE43B270E737",
+      "Packaging": "embedded",
+      "SourcePath": "a4",
+      "Container": "WixAttachedContainer"
+    },
+    "sha256": "596629040fda9c7eb2b15d809199bf691e7a61d12e8e400f2e94e3871866e9a3",
+    "bytes": 1060683
+  },
+  "files": {
+    "concrt140.dll": {
+      "archive_member": "WixAttachedContainer/a4/concrt140.dll_amd64",
+      "cab_member": "concrt140.dll_amd64",
+      "bytes": 368064,
+      "sha256": "8efda0374a4b4df975feeefbea3d86cafdd36802a0144c3d261295bd268071c7",
+      "file_version": "14.52.37029.0",
+      "machine": "0x8664"
+    },
+    "msvcp140.dll": {
+      "archive_member": "WixAttachedContainer/a4/msvcp140.dll_amd64",
+      "cab_member": "msvcp140.dll_amd64",
+      "bytes": 652136,
+      "sha256": "59d325227321d52b9a523ea401ce6787a5d59f78229a0ff3a6f124e5d3445685",
+      "file_version": "14.52.37029.0",
+      "machine": "0x8664"
+    },
+    "msvcp140_1.dll": {
+      "archive_member": "WixAttachedContainer/a4/msvcp140_1.dll_amd64",
+      "cab_member": "msvcp140_1.dll_amd64",
+      "bytes": 35696,
+      "sha256": "1c6522f4d005539109aa040f063659704bfda94a224142f50942573cfbcf7ec9",
+      "file_version": "14.52.37029.0",
+      "machine": "0x8664"
+    },
+    "msvcp140_2.dll": {
+      "archive_member": "WixAttachedContainer/a4/msvcp140_2.dll_amd64",
+      "cab_member": "msvcp140_2.dll_amd64",
+      "bytes": 271800,
+      "sha256": "56318c983acc3914f8523be61f6b1f1c91e6c1ae4b6c531169882aa59baaec6b",
+      "file_version": "14.52.37029.0",
+      "machine": "0x8664"
+    },
+    "msvcp140_atomic_wait.dll": {
+      "archive_member": "WixAttachedContainer/a4/msvcp140_atomic_wait.dll_amd64",
+      "cab_member": "msvcp140_atomic_wait.dll_amd64",
+      "bytes": 58736,
+      "sha256": "8b10c6bd4c3c427ce7c8be96ef0fef0f8187bc236962be62a03caef834b37dcd",
+      "file_version": "14.52.37029.0",
+      "machine": "0x8664"
+    },
+    "msvcp140_codecvt_ids.dll": {
+      "archive_member": "WixAttachedContainer/a4/msvcp140_codecvt_ids.dll_amd64",
+      "cab_member": "msvcp140_codecvt_ids.dll_amd64",
+      "bytes": 31080,
+      "sha256": "695dbb4921cc1536429d238488cbee73581357a2fa05bb5c87b0f6ae48efcaca",
+      "file_version": "14.52.37029.0",
+      "machine": "0x8664"
+    },
+    "vcamp140.dll": {
+      "archive_member": "WixAttachedContainer/a4/vcamp140.dll_amd64",
+      "cab_member": "vcamp140.dll_amd64",
+      "bytes": 426352,
+      "sha256": "5f8760c808e0e56b80d8884072007703ae48494e91f37e4ec986bcfd6632cff6",
+      "file_version": "14.52.37029.0",
+      "machine": "0x8664"
+    },
+    "vccorlib140.dll": {
+      "archive_member": "WixAttachedContainer/a4/vccorlib140.dll_amd64",
+      "cab_member": "vccorlib140.dll_amd64",
+      "bytes": 351600,
+      "sha256": "d247b63cf9b93a5769b5ac205e10fe29029c8ddce1b800159dc6061a36a1c149",
+      "file_version": "14.52.37029.0",
+      "machine": "0x8664"
+    },
+    "vcomp140.dll": {
+      "archive_member": "WixAttachedContainer/a4/vcomp140.dll_amd64",
+      "cab_member": "vcomp140.dll_amd64",
+      "bytes": 213864,
+      "sha256": "294397f642d824a97de354aa625f993a97f34d729eca1bde56d5a897ae574888",
+      "file_version": "14.52.37029.0",
+      "machine": "0x8664"
+    },
+    "vcruntime140.dll": {
+      "archive_member": "WixAttachedContainer/a4/vcruntime140.dll_amd64",
+      "cab_member": "vcruntime140.dll_amd64",
+      "bytes": 176488,
+      "sha256": "eb1ee979bf02324712346e5bdbfc59c785388bc50d18cc2688aae4b0734915a0",
+      "file_version": "14.52.37029.0",
+      "machine": "0x8664"
+    },
+    "vcruntime140_1.dll": {
+      "archive_member": "WixAttachedContainer/a4/vcruntime140_1.dll_amd64",
+      "cab_member": "vcruntime140_1.dll_amd64",
+      "bytes": 50544,
+      "sha256": "a14b4a42a2c6df04d6d53a8340816023d953406f7f3d94996c7cab30c414ff63",
+      "file_version": "14.52.37029.0",
+      "machine": "0x8664"
+    },
+    "vcruntime140_threads.dll": {
+      "archive_member": "WixAttachedContainer/a4/vcruntime140_threads.dll_amd64",
+      "cab_member": "vcruntime140_threads.dll_amd64",
+      "bytes": 38840,
+      "sha256": "44a0a0b925242699f2b31bf40a43b54ab3513584dfe7869521d1983e40ea1f06",
+      "file_version": "14.52.37029.0",
+      "machine": "0x8664"
+    }
+  },
+  "core_files": {
+    "vcruntime140.dll": "_internal/vcruntime140.dll",
+    "vcruntime140_1.dll": "_internal/vcruntime140_1.dll",
+    "vcruntime140_threads.dll": "native/vcruntime140_threads.dll",
+    "msvcp140.dll": "native/msvcp140.dll",
+    "msvcp140_1.dll": "native/msvcp140_1.dll",
+    "msvcp140_2.dll": "native/msvcp140_2.dll",
+    "msvcp140_atomic_wait.dll": "native/msvcp140_atomic_wait.dll",
+    "msvcp140_codecvt_ids.dll": "native/msvcp140_codecvt_ids.dll",
+    "concrt140.dll": "native/concrt140.dll"
+  },
+  "preload_order": [
+    "vcruntime140.dll",
+    "vcruntime140_1.dll",
+    "vcruntime140_threads.dll",
+    "msvcp140.dll",
+    "msvcp140_1.dll",
+    "msvcp140_2.dll",
+    "msvcp140_atomic_wait.dll",
+    "msvcp140_codecvt_ids.dll",
+    "concrt140.dll"
+  ],
+  "scope": "Fixed Microsoft base CRT family; original vendor DLLs retained. OpenMP, C++ AMP and WinRT support runtimes are not added to Core."
+}

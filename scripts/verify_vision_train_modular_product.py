@@ -1,6 +1,7 @@
 """Exercise the actual protocol-4 EXE, offline ZIP manager and fixed CPU cases."""
 
 import argparse
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -17,6 +18,7 @@ from build_records import fileHash
 from build_records import objectHash
 from build_records import rejectLinks
 from build_records import scanFiles
+from vision_train_modular_build import loadContract
 from scripts.verify_vision_train_modules import cleanEnvironment
 from scripts.verify_vision_train_modules import writeReport
 
@@ -207,6 +209,113 @@ def verifyColdRepair(executable, archive, reports, environment, identity):
   return dict(record, report=evidence.name, report_sha256=fileHash(evidence))
 
 
+def createResourceUpdateFixture(archive: Path, destination: Path, core: dict, contract) -> dict:
+  markerPath = 'resources/visionworkshop-offline-update-fixture.txt'
+  with zipfile.ZipFile(archive) as original:
+    document = json.loads(original.read('module.json').decode('utf-8'))
+    contract.validate_manifest(document, core)
+    if document['module_id'] != 'resource.edgesam':
+      raise RuntimeError('The update fixture must derive from the reviewed EdgeSAM resource archive')
+    previous = contract.manifest_digest(document)
+    files = {item['path']: item for item in document['files']}
+    names = [item.filename for item in original.infolist()]
+    if (len(names) != len(set(names)) or set(names) != {'module.json', *('payload/' + path for path in files)}
+        or markerPath in files):
+      raise RuntimeError('The original resource archive has unexpected fixture content')
+    marker = ('DIAGNOSTIC OFFLINE UPDATE FIXTURE ONLY\n'
+              'All original weights are byte-identical; no new business-model qualification.\n'
+              'Original manifest: ' + previous + '\n').encode('ascii')
+    version = list(contract.stable_version(document['version']))
+    originalVersion = document['version']
+    version[-1] += 1
+    document['version'] = '.'.join(map(str, version))
+    document['build']['build_id'] += '-offline-update-fixture'
+    entry = {'path': markerPath, 'size': len(marker), 'sha256': hashlib.sha256(marker).hexdigest()}
+    document['files'] = sorted([*document['files'], entry], key=lambda item: item['path'])
+    document['expanded_size'] += len(marker)
+    contract.validate_manifest(document, core)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(destination, 'x', compression=zipfile.ZIP_STORED) as result:
+      result.writestr('module.json', contract.canonical_json(document))
+      for relative, expected in sorted(files.items()):
+        digest, size = hashlib.sha256(), 0
+        name = 'payload/' + relative
+        with original.open(name) as source, result.open(name, 'w') as target:
+          for chunk in iter(lambda: source.read(1024 * 1024), b''):
+            target.write(chunk)
+            digest.update(chunk)
+            size += len(chunk)
+        if size != expected['size'] or digest.hexdigest() != expected['sha256']:
+          raise RuntimeError('Update fixture source payload differs from its original manifest: ' + relative)
+      result.writestr('payload/' + markerPath, marker)
+  return {'scope': 'Diagnostic version lifecycle only; original model weights unchanged',
+          'distributed_archive': {'path': str(archive), 'sha256': fileHash(archive),
+                                  'manifest_sha256': previous, 'version': originalVersion},
+          'diagnostic_archive': {'path': str(destination), 'sha256': fileHash(destination),
+                                 'manifest_sha256': contract.manifest_digest(document),
+                                 'version': document['version'], 'published': False},
+          'marker': entry, 'original_payload_files': list(files.values()), 'manifest': document}
+
+
+def verifySingleModuleUpdate(executable, archive, reports, environment, identity, core, checkpoint):
+  name = 'edgesam-single-module-update'
+  record = {'name': name, 'status': 'FAIL', 'runtime_identity_before': identity}
+  started = time.monotonic()
+  evidence = reports / (name + '.json')
+  try:
+    contract = loadContract(executable.parent / 'python')
+    fixture = createResourceUpdateFixture(archive, reports.parent / 'lifecycle-fixtures'
+      / 'resource.edgesam-diagnostic-update.zip', core, contract)
+    record['fixture'] = fixture
+    if fixture['distributed_archive']['manifest_sha256'] != identity['modules']['resource.edgesam']:
+      raise RuntimeError('Update fixture does not derive from the active original resource version')
+    roots = {module: executable.parent / 'modules' / module / digest
+             for module, digest in identity['modules'].items()}
+    original = {module: scanFiles(root) for module, root in roots.items()}
+    record['original_version_inventories'] = original
+    cli(executable, ['install', fixture['diagnostic_archive']['path']], reports,
+        name + '-install', environment)
+    pending, _ = cli(executable, ['status'], reports, name + '-pending', environment)
+    row = next(item for item in pending['result']['modules'] if item['module_id'] == 'resource.edgesam')
+    if (activeIdentity(pending, identity['core_sha256']) != identity or row['status'] != 'pending_update'
+        or row['pending_version'] != fixture['diagnostic_archive']['version']):
+      raise RuntimeError('A different resource manifest was not prepared as a pending update')
+    activated, _ = cli(executable, ['activate'], reports, name + '-activate', environment)
+    updated = activeIdentity(activated, identity['core_sha256'])
+    wanted = dict(identity['modules'], **{'resource.edgesam': fixture['diagnostic_archive']['manifest_sha256']})
+    if updated['modules'] != wanted or updated['generation'] != identity['generation'] + 1:
+      raise RuntimeError('Single-module activation changed another module or has the wrong generation')
+    newRoot = executable.parent / 'modules/resource.edgesam' / wanted['resource.edgesam']
+    expected = {item['path']: {key: item[key] for key in ('size', 'sha256')}
+                for item in fixture['manifest']['files']}
+    if (newRoot == roots['resource.edgesam'] or scanFiles(newRoot / 'payload') != expected
+        or fileHash(newRoot / 'module.json') != wanted['resource.edgesam']
+        or any(scanFiles(roots[module]) != files for module, files in original.items())):
+      raise RuntimeError('The updated resource directory or original Core/shared-resource inputs changed')
+    record.update(runtime_identity_updated=updated, original_versions_unchanged_after_update=True,
+                  fixture_payload_verified=True, installed_fixture_path=str(newRoot))
+    checkpoint('single-module-update')
+    cli(executable, ['rollback'], reports, name + '-rollback-plan', environment)
+    restored, _ = cli(executable, ['activate'], reports, name + '-rollback-activate', environment)
+    rolled = activeIdentity(restored, identity['core_sha256'])
+    if (rolled['modules'] != identity['modules'] or rolled['generation'] != updated['generation'] + 1
+        or restored['result']['pending']
+        or any(scanFiles(roots[module]) != files for module, files in original.items())
+        or scanFiles(newRoot / 'payload') != expected):
+      raise RuntimeError('Cold rollback did not restore the exact original module versions')
+    checkpoint('single-module-version-rollback')
+    record.update(status='PASS', runtime_identity_restored=rolled,
+                  original_versions_unchanged_after_rollback=True,
+                  updated_model_computation='NOT_RUN; this fixture tests version transactions only')
+  except Exception as error:
+    record['error'] = str(error)
+    raise
+  finally:
+    record['elapsed_seconds'] = round(time.monotonic() - started, 3)
+    writeReport(evidence, record)
+  return dict(record, report=evidence.name, report_sha256=fileHash(evidence)), rolled
+
+
 def checkCase(executable, case, reports, name, environment, core, expectedIdentity, timeout=300):
   report, process = invoke(executable, ['--modular-runtime-check', '--case', case],
                            reports, name, environment, timeout=timeout)
@@ -366,6 +475,12 @@ def main(argv=None) -> int:
     summary['cases'].append(checkCase(executable, 'edgesam', reports, 'edgesam-without-torch',
                                       environment, core, identity, timeout=180))
     checkpoint('edgesam-resource-install-and-cpu')
+    versionUpdate, identity = verifySingleModuleUpdate(executable, archives['resource.edgesam'], reports,
+                                                       environment, identity, core, checkpoint)
+    summary['cases'].append(versionUpdate)
+    summary['cases'].append(checkCase(executable, 'edgesam', reports, 'edgesam-after-version-rollback',
+                                      environment, core, identity, timeout=180))
+    checkpoint('edgesam-after-version-rollback-computation')
     cli(executable, ['remove', 'runtime.ort', 'resource.edgesam'], reports,
         'ort-and-edgesam-remove', environment)
     empty, _ = cli(executable, ['activate'], reports, 'ort-and-edgesam-remove-activate', environment)
@@ -379,9 +494,10 @@ def main(argv=None) -> int:
     if set(identity['modules']) != set(archives):
       raise RuntimeError('The complete candidate set did not activate')
     checkpoint('complete-install-and-activation')
-    for case, timeout in (('torch', 300), ('ort', 300), ('dino', 300),
+    for case, timeout in (('torch', 300), ('ort', 300), ('dino', 300), ('sklearn', 180),
                           ('image-simplification', 240), ('cnn-pretrained', 180),
-                          ('dino-pretrained', 240), ('yolo', 900), ('pt', args.pt_timeout)):
+                          ('dino-pretrained', 240), ('yolo-pretrained', 300),
+                          ('yolo', 900), ('pt', args.pt_timeout)):
       summary['cases'].append(checkCase(executable, case, reports, case + '-full',
                                         environment, core, identity, timeout=timeout))
     checkpoint('complete-native-and-worker-matrix')

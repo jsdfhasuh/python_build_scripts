@@ -7,6 +7,7 @@ on:
     paths:
       - '.github/workflows/visionworkshop-modular-candidate.yml'
       - 'ci/visionworkshop-modular.json'
+      - 'ci/visionworkshop-msvc-runtime.json'
       - 'profiles/visionworkshop.json'
       - 'assets/branding.json'
       - 'assets/icons/visionworkshop.ico'
@@ -44,7 +45,7 @@ jobs:
       - name: Validate exact application source input
         shell: pwsh
         env:
-          APP_SOURCE_REF: ${{ inputs.app_ref || '12487c202daf8b4d51db7f54ef0dd6b2919a7c85' }}
+          APP_SOURCE_REF: ${{ inputs.app_ref || '683698093e852a17d68b92165ec7cdc57ed113d0' }}
         run: |
           if ($env:APP_SOURCE_REF -notmatch '^[a-f0-9]{40}$') {
             throw 'An exact reviewed application commit is required before this candidate can build'
@@ -110,7 +111,7 @@ jobs:
         shell: pwsh
         run: |
           & $env:BUILD_PYTHON -m pip install pyinstaller==6.18.0 pyinstaller-hooks-contrib==2026.0 `
-            Pillow==12.0.0 PyYAML==6.0.3 pytest==8.4.2 requests==2.32.5 numpy==2.0.2 `
+            Pillow==12.0.0 PyYAML==6.0.3 pytest==8.4.2 requests==2.32.5 numpy==2.0.2 pefile==2024.8.26 `
             --report reports/compiler-install.json
           if ($LASTEXITCODE -ne 0) { throw 'Compiler/test installation failed' }
           & $env:BUILD_PYTHON -m pip check
@@ -161,14 +162,12 @@ jobs:
           & $env:RUNTIME_PYTHON -m pip freeze --all | Out-File reports/runtime-freeze.txt -Encoding utf8
           if ($LASTEXITCODE -ne 0) { throw 'Cannot record the actual preparation environment' }
 
-      - name: Download exact reviewed CRT source
+      - name: Prepare the fixed official Microsoft CRT without running its installer
         shell: pwsh
         run: |
-          $crtSource = Join-Path $env:RUNNER_TEMP 'vw-p4-crt'
-          & $env:BUILD_PYTHON -m pip download --no-deps --only-binary=:all: --platform win_amd64 `
-            --python-version 312 --implementation cp --abi cp312 pandas==2.3.3 --dest $crtSource
-          if ($LASTEXITCODE -ne 0) { throw 'CRT source download failed' }
-          "CRT_WHEEL=$crtSource/pandas-2.3.3-cp312-cp312-win_amd64.whl" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+          & $env:BUILD_PYTHON packager/scripts/build_vision_train_modular.py crt `
+            --source-root source --output modular-crt
+          if ($LASTEXITCODE -ne 0) { throw 'Fixed official CRT download or pure CAB extraction failed' }
 
       - name: Save successful downloads before construction
         if: ${{ steps.module-pip-cache.outputs.cache-hit != 'true' }}
@@ -206,7 +205,7 @@ jobs:
             --source-root source --assets-root modular-assets --output modular-candidate `
             --build-python $env:BUILD_PYTHON --runtime-python $env:RUNTIME_PYTHON `
             --install-report reports/runtime-install.json --install-report reports/provider-install.json `
-            --torch-install-report reports/runtime-install.json --crt-wheel $env:CRT_WHEEL `
+            --torch-install-report reports/runtime-install.json --crt-root modular-crt `
             --build-id "candidate-${{ github.run_id }}-${{ github.run_attempt }}" `
             2>&1 | Tee-Object reports/modular-build.log
           if ($LASTEXITCODE -ne 0) { throw 'Modular candidate construction failed' }
@@ -228,6 +227,7 @@ jobs:
           path: |
             reports/**
             modular-input/**
+            modular-crt/reports/**
             modular-candidate/reports/**
             modular-acceptance/reports/**
             modular-acceptance/isolated-user/AppData/Local/VisionWorkshop/logs/**

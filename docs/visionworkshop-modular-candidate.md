@@ -83,17 +83,41 @@ providers. If alias metadata remains installed, its version must equal the
 selected actual provider version. Only the provider supplies importable payload;
 original metadata is preserved and the substitution is recorded.
 
+The only reviewed standard-library-name compatibility provider is Windows
+`readline.py` from `pyreadline3==3.5.4`, owned by `runtime.ort` for humanfriendly's
+Windows dependency. The application contract fixes its wheel hash, file hash,
+size and unique owner. The builder preserves the original payload/RECORD and
+requires a separate `-I -S` compiler process to prove that this Windows Python
+has no native `readline` implementation. Other standard-library overrides and
+alternate readline directories or native extensions remain rejected.
+
 The stdlib launcher compares on-disk Core metadata with its exact embedded bytes
 before importing application code. It verifies the complete external Core
 `runtime_files` inventory (first-party files, third-party Python/PYD/DLL files,
 metadata and Qt helper programs), rejects additional files in those owned
-directories, checks the dependency lock, then preloads the established Core CRT
-and canonical MSVCP DLL. Metadata is serialized with the application's canonical
+directories, checks the dependency lock, then preloads the fixed Core CRT
+in dependency order. Metadata is serialized with the application's canonical
 encoder and must fit its shared 32 MiB limit; oversized documents fail the build.
 The frozen `_internal` files and EXE are separately tied to the compiler source
 audit and final archive hashes, avoiding an EXE self-hash cycle.
 After freezing, the builder also checks the complete Core DLL inventory,
 including `_internal`, against every module owner before creating any ZIP.
+
+The product candidate uses the official Microsoft 14.52.37029.0 base CRT family,
+whose toolset is newer than the selected sklearn 14.51 binaries. The separate
+historical B2 probe keeps its original CRT recipe. The product preparation
+verifies a fixed Microsoft archive URL/hash, slices the pinned CAB container,
+and uses Windows `expand.exe` for its two layers; it never executes the
+redistributable installer. All twelve source DLL identities and the original
+license document are retained in provenance. Core selects nine base runtime
+DLLs and leaves sklearn's OpenMP runtime with that feature. The two VCRUNTIME
+DLLs enter PyInstaller's Analysis before EXE/COLLECT, with original and replacement
+source evidence, and their final `_internal` bytes must match. Qt and sklearn
+retain their original private MSVCP copies because vendor loaders use those
+paths. The shared contract allows only the exact reviewed Core/feature paths,
+sizes and hashes with the fixed Core preload; it does not permit general
+cross-owner DLL collisions. Static import coverage is followed by actual product
+native operations and K32 loaded-file checks, and is not itself runtime qualification.
 
 Only the already audited TorchVision wheel's exact redundant `python312.dll` is
 omitted. Its wheel origin, file size, digest and ABI evidence are recorded by the
@@ -125,6 +149,8 @@ compiler and dependency preparation environments. The CLI steps are:
 
 ```powershell
 python scripts/build_vision_train_modular.py prepare --output modular-input
+python scripts/build_vision_train_modular.py crt --source-root <exact-source> `
+  --output <prepared-official-crt>
 python scripts/build_vision_train_modular.py assets `
   --source-root <exact-source> --assets-root <isolated-resource-staging> `
   --output <reports/resource-preparation.json>
@@ -133,7 +159,7 @@ python scripts/build_vision_train_modular.py build `
   --output <new-candidate-directory> `
   --build-python <compiler-python.exe> --runtime-python <preparation-python.exe> `
   --install-report <runtime-install.json> --install-report <provider-install.json> `
-  --torch-install-report <runtime-install.json> --crt-wheel <reviewed-pandas-wheel>
+  --torch-install-report <runtime-install.json> --crt-root <prepared-official-crt>
 python scripts/verify_vision_train_modular_product.py `
   --build-summary <new-candidate-directory/reports/modular-build-summary.json> `
   --output <new-acceptance-directory> --pt-timeout 1200
@@ -177,11 +203,22 @@ path with isolated user directories and an empty current directory. It checks:
 - EdgeSAM's actual encoder and decoder from its separate resource ZIP with only
   ORT installed, explicitly selecting CPU and keeping Torch absent. Both modules
   are then removed before the fresh Core-only check.
+- A separate resource-version transaction: derive a diagnostic second EdgeSAM
+  manifest with one explicit marker, keeping every original weight unchanged.
+  Real EXE install/activate must preserve Core, ORT and the prior EdgeSAM version,
+  create a distinct verified version directory and advance the registry
+  generation. Cold rollback restores the original selection; a new EXE then
+  performs the original EdgeSAM CPU computation. The diagnostic ZIP is excluded
+  from downloadable module artifacts and does not qualify changed model weights.
 - Actual loading and CPU execution of the image-simplification, CNN pretrained
   and DINO pretrained resources using the production loaders and registered
   weights, with separate time limits and weight/manifest provenance reports.
+- All four registered YOLO preset weights, each with actual CPU forward and
+  prediction, retained payload identity and isolated verified font-cache sources.
 - Actual Torch, ORT, DINO, YOLO and native PT fixture entry points using the same
   EXE and exact Core/generation/module identities.
+- Actual sklearn DBSCAN native computation with the retained vendor DLLs and
+  the selected Core CRT, followed by loaded-library path/hash checks.
 - A cold rollback followed by another fresh Core-only process.
 
 Reports bind executable SHA, process ID, runtime generation, manifest hashes,
@@ -189,6 +226,8 @@ observed origins, network attempts and child-process logs. The PT case has a
 20-minute limit; timeouts terminate the process tree and fail with saved logs.
 The GUI lease observation deliberately terminates a disposable GUI process after
 the observation and is not evidence of graceful user-driven shutdown.
+The Python socket/DNS audit is an application-level offline check; it does not
+claim a physically disconnected machine or whole-system network capture.
 The driver records a complete initial Core inventory, including EXE and
 `_internal`, and compares it after pending installation, activation, repair,
 removal, complete native/worker execution and rollback. Only the explicit root
@@ -237,3 +276,20 @@ in the isolated compiler/test environment. The workflow adds the existing pinned
 Artifact `15013174037` preserves this result (ZIP SHA-256
 `be3dc742569941440e447237f51dc5966d1004f91e7c6b37fbb0cb01e262bb7d`).
 This second gate run also produced no product candidate or native product result.
+
+[Run 45603279133](https://github.com/jsdfhasuh/python_build_scripts/actions/runs/45603279133)
+passed 31 builder checks, 10 contract checks, 17 Windows transaction checks,
+71 repair/annotation/font/resource guards and all three legacy worker checks.
+The one early real-font skip occurred before resource preparation; the later
+official-font test ran separately and passed with zero skips. Dependency
+preparation, its pre-vendor `pip check`, model preparation and official font
+verification also passed. Construction then stopped before freezing at the
+previous blanket standard-library-name rejection of the actual Windows
+pyreadline3 shim. Its independent evidence artifact is `15018160038`, 26,722,760
+bytes, SHA-256 `3be479ee83497a1d816dde26368604cfdafdffac9046941bc7cf215551a2068a`.
+The same installed inventory exposed sklearn's private MSVCP copy, motivating
+the explicit official CRT provenance/compatibility work described above.
+This run produced no Core/module ZIP or product EXE acceptance result.
+The checked artifact identity, exact source gates and actual module dependency
+edges are preserved in
+`docs/evidence/visionworkshop-modular-candidate-45603279133.json`.

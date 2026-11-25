@@ -2,6 +2,7 @@
 
 import base64
 import csv
+from copy import deepcopy
 import hashlib
 import importlib.util
 import json
@@ -26,6 +27,7 @@ from vision_train_modular_build import pinnedSeeds
 from vision_train_modular_build import prepareAssets
 from vision_train_modular_build import PROFILE
 from vision_train_modular_build import writeCanonical
+from vision_train_modular_build import validateReadlineProvider
 from vision_train_modular_build import verifyPreparedCoreResource
 from vision_train_module_inventory import buildDependencyLock
 from vision_train_module_inventory import inventoryPayload
@@ -34,6 +36,7 @@ from vision_train_module_inventory import readProvenance
 from vision_train_module_inventory import recordPath
 from vision_train_module_inventory import resolveOwnership
 from scripts.verify_vision_train_modular_product import coreInventory
+from scripts.verify_vision_train_modular_product import createResourceUpdateFixture
 from scripts.verify_vision_train_modular_product import verifyCoreUnchanged
 
 
@@ -90,6 +93,44 @@ class ModularBuildTests(unittest.TestCase):
     inventory = inventoryPayload(self.site, distributions, ownership,
                                  namespaceProviders={}, omittedPython=[])
     self.assertEqual(len(inventory['files']), 3)
+
+  def test_windows_readline_provider_requires_the_original_record_wheel_and_unique_owner(self):
+    data = b'from pyreadline3.rlmain import Readline\n'
+    self.distribution('pyreadline3', {'pyreadline3/__init__.py': b'', 'readline.py': data},
+                      version='3.5.4')
+    distributions = readDistributions(self.site)
+    ownership = self.ownership(distributions, {'core': [], 'runtime.ort': ['pyreadline3==3.5.4']})
+    declaration = {'owner': 'runtime.ort', 'distribution': 'pyreadline3', 'version': '3.5.4',
+                   'namespace': 'readline', 'path': 'site-packages/readline.py', 'size': len(data),
+                   'sha256': hashlib.sha256(data).hexdigest(), 'wheel_sha256': 'a' * 64}
+    provenance = {'pyreadline3': {'version': '3.5.4', 'sha256': 'a' * 64,
+                                 'url': 'https://example.test/reviewed.whl'}}
+    result = validateReadlineProvider(self.site, distributions, provenance, ownership, declaration)
+    self.assertTrue(result['payload_unchanged'])
+    self.assertEqual((self.site / 'readline.py').read_bytes(), data)
+    for invalid in ('wheel', 'version', 'owner', 'namespace-owner', 'record', 'variant', 'second-provider'):
+      with self.subTest(invalid=invalid):
+        actual, origins, owners = deepcopy(distributions), deepcopy(provenance), deepcopy(ownership)
+        if invalid == 'wheel':
+          origins['pyreadline3']['sha256'] = 'b' * 64
+        elif invalid == 'version':
+          actual['pyreadline3']['version'] = '3.5.5'
+        elif invalid == 'owner':
+          owners['distribution_owners']['pyreadline3'] = 'core'
+        elif invalid == 'namespace-owner':
+          owners['import_owners']['readline'] = 'core'
+        elif invalid == 'record':
+          actual['pyreadline3']['records']['readline.py'][1] = ''
+        elif invalid == 'variant':
+          actual['pyreadline3']['records']['readline/extra.py'] = ['readline/extra.py', '', '']
+        else:
+          actual['other'] = {'import_roots': ['readline']}
+          owners['distribution_owners']['other'] = 'runtime.ort'
+        with self.assertRaises(BuildConfigError):
+          validateReadlineProvider(self.site, actual, origins, owners, declaration)
+    (self.site / 'readline.py').write_bytes(data + b'# changed\n')
+    with self.assertRaises(BuildConfigError):
+      validateReadlineProvider(self.site, distributions, provenance, ownership, declaration)
 
   def test_conflicting_record_alias_is_rejected(self):
     metadata = self.distribution('example', {'example/__init__.py': b'VALUE=1\n'})
@@ -389,6 +430,56 @@ class ModularBuildTests(unittest.TestCase):
     writeCanonical(root / 'core.json', document, encoder=contract.canonical_json)
     self.assertEqual(fileHash(root / 'core.json'), contract.manifest_digest(document))
     self.assertEqual(launcher.verifyCore(root, (root / 'core.json').read_text()), document)
+
+  @unittest.skipUnless(os.environ.get('VISIONWORKSHOP_MODULE_SOURCE'), 'requires exact application contract checkout')
+  def test_update_fixture_preserves_original_payload_and_rejects_tampered_source(self):
+    contract = loadContract(Path(os.environ['VISIONWORKSHOP_MODULE_SOURCE']))
+    declaration = {'kind': 'resource', 'requires': [], 'distributions': {}, 'import_roots': []}
+    core = {'version': '0.0.0', 'dependency_lock_sha256': 'a' * 64,
+            'catalog': {'resource.edgesam': declaration}}
+    payload = {'resources/encoder.onnx': b'explicit fixture encoder',
+               'resources/decoder.onnx': b'explicit fixture decoder'}
+    files = [{'path': name, 'size': len(data), 'sha256': hashlib.sha256(data).hexdigest()}
+              for name, data in sorted(payload.items())]
+    document = {'protocol_version': 4, 'module_api': 1, 'type': 'visionworkshop-module',
+                'module_id': 'resource.edgesam', 'version': '0.0.0',
+                'python': {'version': '3.12.10', 'abi': 'cp312', 'platform': 'win_amd64'},
+                'dependency_lock_sha256': core['dependency_lock_sha256'],
+                'build': {'app_sha': 'a' * 40, 'packager_sha': 'b' * 40, 'build_id': 'fixture'},
+                'core_versions': {'min': '0.0.0', 'max_exclusive': '0.0.1'}, **declaration,
+                'python_paths': [], 'dll_dirs': [], 'resources': {
+                  'static/models/encoder.onnx': 'resources/encoder.onnx',
+                  'static/models/decoder.onnx': 'resources/decoder.onnx'},
+                'files': files, 'expanded_size': sum(item['size'] for item in files)}
+    original = self.root / 'distributed.zip'
+    with zipfile.ZipFile(original, 'w') as archive:
+      archive.writestr('module.json', contract.canonical_json(document))
+      for name, data in payload.items():
+        archive.writestr('payload/' + name, data)
+    originalHash = fileHash(original)
+    changed = self.root / 'diagnostic.zip'
+    result = createResourceUpdateFixture(original, changed, core, contract)
+    self.assertEqual(fileHash(original), originalHash)
+    self.assertNotEqual(result['distributed_archive']['manifest_sha256'],
+                        result['diagnostic_archive']['manifest_sha256'])
+    self.assertEqual(result['diagnostic_archive']['version'], '0.0.1')
+    self.assertFalse(result['diagnostic_archive']['published'])
+    with zipfile.ZipFile(changed) as archive:
+      updated = json.loads(archive.read('module.json'))
+      contract.validate_manifest(updated, core)
+      self.assertEqual(set(archive.namelist()), {'module.json', *('payload/' + row['path']
+                                                                for row in updated['files'])})
+      for name, data in payload.items():
+        self.assertEqual(archive.read('payload/' + name), data)
+      self.assertIn(b'DIAGNOSTIC OFFLINE UPDATE FIXTURE ONLY',
+                    archive.read('payload/' + result['marker']['path']))
+    bad = self.root / 'tampered.zip'
+    with zipfile.ZipFile(bad, 'w') as archive:
+      archive.writestr('module.json', contract.canonical_json(document))
+      for name, data in payload.items():
+        archive.writestr('payload/' + name, data + b' changed')
+    with self.assertRaisesRegex(RuntimeError, 'differs from its original manifest'):
+      createResourceUpdateFixture(bad, self.root / 'bad-fixture.zip', core, contract)
 
   def test_top_level_native_extension_does_not_add_invalid_module_dll_directory(self):
     records = [{'path': 'site-packages/_native.cp312-win_amd64.pyd'},

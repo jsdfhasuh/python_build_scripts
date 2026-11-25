@@ -1,6 +1,7 @@
 {
   "schema_version": 1,
   "branding_profile": "profiles/visionworkshop.json",
+  "crt_profile": "ci/visionworkshop-msvc-runtime.json",
   "core_prepared_resources": [
     {
       "path": "static/fonts/NotoSansCJKsc-Regular.otf",
