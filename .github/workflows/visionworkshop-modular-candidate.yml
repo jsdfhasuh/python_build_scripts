@@ -150,6 +150,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Modular builder unit checks failed' }
           & $env:BUILD_PYTHON -m unittest discover -s tests -p test_vision_train_modular_reuse.py -v
           if ($LASTEXITCODE -ne 0) { throw 'Exact module ZIP reuse checks failed' }
+          & $env:BUILD_PYTHON -m unittest discover -s tests -p test_vision_train_modular_receipts.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'Immutable source-module receipt qualification failed' }
           Pop-Location
           Push-Location source
           & $env:BUILD_PYTHON -m unittest discover -s tests -p test_module_contract.py -v
@@ -159,6 +161,7 @@ jobs:
           & $env:BUILD_PYTHON -m pytest -p no:cacheprovider tests/test_module_repair.py `
             tests/test_module_runtime_check_annotation.py tests/test_offline_fonts.py `
             tests/test_module_runtime_check_resources.py `
+            tests/test_module_runtime_check_dino.py `
             -q --junitxml ../reports/module-repair-annotation-source.xml
           if ($LASTEXITCODE -ne 0) { throw 'Repair and annotation guard checks failed or did not collect tests' }
           & $env:BUILD_PYTHON -m pytest -p no:cacheprovider tests/test_cnn_onnx_entry.py::test_export_worker_requires_actual_run_permission -q

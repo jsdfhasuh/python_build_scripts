@@ -23,6 +23,7 @@ REPOSITORY = 'jsdfhasuh/python_build_scripts'
 API = 'https://api.github.com/repos/' + REPOSITORY
 SUMMARY_MEMBER = 'modular-candidate/reports/modular-build-summary.json'
 PRODUCT_MEMBER = 'modular-acceptance/reports/modular-product-summary.json'
+INVENTORY_MEMBER = 'modular-candidate/reports/installed-distributions.json'
 MAX_MODULE_ARCHIVE_BYTES = 2 * 1024**3 - 1
 MAX_MODULE_ARTIFACT_BYTES = MAX_MODULE_ARCHIVE_BYTES + 1024**2
 MAX_EVIDENCE_ARTIFACT_BYTES = 128 * 1024**2
@@ -132,8 +133,10 @@ def prepareReuse(runId: int, attempt: int, output: Path) -> dict:
   with zipfile.ZipFile(temporary) as archive:
     summaryBytes = readEvidenceMember(archive, SUMMARY_MEMBER)
     productBytes = readEvidenceMember(archive, PRODUCT_MEMBER, optional=True)
+    inventoryBytes = readEvidenceMember(archive, INVENTORY_MEMBER)
   temporary.unlink()
   (output / 'source-build-summary.json').write_bytes(summaryBytes)
+  (output / 'source-installed-distributions.json').write_bytes(inventoryBytes)
   summary = json.loads(summaryBytes)
   if (summary.get('status') != 'BUILT'
       or summary.get('core', {}).get('build', {}).get('packager_sha') != run['head_sha']):
@@ -149,6 +152,9 @@ def prepareReuse(runId: int, attempt: int, output: Path) -> dict:
              'repository': REPOSITORY, 'source_run': run, 'evidence_artifact': evidence,
              'build_summary': {'path': 'source-build-summary.json', 'size': len(summaryBytes),
                                'sha256': hashlib.sha256(summaryBytes).hexdigest()},
+             'installed_distributions': {'path': 'source-installed-distributions.json',
+                                        'size': len(inventoryBytes),
+                                        'sha256': hashlib.sha256(inventoryBytes).hexdigest()},
              'source_product_acceptance': {'status': 'NOT_RECORDED'}, 'modules': {}}
   if productBytes is not None:
     (output / 'source-product-summary.json').write_bytes(productBytes)
@@ -217,6 +223,16 @@ def readReuseSource(root: Path, contract, expectedModules: set[str]) -> dict:
       != summary['core']['dependency_lock_sha256']):
     raise BuildConfigError('Source Core identity does not match its completed build report')
   contract.validate_core(summary['core'])
+  inventoryRecord = receipt['installed_distributions']
+  if inventoryRecord['path'] != 'source-installed-distributions.json':
+    raise BuildConfigError('Unexpected source installed-distribution report path')
+  inventoryPath = root / inventoryRecord['path']
+  installed = readJson(inventoryPath)
+  if (inventoryPath.stat().st_size != inventoryRecord['size']
+      or fileHash(inventoryPath) != inventoryRecord['sha256']
+      or not isinstance(installed.get('distributions'), dict)
+      or not isinstance(installed.get('provenance'), dict)):
+    raise BuildConfigError('Source installed-distribution evidence changed after artifact extraction')
   acceptance = receipt['source_product_acceptance']
   if acceptance.get('path'):
     if acceptance['path'] != 'source-product-summary.json':
@@ -244,7 +260,8 @@ def readReuseSource(root: Path, contract, expectedModules: set[str]) -> dict:
         or any(item[key] != package[key] for key in ('bytes', 'sha256', 'manifest_sha256'))
         or package.get('verified') is not True or package.get('compression') != 'zip/lzma'):
       raise BuildConfigError('Reuse ZIP does not match its original completed archive record')
-  return {'root': root, 'receipt': receipt, 'summary': summary, 'packages': packages}
+  return {'root': root, 'receipt': receipt, 'summary': summary, 'packages': packages,
+          'installed': installed}
 
 
 def boundedLzmaMember(archive: zipfile.ZipFile, member: zipfile.ZipInfo) -> None:

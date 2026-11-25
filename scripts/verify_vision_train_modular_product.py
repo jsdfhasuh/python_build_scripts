@@ -338,6 +338,14 @@ def checkCase(executable, case, reports, name, environment, core, expectedIdenti
         or auxiliary.get('imported_during_mount') is not False
         or auxiliary.get('normal_import_succeeded') is not True):
       raise RuntimeError('The retained .pth boundary was not exercised by the actual EXE: ' + name)
+  if case == 'dino-worker':
+    result = report.get('result', {})
+    if (result.get('status') != 'PASS' or result.get('runtime_identity') != expectedIdentity
+        or result.get('successful_model_session') != 'NOT_RUN'
+        or result.get('prediction_and_numerics') != 'NOT_RUN'
+        or not str(result.get('worker_full_import_audit', '')).startswith('NOT_RUN;')
+        or result.get('torch_module_installed') is not ('runtime.torch' in expectedIdentity['modules'])):
+      raise RuntimeError('DINO worker lifecycle evidence overstates or mismatches its tested scope: ' + name)
   for package, origin in report['loaded_packages'].items():
     owner = 'core' if package in core['import_roots'] else next(
       (module for module, item in core['catalog'].items() if package in item['import_roots']), None)
@@ -482,6 +490,9 @@ def main(argv=None) -> int:
                                       environment, core, identity))
     summary['cases'].append(checkCase(executable, 'dino', reports, 'dino-without-torch',
                                       environment, core, identity))
+    summary['cases'].append(checkCase(executable, 'dino-worker', reports,
+                                      'dino-worker-without-torch', environment, core, identity,
+                                      timeout=600))
     checkpoint('ort-repair-and-native-reload')
     cli(executable, ['install', str(archives['resource.edgesam'])], reports,
         'edgesam-install', environment)
@@ -511,7 +522,7 @@ def main(argv=None) -> int:
     if set(identity['modules']) != set(archives):
       raise RuntimeError('The complete candidate set did not activate')
     checkpoint('complete-install-and-activation')
-    for case, timeout in (('torch', 300), ('ort', 300), ('dino', 300), ('sklearn', 180),
+    for case, timeout in (('torch', 300), ('ort', 300), ('dino', 300), ('dino-worker', 600), ('sklearn', 180),
                           ('image-simplification', 240), ('cnn-pretrained', 180),
                           ('dino-pretrained', 240), ('yolo-pretrained', 300),
                           ('yolo', 900), ('pt', args.pt_timeout)):
@@ -532,6 +543,7 @@ def main(argv=None) -> int:
                       'Physical GPU execution not qualified',
                       'Pinned Ultralytics metadata excludes the selected Torch version',
                       'Controlled fixtures do not qualify existing business models or all annotation workflows',
+                      'DINO worker checks cover CPU inspect and negative/cancelled sessions, not model predictions or full worker import auditing',
                       'Core upgrades and power-loss recovery are not covered by this matrix'])
     return 0
   except Exception as error:

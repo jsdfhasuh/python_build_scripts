@@ -18,6 +18,7 @@ from build_records import fileHash
 from build_records import scanFiles
 from vision_train_modular_archive import compressPackage
 from vision_train_modular_build import loadContract
+from vision_train_modular_reuse import INVENTORY_MEMBER
 from vision_train_modular_reuse import PRODUCT_MEMBER
 from vision_train_modular_reuse import MAX_MODULE_ARCHIVE_BYTES
 from vision_train_modular_reuse import MAX_MODULE_ARTIFACT_BYTES
@@ -94,6 +95,7 @@ class ModuleReuseTests(unittest.TestCase):
     with zipfile.ZipFile(self.outerEvidence, 'w') as archive:
       archive.writestr(SUMMARY_MEMBER, json.dumps(self.summary).encode())
       archive.writestr(PRODUCT_MEMBER, json.dumps(self.product).encode())
+      archive.writestr(INVENTORY_MEMBER, json.dumps({'distributions': {}, 'provenance': {}}).encode())
     self.outerModule = self.root / 'module-artifact.zip'
     with zipfile.ZipFile(self.outerModule, 'w') as archive:
       archive.write(self.zip, self.zip.name)
@@ -204,6 +206,7 @@ class ModuleReuseTests(unittest.TestCase):
       with zipfile.ZipFile(self.outerEvidence, 'w') as archive:
         archive.writestr(SUMMARY_MEMBER, json.dumps(summary).encode())
         archive.writestr(PRODUCT_MEMBER, json.dumps(self.product).encode())
+        archive.writestr(INVENTORY_MEMBER, json.dumps({'distributions': {}, 'provenance': {}}).encode())
       self.artifacts[0] = self.artifact(1, self.outerEvidence, 'visionworkshop-modular-evidence-123-1')
       with patch('vision_train_modular_reuse.apiJson', side_effect=self.api), \
            patch('vision_train_modular_reuse.apiRequest', side_effect=self.request), \
@@ -214,7 +217,8 @@ class ModuleReuseTests(unittest.TestCase):
       self.assertEqual(download.call_args.args[0]['id'], 1)
 
   def test_source_report_result_or_build_evidence_cannot_change_after_extraction(self):
-    for name in ('source-build-summary.json', 'source-product-summary.json'):
+    for name in ('source-build-summary.json', 'source-product-summary.json',
+                  'source-installed-distributions.json'):
       path = self.reuseRoot / name
       original = path.read_bytes()
       path.write_bytes(original + b' ')

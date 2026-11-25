@@ -180,7 +180,7 @@ No operation publishes anything.
 
 A Core-only source fix can reuse a completed candidate's module archives by
 explicitly supplying `reuse_run_id` and `reuse_run_attempt`. The current request
-selects application `fa92b08720726ccf984fdf90d03dc4071a1adf68` and the original
+selects application `b1201a03313da762cdd2854a0cd1ff4f87ed87b1` and the original
 module ZIPs from run `45616400076`, attempt 1. That source run failed its first
 EXE CLI check; its build was `BUILT`. Reuse preserves that failure status and
 does not transfer native qualification to the new candidate.
@@ -193,14 +193,35 @@ positive integer size no larger than 2 GiB minus one byte before its artifact is
 downloaded. Module outer artifacts have a further fixed 1 MiB container allowance.
 An earlier attempt of a subsequently rerun source is deliberately refused.
 
-Construction still reproduces the complete new dependency/model staging. Every
-original `module.json` field except its retained build identity must match the
-new manifest, including version, schema, ABI, dependency lock, catalog ownership,
-Core compatibility range and full payload inventory. Every original ZIP member
-must match the new staged path, size and SHA-256. Extra or duplicate entries,
-links, altered bytes, unreviewed compression properties and any mismatch fail;
-there is no silent fallback or manifest rewrite. The copied output ZIP and
-manifest retain their original bytes and identities.
+Construction still reproduces the complete new dependency/model staging. It
+retains this fresh staging and its own manifest separately from an immutable
+source-module staging extracted from the verified original ZIP. Version, schema,
+ABI, dependency lock, catalog ownership and Core compatibility range must agree.
+Every non-RECORD payload path, size and SHA-256 must match the fresh staging.
+
+Installed `*.dist-info/RECORD` files can describe preparation-only entry EXEs that
+are not distributed. [Pip 25.0.1's launcher generator](https://github.com/pypa/pip/blob/25.0.1/src/pip/_vendor/distlib/scripts.py)
+appends a ZIP containing `__main__.py`; when no fixed epoch is supplied,
+[CPython 3.12.10's ZIP writer](https://github.com/python/cpython/blob/v3.12.10/Lib/zipfile/__init__.py)
+uses the current time for that member. This appended ZIP timestamp can change
+the generated EXE receipt hash between otherwise identical installations; it
+does not describe a PE compilation timestamp. Qualification still requires the actual original and fresh
+raw CSV bytes. Both reports must identify the same wheel URL/version/SHA, the
+same installed metadata and retained runtime rows, and the same excluded-file
+list. Changed rows must already exist in both lists, have exactly the same
+`../../Scripts/<name>.exe` path, positive size, row order and CSV formatting, and
+differ only in their SHA-256 field. No `.pyc` or other receipt differences are
+allowed. Original/fresh RECORD size and SHA are tied to their own inventories;
+both raw files are saved as evidence before the row qualification. A different
+payload, unproven receipt or size mismatch fails without rewriting anything.
+
+The final strict ZIP verifier still compares every original byte against the
+separately selected source staging, including the original RECORDs. All members
+must be unique regular LZMA files within the declared size budget; source build
+identity, manifest bytes, complete member inventory and archive SHA are checked.
+The copied output ZIP and manifest retain their original identities. Fresh
+installation files and manifests are never overwritten with older receipts,
+and the report distinguishes receipt differences from byte-identical payloads.
 
 `module-reuse-validation.json` and the build/product summaries record the source
 run, artifact and original module build separately from the new Core build.
@@ -233,6 +254,11 @@ path with isolated user directories and an empty current directory. It checks:
 - A real GUI process's lifetime lease: ZIP installation may prepare a pending
   selection, but activation while that process is alive must return `LOCK_BUSY`.
 - ORT CPU and the fixed DINO native fixture with no Torch module installed.
+- Separate DINO worker lifecycle processes in both the ORT-only and full-module
+  combinations, each with a ten-minute limit: the real CPU inspector and two
+  real session children exercise a missing deployment and cancellation. The
+  helper checks child cleanup and inherited module identity. Successful model
+  loading, prediction/numerics and full worker import auditing remain `NOT_RUN`.
 - Cold repair through the real EXE: deliberately corrupt one registered small
   ORT file in the disposable installation, require `status` to report `broken`
   and ordinary same-version installation to return `MODULE_REPAIR_REQUIRED`,
@@ -269,8 +295,10 @@ the observation and is not evidence of graceful user-driven shutdown.
 The Python socket/DNS audit is an application-level offline check; it does not
 claim a physically disconnected machine or whole-system network capture.
 The DINO runtime case covers environment inspection and a small native ORT
-graph. Its success, and the separate pretrained-resource or PT worker cases,
-do not qualify the production DINO ONNX worker; that worker remains `NOT_RUN`.
+graph. Its separate worker case adds the real CPU inspector and bounded
+negative/cancelled session lifecycle. Neither that lifecycle fixture nor the
+pretrained-resource/PT cases qualifies successful DINO ONNX model sessions or
+prediction/numerics. Full child-process import auditing also remains `NOT_RUN`.
 The driver records a complete initial Core inventory, including EXE and
 `_internal`, and compares it after pending installation, activation, repair,
 removal, complete native/worker execution and rollback. Only the explicit root
@@ -346,6 +374,25 @@ the product EXE. Evidence artifact `15032501325` is 238,312 bytes, with API SHA-
 App `fa92b08720726ccf984fdf90d03dc4071a1adf68` updates those three exact string
 expectations to `os.linesep`; production encoding behavior is unchanged. The
 explicit candidate request continues to select the original `45616400076` ZIPs.
+
+[Run 45634156750](https://github.com/jsdfhasuh/python_build_scripts/actions/runs/45634156750)
+at builder `baf33237b9613f69758415ace80f969b0c8a01b4`, app
+`fa92b08720726ccf984fdf90d03dc4071a1adf68`, passed preparation and downloaded
+all eleven original module artifacts with their outer and inner digests verified.
+The unchanged strict reuse verifier then rejected a fresh manifest difference
+before Core freezing. Independent old/new inventory comparison found the same
+42,519 installed paths, with 34 equal-size `*.dist-info/RECORD` files changed and
+all 42,485 other file inventories identical. All 137 distribution runtime-row
+projections, excluded-file lists and wheel provenance records were unchanged.
+The previous evidence did not contain the fresh raw RECORD bytes, so the exact
+changed CSV rows were not yet qualified. The new separate source-staging path
+above must prove those rows on the next actual Windows run; projected equality
+alone is insufficient. The rejection is preserved in
+`docs/evidence/visionworkshop-modular-candidate-45634156750.json` with report
+hashes, all changed receipt identities and evidence artifact `15034115936`
+(34,697,589 bytes; verified SHA-256
+`11b7c8d8e200ae55adf82d52045b4e5cdc94e906a3b5aec20389695bdc5fe4ea`).
+This run produced no new Core ZIP or product EXE acceptance result.
 
 ## Initial Windows gate result
 

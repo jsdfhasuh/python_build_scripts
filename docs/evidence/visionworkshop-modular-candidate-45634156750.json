@@ -1,0 +1,699 @@
+{
+  "schema_version": 1,
+  "scope": "Actual source artifact download and fresh Windows inventory comparison; new Core freeze and product EXE were not reached",
+  "run": {
+    "id": 45634156750,
+    "job_id": 139274995826,
+    "url": "https://github.com/jsdfhasuh/python_build_scripts/actions/runs/45634156750",
+    "builder_sha": "baf33237b9613f69758415ace80f969b0c8a01b4",
+    "app_sha": "fa92b08720726ccf984fdf90d03dc4071a1adf68",
+    "conclusion": "failure"
+  },
+  "artifact": {
+    "id": 15034115936,
+    "name": "visionworkshop-modular-evidence-45634156750-1",
+    "bytes": 34697589,
+    "sha256": "11b7c8d8e200ae55adf82d52045b4e5cdc94e906a3b5aec20389695bdc5fe4ea",
+    "downloaded_sha256_verified": true
+  },
+  "build": {
+    "status": "FAIL",
+    "error": "Reusable module metadata, version, compatibility or payload changed",
+    "elapsed_seconds": 213.828,
+    "product_acceptance": "NOT_RUN",
+    "gpu_hardware": "NOT_RUN"
+  },
+  "source_module_run": 45616400076,
+  "source_product_status": "FAIL",
+  "observed_comparison": {
+    "paths": 42519,
+    "added": [],
+    "removed": [],
+    "changed_records": 34,
+    "unchanged_other_files": 42485,
+    "changed_by_owner": {
+      "core": 19,
+      "feature.patchcore": 7,
+      "runtime.ort": 5,
+      "runtime.vision": 2,
+      "runtime.torch": 1
+    },
+    "same_size": true,
+    "distributions": 137,
+    "runtime_record_rows_equal": true,
+    "preparation_only_lists_equal": true,
+    "wheel_provenance_equal": true,
+    "raw_changed_record_rows": "NOT_VERIFIED; previous evidence did not contain the fresh raw RECORD files"
+  },
+  "report_bindings": {
+    "45616400076": {
+      "installed-file-ownership.json": {
+        "bytes": 10979775,
+        "sha256": "cd78f6b8478af83f3334b37d76d3c2f1258b816fd93533228d5563798418afa9"
+      },
+      "installed-distributions.json": {
+        "bytes": 11131507,
+        "sha256": "84f38945e37081f43e449b0de8a39f7bd047b1e69c2f4c4d41f14f5a0d571ec1"
+      },
+      "modular-build-summary.json": {
+        "bytes": 2704752,
+        "sha256": "11e849a240b6d12084b79eff1f626f4393f1d357e626ed1ffa49af79d19fb715"
+      }
+    },
+    "45634156750": {
+      "installed-file-ownership.json": {
+        "bytes": 10979775,
+        "sha256": "54ba87ef2159e33b209ad6dab083e71f3c1276134db63e4289fe8cd42e16ebb5"
+      },
+      "installed-distributions.json": {
+        "bytes": 11131507,
+        "sha256": "9d548162c835220e4cd2d39b0ab15f27da364058a11dfc0ff992cd62e809972d"
+      },
+      "modular-build-summary.json": {
+        "bytes": 968,
+        "sha256": "89ca86c0aca8a3d8ae3ab50b85798cd02cf8880ede28b6c1f61b04d309f662bf"
+      }
+    }
+  },
+  "changed_record_files": {
+    "PyQt5-5.15.9.dist-info/RECORD": {
+      "source": {
+        "owner": "core",
+        "size": 95761,
+        "sha256": "8c9e9fcb734650afd02f42cbca21bd9d31188895b545b7e3f9907c42026d221c",
+        "distributions": [
+          "pyqt5"
+        ]
+      },
+      "fresh": {
+        "owner": "core",
+        "size": 95761,
+        "sha256": "dd80cd694f187a3073a2bcdb58cdd1fe09cf5d52e160559f5047fb34219674b6",
+        "distributions": [
+          "pyqt5"
+        ]
+      }
+    },
+    "anomalib-2.5.1.dist-info/RECORD": {
+      "source": {
+        "owner": "feature.patchcore",
+        "size": 79640,
+        "sha256": "e3212f5547180bb49cfb8b95483ffbb0ea56b2bc3458eb480e7f82f572500274",
+        "distributions": [
+          "anomalib"
+        ]
+      },
+      "fresh": {
+        "owner": "feature.patchcore",
+        "size": 79640,
+        "sha256": "5abb64e48d0b4f6f12c047ef18d334e16a042da25806420b495744211019176e",
+        "distributions": [
+          "anomalib"
+        ]
+      }
+    },
+    "av-18.0.0.dist-info/RECORD": {
+      "source": {
+        "owner": "feature.patchcore",
+        "size": 23128,
+        "sha256": "e2f540fe3607db2ee47d6ec83732297559be8343761dad62cb87c04f6288b15e",
+        "distributions": [
+          "av"
+        ]
+      },
+      "fresh": {
+        "owner": "feature.patchcore",
+        "size": 23128,
+        "sha256": "e3229bd3e463d1c5c581d340fe68ddaf2ce39d304399248c3655d27193eae2ca",
+        "distributions": [
+          "av"
+        ]
+      }
+    },
+    "charset_normalizer-3.4.4.dist-info/RECORD": {
+      "source": {
+        "owner": "core",
+        "size": 2775,
+        "sha256": "5437aa6b5e790d28beb6207c372d18602c3df60d99e323bb58a228d8227d33f0",
+        "distributions": [
+          "charset-normalizer"
+        ]
+      },
+      "fresh": {
+        "owner": "core",
+        "size": 2775,
+        "sha256": "93ee1c8a2e1afda467b3932def3dfe622e78b8a38cf0863f7c51b237790c5826",
+        "distributions": [
+          "charset-normalizer"
+        ]
+      }
+    },
+    "coloredlogs-15.0.1.dist-info/RECORD": {
+      "source": {
+        "owner": "runtime.ort",
+        "size": 1720,
+        "sha256": "7cfbe609646ae7c67af109542a6c7745d48fcb6b847ac7afd077c16dd2427bcb",
+        "distributions": [
+          "coloredlogs"
+        ]
+      },
+      "fresh": {
+        "owner": "runtime.ort",
+        "size": 1720,
+        "sha256": "bac9ed7649e4dad7b6f9f279a4c0700735a755a52db4ea4f471db93fb5896f94",
+        "distributions": [
+          "coloredlogs"
+        ]
+      }
+    },
+    "distro-1.9.0.dist-info/RECORD": {
+      "source": {
+        "owner": "core",
+        "size": 1085,
+        "sha256": "d97b70d5b2e1770de7c6c5b9430c8519db444bee6a562257950dfd4794d17240",
+        "distributions": [
+          "distro"
+        ]
+      },
+      "fresh": {
+        "owner": "core",
+        "size": 1085,
+        "sha256": "eecd72fec838215b5bee02749fe8fa5cab2d2466c9a7538c80df19291f127f7c",
+        "distributions": [
+          "distro"
+        ]
+      }
+    },
+    "fonttools-4.61.1.dist-info/RECORD": {
+      "source": {
+        "owner": "core",
+        "size": 51355,
+        "sha256": "b6103105ef76b04eff3eb1235789728cee533713699a4f43ccf375c8c3d0b1f9",
+        "distributions": [
+          "fonttools"
+        ]
+      },
+      "fresh": {
+        "owner": "core",
+        "size": 51355,
+        "sha256": "45d6f67fa36deee5c4e6f368699227ffa7c06926a8c8c76a32bda5c2183ae241",
+        "distributions": [
+          "fonttools"
+        ]
+      }
+    },
+    "httpx-0.28.1.dist-info/RECORD": {
+      "source": {
+        "owner": "core",
+        "size": 3617,
+        "sha256": "e4c859345df491c1b04233ace597b7879eac62e0dbd00e7eb754c6c89215f7a7",
+        "distributions": [
+          "httpx"
+        ]
+      },
+      "fresh": {
+        "owner": "core",
+        "size": 3617,
+        "sha256": "92745b957ebb4469130ee1afa61b28d32bf53f04356598d237a185e0d2a553c5",
+        "distributions": [
+          "httpx"
+        ]
+      }
+    },
+    "huggingface_hub-0.26.5.dist-info/RECORD": {
+      "source": {
+        "owner": "runtime.vision",
+        "size": 19924,
+        "sha256": "2db0b785c98b39f5ab2fbf094bd0d38a06877042878b399acde2d3f07015b89e",
+        "distributions": [
+          "huggingface-hub"
+        ]
+      },
+      "fresh": {
+        "owner": "runtime.vision",
+        "size": 19924,
+        "sha256": "dbe5b1a63fb5e788e4b5c89cf90715af168125298c8dadff6b3412c17cec6106",
+        "distributions": [
+          "huggingface-hub"
+        ]
+      }
+    },
+    "humanfriendly-10.0.dist-info/RECORD": {
+      "source": {
+        "owner": "runtime.ort",
+        "size": 2911,
+        "sha256": "11562dec94803b253927eb5a9616684bfaaedccd4a830f5e4b9c8723aee337f0",
+        "distributions": [
+          "humanfriendly"
+        ]
+      },
+      "fresh": {
+        "owner": "runtime.ort",
+        "size": 2911,
+        "sha256": "08000edd01add3b19747862b2001bd28c860806be91466395bbbc265749a70d7",
+        "distributions": [
+          "humanfriendly"
+        ]
+      }
+    },
+    "imagecodecs-2025.3.30.dist-info/RECORD": {
+      "source": {
+        "owner": "feature.patchcore",
+        "size": 12738,
+        "sha256": "76676be61023ee5127da2f2b31d09c51c7f7b9a0fc30b06301e2cf0bd83ad2b5",
+        "distributions": [
+          "imagecodecs"
+        ]
+      },
+      "fresh": {
+        "owner": "feature.patchcore",
+        "size": 12738,
+        "sha256": "cc397e1fd23ce26c23a96167a6c45b98f5decb6074868cf696e66f8aee5b6c9e",
+        "distributions": [
+          "imagecodecs"
+        ]
+      }
+    },
+    "imageio-2.37.2.dist-info/RECORD": {
+      "source": {
+        "owner": "feature.patchcore",
+        "size": 8182,
+        "sha256": "14b11ba01508dd50c76a359b54745a151bbe1c711cdb9ce1f0ad3e4e546de9c4",
+        "distributions": [
+          "imageio"
+        ]
+      },
+      "fresh": {
+        "owner": "feature.patchcore",
+        "size": 8182,
+        "sha256": "71621e9ce05043134c5bbbc824fae6e6b1e1a7c03abc0f49423bbc7a6ea9e954",
+        "distributions": [
+          "imageio"
+        ]
+      }
+    },
+    "json_repair-0.55.0.dist-info/RECORD": {
+      "source": {
+        "owner": "core",
+        "size": 3147,
+        "sha256": "44712053af1c9f6435d1ecdaf0c895e59e5944cac6a55eb6ee36cff5e018f381",
+        "distributions": [
+          "json-repair"
+        ]
+      },
+      "fresh": {
+        "owner": "core",
+        "size": 3147,
+        "sha256": "3db2de03be373a3e17defa9656f4b4b210d02440dec0c86caca562e7bb15b859",
+        "distributions": [
+          "json-repair"
+        ]
+      }
+    },
+    "jsonschema-4.26.0.dist-info/RECORD": {
+      "source": {
+        "owner": "core",
+        "size": 6331,
+        "sha256": "c002eca5b1aa6a261d13d85517d4ba1f69edc6c0af8e3eb5d10cdf2770325b5a",
+        "distributions": [
+          "jsonschema"
+        ]
+      },
+      "fresh": {
+        "owner": "core",
+        "size": 6331,
+        "sha256": "0c5065b45ecc6af713ed5a837355b51a28106eea51f567977b22b951b1df1da3",
+        "distributions": [
+          "jsonschema"
+        ]
+      }
+    },
+    "jupyter_core-5.9.1.dist-info/RECORD": {
+      "source": {
+        "owner": "core",
+        "size": 2208,
+        "sha256": "f9e25ab558feb1d61d58fac1eaccd3019ed48f14b8d5c8432ecd1dc812e639fd",
+        "distributions": [
+          "jupyter-core"
+        ]
+      },
+      "fresh": {
+        "owner": "core",
+        "size": 2208,
+        "sha256": "8fd3c8bb5c180c57b05f1d4a530bd2b7d5a14ae3ae4b84c8f509ab41dd1d690b",
+        "distributions": [
+          "jupyter-core"
+        ]
+      }
+    },
+    "jupytext-1.19.7.dist-info/RECORD": {
+      "source": {
+        "owner": "core",
+        "size": 8228,
+        "sha256": "60856d94bbca1bfbd07a9937249e2211b966082c4b9be668bf8c0f6e8ad45e7c",
+        "distributions": [
+          "jupytext"
+        ]
+      },
+      "fresh": {
+        "owner": "core",
+        "size": 8228,
+        "sha256": "d26e9542c74ecc0d7bdc55f2048993a70405a07cdc11b603dfedcb9be9e58b00",
+        "distributions": [
+          "jupytext"
+        ]
+      }
+    },
+    "kaggle-2.2.4.dist-info/RECORD": {
+      "source": {
+        "owner": "core",
+        "size": 1819,
+        "sha256": "6a30e43db8518a72b4435b8be1df0f1c96427c2fe9000d43ff303c6f6c9bacc2",
+        "distributions": [
+          "kaggle"
+        ]
+      },
+      "fresh": {
+        "owner": "core",
+        "size": 1819,
+        "sha256": "281e07efe9556d6108c54c687b1b698ea00d11ce4bebbcf699c5c799841b1ca7",
+        "distributions": [
+          "kaggle"
+        ]
+      }
+    },
+    "lightning-2.6.5.dist-info/RECORD": {
+      "source": {
+        "owner": "feature.patchcore",
+        "size": 46660,
+        "sha256": "b6f6fe294ded39a487cd9c2a58a1ee747b08df0304eb639e391926cf6f4a882c",
+        "distributions": [
+          "lightning"
+        ]
+      },
+      "fresh": {
+        "owner": "feature.patchcore",
+        "size": 46660,
+        "sha256": "65b58a5a2fc9ad6b396755f5c58bfcc4b228aa323e1d535f5e159a3b0e7bca03",
+        "distributions": [
+          "lightning"
+        ]
+      }
+    },
+    "markdown-3.10.1.dist-info/RECORD": {
+      "source": {
+        "owner": "core",
+        "size": 5457,
+        "sha256": "a298df86539c2e47eb97a9d24acfcfe1e2b35efcedd11b6dc3a07c16bab5b217",
+        "distributions": [
+          "markdown"
+        ]
+      },
+      "fresh": {
+        "owner": "core",
+        "size": 5457,
+        "sha256": "691a95b886e766fc4cf08983b52f25f5fea05333987dfdd705eb104d90ffe7bb",
+        "distributions": [
+          "markdown"
+        ]
+      }
+    },
+    "markdown_it_py-4.3.0.dist-info/RECORD": {
+      "source": {
+        "owner": "core",
+        "size": 10856,
+        "sha256": "c16aca8c0bbf9730b1c9ee261ad2f54fd42430b8511e6819c683a09140efdac3",
+        "distributions": [
+          "markdown-it-py"
+        ]
+      },
+      "fresh": {
+        "owner": "core",
+        "size": 10856,
+        "sha256": "56527df2a601425a727ecc77c075e51dee5e36a368085128e4aa0172cc15bb6c",
+        "distributions": [
+          "markdown-it-py"
+        ]
+      }
+    },
+    "natsort-8.1.0.dist-info/RECORD": {
+      "source": {
+        "owner": "core",
+        "size": 2295,
+        "sha256": "020e3742b8e30192ce907c76fcd58c78db6e70f78b9a20f8444ab62044a6adb0",
+        "distributions": [
+          "natsort"
+        ]
+      },
+      "fresh": {
+        "owner": "core",
+        "size": 2295,
+        "sha256": "8fe625404c8569a29b264cf485b8ead5510e467c5ff7c4b8f039a1ac1b2cae93",
+        "distributions": [
+          "natsort"
+        ]
+      }
+    },
+    "nbformat-5.10.4.dist-info/RECORD": {
+      "source": {
+        "owner": "core",
+        "size": 6638,
+        "sha256": "8c84bf524266269edb30c539723f08a8250257ac3c516dcd798cc0acab11bac4",
+        "distributions": [
+          "nbformat"
+        ]
+      },
+      "fresh": {
+        "owner": "core",
+        "size": 6638,
+        "sha256": "d4545c42da4ae18cb352f04d6f68d6d8ef8df11bd37fede5c7cf315fa33cc1e4",
+        "distributions": [
+          "nbformat"
+        ]
+      }
+    },
+    "numpy-2.0.2.dist-info/RECORD": {
+      "source": {
+        "owner": "core",
+        "size": 101441,
+        "sha256": "b5b3bf7de724f5123e6299414775e0f070e343bce05e58d6e0db72733a6baced",
+        "distributions": [
+          "numpy"
+        ]
+      },
+      "fresh": {
+        "owner": "core",
+        "size": 101441,
+        "sha256": "e5df2e041a4d24f06aa29209ce55d76324df092380ad1e27a0facec89ea2190d",
+        "distributions": [
+          "numpy"
+        ]
+      }
+    },
+    "onnx-1.16.0.dist-info/RECORD": {
+      "source": {
+        "owner": "runtime.ort",
+        "size": 904546,
+        "sha256": "bc50193ebf6b4026c923fc6a7350110084e12cfdf108924db67b0294c05c141a",
+        "distributions": [
+          "onnx"
+        ]
+      },
+      "fresh": {
+        "owner": "runtime.ort",
+        "size": 904546,
+        "sha256": "a386bb43d46da74ede99dc6bf7ddfea99d05613860effa1a33a9ded3de35e37d",
+        "distributions": [
+          "onnx"
+        ]
+      }
+    },
+    "onnxruntime_gpu-1.23.2.dist-info/RECORD": {
+      "source": {
+        "owner": "runtime.ort",
+        "size": 60740,
+        "sha256": "c6e953e5fd76123b8384caa287826523d2300eb84c13b5dc0d0a39f92834127e",
+        "distributions": [
+          "onnxruntime-gpu"
+        ]
+      },
+      "fresh": {
+        "owner": "runtime.ort",
+        "size": 60740,
+        "sha256": "63cfb52d3eb33602473d19a1a46e0e95610820e9abf77f9e4b9c8d2089e2ba8d",
+        "distributions": [
+          "onnxruntime-gpu"
+        ]
+      }
+    },
+    "onnxslim-0.1.99.dist-info/RECORD": {
+      "source": {
+        "owner": "runtime.ort",
+        "size": 37770,
+        "sha256": "1243b226a7f7a11bd13b29b979a737124d33baefe414ff99b94db260817ca0cd",
+        "distributions": [
+          "onnxslim"
+        ]
+      },
+      "fresh": {
+        "owner": "runtime.ort",
+        "size": 37770,
+        "sha256": "3aedbb00efa31860f4b52521893bfad3e3267125004beecda34c689b627f3611",
+        "distributions": [
+          "onnxslim"
+        ]
+      }
+    },
+    "pygments-2.19.2.dist-info/RECORD": {
+      "source": {
+        "owner": "feature.patchcore",
+        "size": 47436,
+        "sha256": "2407a031de60afea1df29677290ee3e1b50811970b3aee982e737d8c0e76e91f",
+        "distributions": [
+          "pygments"
+        ]
+      },
+      "fresh": {
+        "owner": "feature.patchcore",
+        "size": 47436,
+        "sha256": "550b26c3b2042a446ec53190240f6b467e51a7df36a697100dbdf94ff827222b",
+        "distributions": [
+          "pygments"
+        ]
+      }
+    },
+    "python_dotenv-1.2.1.dist-info/RECORD": {
+      "source": {
+        "owner": "core",
+        "size": 1739,
+        "sha256": "f87ff1525bcb804d665d3eb94b93665a418b5fd07dbd83e1c67dd71a3cf8200f",
+        "distributions": [
+          "python-dotenv"
+        ]
+      },
+      "fresh": {
+        "owner": "core",
+        "size": 1739,
+        "sha256": "76d774463c1ededa1cfc75700f515166086da228322308cc215311d5e85fa78b",
+        "distributions": [
+          "python-dotenv"
+        ]
+      }
+    },
+    "python_slugify-9.2.0.dist-info/RECORD": {
+      "source": {
+        "owner": "core",
+        "size": 1538,
+        "sha256": "b8a30bd4290e67c144909924530cf216343788bf220f6aaf5085001515a4ef42",
+        "distributions": [
+          "python-slugify"
+        ]
+      },
+      "fresh": {
+        "owner": "core",
+        "size": 1538,
+        "sha256": "fc54624b4621a8e4490eef672ed27f534a0a12ba1e0a79c20896854f985b7fb6",
+        "distributions": [
+          "python-slugify"
+        ]
+      }
+    },
+    "sympy-1.14.0.dist-info/RECORD": {
+      "source": {
+        "owner": "core",
+        "size": 245591,
+        "sha256": "8cf37607b16d4009ed83e0b9adbfee0ea10479e1abefa7166f0a7074b5dde9fc",
+        "distributions": [
+          "sympy"
+        ]
+      },
+      "fresh": {
+        "owner": "core",
+        "size": 245591,
+        "sha256": "a0846501af2a66f555da5c65b9c868ccb50911f440412241d6e090edfa401a82",
+        "distributions": [
+          "sympy"
+        ]
+      }
+    },
+    "tifffile-2026.1.14.dist-info/RECORD": {
+      "source": {
+        "owner": "feature.patchcore",
+        "size": 2319,
+        "sha256": "a0ab7c28f60ee73d949bc34466ad8093b8986b3cbef4e598808045823fa8c554",
+        "distributions": [
+          "tifffile"
+        ]
+      },
+      "fresh": {
+        "owner": "feature.patchcore",
+        "size": 2319,
+        "sha256": "8647f5abfaae5cb6bae0f9a0321736c46cc2b977b51bda16e7ab5a26fc8eeec7",
+        "distributions": [
+          "tifffile"
+        ]
+      }
+    },
+    "torch-2.10.0+cu128.dist-info/RECORD": {
+      "source": {
+        "owner": "runtime.torch",
+        "size": 1402669,
+        "sha256": "7fceb8790a7360ebf68ccaf8ff75c3bfc7c7c76b381e2b9c9b0aeac61e807d46",
+        "distributions": [
+          "torch"
+        ]
+      },
+      "fresh": {
+        "owner": "runtime.torch",
+        "size": 1402669,
+        "sha256": "2925b33fe133c3b7199af4827cab436463a50aab950d08aef7b2638656d7bb7a",
+        "distributions": [
+          "torch"
+        ]
+      }
+    },
+    "tqdm-4.70.1.dist-info/RECORD": {
+      "source": {
+        "owner": "core",
+        "size": 4637,
+        "sha256": "f73b279e7c8db668f35c64251b0979b99646494edccd3d758fbba1f8e23ea4b2",
+        "distributions": [
+          "tqdm"
+        ]
+      },
+      "fresh": {
+        "owner": "core",
+        "size": 4637,
+        "sha256": "c4228d2779d4ee80eea9f440faecb551694e7818a6e2c3258a1fda0e6e5fbe16",
+        "distributions": [
+          "tqdm"
+        ]
+      }
+    },
+    "transformers-4.46.3.dist-info/RECORD": {
+      "source": {
+        "owner": "runtime.vision",
+        "size": 349085,
+        "sha256": "d10f5d7a5e8b58fff46257b49fda119dad33c3b3a6415e8b8a627b8676513e1d",
+        "distributions": [
+          "transformers"
+        ]
+      },
+      "fresh": {
+        "owner": "runtime.vision",
+        "size": 349085,
+        "sha256": "b2cea6e247b5bed9d36681b9bc5529d7cd7d8310bc8b3108a76e4e1413fbd0d1",
+        "distributions": [
+          "transformers"
+        ]
+      }
+    }
+  },
+  "next_candidate_scope": "Select a separate immutable source-module staging only after actual raw CSV qualification of already excluded Scripts/*.exe receipt hashes. Preserve source ZIP, manifest, original RECORD and fresh installation bytes. Repeat complete Core freeze and EXE matrix.",
+  "not_run": [
+    "Fresh raw RECORD row qualification",
+    "New Core freeze and compression",
+    "Every actual product EXE and native case",
+    "Physical GPU execution"
+  ]
+}

@@ -9,6 +9,7 @@ import json
 import os
 import tempfile
 import unittest
+from unittest.mock import patch
 import zipfile
 from pathlib import Path
 from types import SimpleNamespace
@@ -37,6 +38,7 @@ from vision_train_module_inventory import readProvenance
 from vision_train_module_inventory import recordPath
 from vision_train_module_inventory import resolveOwnership
 from scripts.verify_vision_train_modular_product import coreInventory
+from scripts.verify_vision_train_modular_product import checkCase
 from scripts.verify_vision_train_modular_product import createResourceUpdateFixture
 from scripts.verify_vision_train_modular_product import verifyCoreUnchanged
 
@@ -79,6 +81,36 @@ class ModularBuildTests(unittest.TestCase):
   def ownership(self, distributions, seeds, providers=None, source=None):
     return resolveOwnership(distributions, seeds, providers=providers or {},
                              sourceRequirements=source or {})
+
+  def test_dino_worker_driver_preserves_negative_fixture_qualification_scope(self):
+    executable = self.root / 'VisionWorkshop.exe'
+    identity = {'core_sha256': 'a' * 64, 'generation': 1, 'modules': {'runtime.ort': 'b' * 64}}
+    result = {'status': 'PASS', 'runtime_identity': identity, 'torch_module_installed': False,
+               'successful_model_session': 'NOT_RUN', 'prediction_and_numerics': 'NOT_RUN',
+               'worker_full_import_audit': 'NOT_RUN; production inspector coverage remains limited'}
+    report = {'status': 'PASS', 'case': 'dino-worker', 'frozen': True,
+               'python': '3.12.10', 'platform': 'win32', 'pid': 123,
+               'executable': str(executable), 'runtime_identity': identity,
+               'network_attempts': [], 'loaded_packages': {}, 'result': result,
+               'inert_pth': {'status': 'PASS', 'module_id': 'runtime.ort',
+                             'manifest_sha256': 'b' * 64, 'COLOREDLOGS_AUTO_INSTALL': '1',
+                             'imported_during_mount': False, 'normal_import_succeeded': True}}
+    process = {'pid': 123, 'report_sha256': 'c' * 64}
+    with patch('scripts.verify_vision_train_modular_product.invoke', return_value=(report, process)) as invoke:
+      actual = checkCase(executable, 'dino-worker', self.root, 'dino-worker-without-torch', {},
+                         {'import_roots': [], 'catalog': {}}, identity, timeout=600)
+    self.assertEqual(actual['result'], result)
+    self.assertEqual(invoke.call_args.kwargs['timeout'], 600)
+    self.assertEqual(invoke.call_args.args[4]['COLOREDLOGS_AUTO_INSTALL'], '1')
+    for field, value in [('status', 'FAIL'), ('successful_model_session', 'PASS'),
+                          ('prediction_and_numerics', 'PASS'), ('worker_full_import_audit', 'PASS'),
+                          ('torch_module_installed', True), ('runtime_identity', {})]:
+      invalid = dict(report, result=dict(result, **{field: value}))
+      with self.subTest(field=field), patch('scripts.verify_vision_train_modular_product.invoke',
+                                           return_value=(invalid, process)), \
+           self.assertRaisesRegex(RuntimeError, 'tested scope'):
+        checkCase(executable, 'dino-worker', self.root, 'dino-worker-without-torch', {},
+                   {'import_roots': [], 'catalog': {}}, identity, timeout=600)
 
   def test_installed_records_and_pip_windows_alias_have_one_payload(self):
     metadata = self.distribution('example', {'example/__init__.py': b'VALUE=1\n'})

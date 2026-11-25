@@ -34,6 +34,7 @@ from vision_train_modular_archive import compressPackage
 from vision_train_modular_crt import loadRuntimeProfile
 from vision_train_modular_crt import prepareRuntime
 from vision_train_modular_crt import qualifyVendorCrt
+from vision_train_modular_receipts import selectSourceStaging
 from vision_train_modular_reuse import readReuseSource
 from vision_train_modular_reuse import reuseArchive
 from vision_train_modular_reuse import validateReuseCore
@@ -748,7 +749,7 @@ def buildCandidate(args) -> dict:
     if reuse:
       validateReuseCore(reuse, metadata)
     reusedArchives, reuseReports = {}, []
-    manifests = {}
+    manifests, freshManifests = {}, {}
     for name, declaration in metadata['catalog'].items():
       root = modules / name
       files = fileRecords(root / 'payload')
@@ -764,15 +765,22 @@ def buildCandidate(args) -> dict:
         'files': files, 'expanded_size': sum(record['size'] for record in files),
       }
       contract.validate_manifest(manifest, metadata)
+      writeCanonical(root / contract.MANIFEST_FILE, manifest, encoder=contract.canonical_json,
+                      maximumBytes=contract.MAX_METADATA)
+      freshManifests[name] = manifest
+      loader.writeReport(reports / 'fresh-module-manifests.json', freshManifests)
       if reuse:
+        originalRoot = output / 'source-module-staging' / name
+        selected, selection = selectSourceStaging(
+          reuse, name, root / 'payload', manifest, metadata, originalRoot / 'payload', contract,
+          distributions, provenance, reports / 'module-reuse-receipts' / name)
+        loader.writeReport(reports / ('module-reuse-selection-' + name + '.json'), selection)
         destination = archives / (name + '-' + args.core_version + '.zip')
         manifest, reusedArchives[name], evidence, originalBytes = reuseArchive(
-          reuse, name, root / 'payload', manifest, metadata, destination, contract)
-        (root / contract.MANIFEST_FILE).write_bytes(originalBytes)
+          reuse, name, originalRoot / 'payload', selected, metadata, destination, contract)
+        (originalRoot / contract.MANIFEST_FILE).write_bytes(originalBytes)
+        evidence['staging_selection'] = selection
         reuseReports.append(evidence)
-      else:
-        writeCanonical(root / contract.MANIFEST_FILE, manifest, encoder=contract.canonical_json,
-                        maximumBytes=contract.MAX_METADATA)
       manifests[name] = manifest
     contract.validate_module_set(metadata, manifests)
     loader.writeReport(reports / 'module-manifests.json', manifests)
