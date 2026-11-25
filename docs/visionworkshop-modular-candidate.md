@@ -709,6 +709,17 @@ exception fields. Four focused projection guards join the existing 33 guards
 before the actual Windows fixtures. This follow-up's new local tests remain
 NOT_RUN, and the earlier failure is not replaced with a presumed success.
 
+Attempt 3 / [45678371316](https://github.com/jsdfhasuh/python_build_scripts/actions/runs/45678371316)
+stopped even earlier: a test incorrectly hardcoded diagnostic nonce 2 while the
+request was 3. The existing group ran 16 tests with one failure; all subsequent
+guards and native/Core stages were skipped. The always-log reader executed and
+its nine MISSING projections were independently reconstructed and SHA-verified.
+Request attempt 4 checks the nonce as a positive exact integer, with bool/zero/
+negative rejection, while preserving all original Core/run-attempt/app/head/
+artifact pins. The native controllers and logging implementation do not change.
+This correction and the failed run are recorded in
+`docs/evidence/visionworkshop-core-exit-diagnostic-45678371316.json`.
+
 The independent cross-product Git-object baseline is preserved in
 `docs/evidence/visionworkshop-modular-other-product-baseline-d3ace70.json`.
 EmoMaster configs/release workflows and shared `build.py` match the original

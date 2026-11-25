@@ -76,7 +76,8 @@ class CoreExitDiagnosticTests(unittest.TestCase):
     self.assertEqual(value['core_archive']['bytes'], 180443076)
     self.assertEqual(set(value['artifacts']), {'core', 'evidence'})
     self.assertEqual(value['schema_version'], 2)
-    self.assertEqual(value['diagnostic_attempt'], 2)
+    self.assertIs(type(value['diagnostic_attempt']), int)
+    self.assertGreater(value['diagnostic_attempt'], 0)
     self.assertIs(value['debugger_observed'], True)
     self.assertIs(value['dll_search_probe'], True)
     for key in ('debugger_observed', 'dll_search_probe'):
@@ -87,7 +88,8 @@ class CoreExitDiagnosticTests(unittest.TestCase):
 
   def test_request_rejects_unknown_bool_oversized_and_unsafe_inputs(self):
     variants = []
-    for key, value in [('source_run_id', True), ('source_run_attempt', 0), ('source_head_sha', 'main'),
+    for key, value in [('diagnostic_attempt', True), ('diagnostic_attempt', 0), ('diagnostic_attempt', -1),
+                       ('source_run_id', True), ('source_run_attempt', 0), ('source_head_sha', 'main'),
                        ('source_app_sha', 'a' * 39), ('normal_gui_comparison', 1)]:
       changed = copy.deepcopy(self.request); changed[key] = value; variants.append(changed)
     for role, key, value in [('core', 'bytes', True), ('core', 'bytes', diagnostic.MAX_CORE_ZIP + 1024**2 + 1),
