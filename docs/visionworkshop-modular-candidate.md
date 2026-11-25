@@ -686,6 +686,29 @@ the recorded patches using Git objects. **New local tests are NOT_RUN**; prior
 and actual fixture gates must pass before this follow-up can supply any new
 native evidence.
 
+[Attempt 2 / run 45675786871](https://github.com/jsdfhasuh/python_build_scripts/actions/runs/45675786871)
+stopped at the source guard: the existing 16 tests passed, while one of the new
+17 tests errored because its temporary directory root was not resolved before
+a resolved-path containment comparison. The native helper's actual fixtures,
+Core download, exception observation and DLL-search observation were all
+skipped. Artifact `15051088204` is only the 751-byte request artifact
+(SHA256 `7eed7b346abd0ed25c853afb1fec34e5bdfd4f63c68d398be954c512b33f27f6`).
+The failure is preserved in
+`docs/evidence/visionworkshop-core-exit-diagnostic-45675786871.json`.
+
+Request attempt 3 resolves the test fixture root and logs its raw/canonical
+spelling; the production containment rule is unchanged. The workflow also
+always emits read-only, bounded JSON projections into its log, since the editing
+executor cannot currently extract downloaded evidence. Every available source
+report has size/SHA256, and complete native exception records retain module,
+offset, memory-access and actual-exit fields. DLL registration summaries retain
+the complete first failure and counts. Full successful registration lists and
+LOAD/UNLOAD inventories remain in the artifact. Numbered 2,048-character chunks
+bind each projection with a SHA256; budgets fail explicitly rather than truncate
+exception fields. Four focused projection guards join the existing 33 guards
+before the actual Windows fixtures. This follow-up's new local tests remain
+NOT_RUN, and the earlier failure is not replaced with a presumed success.
+
 The independent cross-product Git-object baseline is preserved in
 `docs/evidence/visionworkshop-modular-other-product-baseline-d3ace70.json`.
 EmoMaster configs/release workflows and shared `build.py` match the original

@@ -272,7 +272,10 @@ class NativeDebugTests(unittest.TestCase):
 class DllSearchProbeTests(unittest.TestCase):
   def test_exact_duplicate_order_and_unique_sequence_use_real_existing_directories(self):
     with tempfile.TemporaryDirectory() as folder:
-      root = Path(folder)
+      rawRoot = Path(folder)
+      root = rawRoot.resolve()
+      print(json.dumps({'dll_search_fixture_root': str(rawRoot), 'canonical_root': str(root),
+                        'same_path_spelling': str(rawRoot) == str(root)}))
       for relative in ('_internal', 'native', 'site-packages/numpy.libs'):
         (root / relative).mkdir(parents=True)
       core = {'dll_dirs': ['native', 'site-packages/numpy.libs']}

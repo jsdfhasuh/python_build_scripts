@@ -120,6 +120,11 @@ class WorkflowSafetyTests(unittest.TestCase):
     self.assertLess(downloads[0], actual[0])
     self.assertIn('test_vision_train_native_debug.py', text)
     self.assertIn('native-debug-fixtures/*/reports/**', text)
+    logging = [step for step in steps if 'report_vision_train_core_diagnostic.py --diagnostic' in step.get('run', '')]
+    self.assertEqual(len(logging), 1)
+    self.assertEqual(logging[0]['if'], 'always()')
+    self.assertNotIn('GH_TOKEN', logging[0].get('env', {}))
+    self.assertIn('test_vision_train_diagnostic_reports.py', text)
 
   def test_release_checkouts_use_explicit_refs_without_persisting_tokens(self) -> None:
     for name in PRODUCTION:

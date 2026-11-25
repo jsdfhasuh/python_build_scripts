@@ -43,6 +43,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Core diagnostic guard checks failed' }
           python -B -m unittest discover -s tests -p test_vision_train_native_debug.py -v
           if ($LASTEXITCODE -ne 0) { throw 'Native debugger and DLL registration guards failed' }
+          python -B -m unittest discover -s tests -p test_vision_train_diagnostic_reports.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'Bounded diagnostic report checks failed' }
 
       - name: Verify actual Windows normal and access-violation child fixtures
         shell: pwsh
@@ -63,6 +65,13 @@ jobs:
         run: |
           python -B packager/scripts/diagnose_vision_train_core.py run --source diagnostic-source --request packager/ci/visionworkshop-core-diagnostic.json --output core-exit-diagnostic
           if ($LASTEXITCODE -ne 0) { throw 'Original Core exit diagnostic did not pass' }
+
+      - name: Print bounded hash-bound diagnostic projections
+        if: always()
+        shell: pwsh
+        run: |
+          python -I -S -B packager/scripts/report_vision_train_core_diagnostic.py --diagnostic core-exit-diagnostic --fixtures native-debug-fixtures --source diagnostic-source
+          if ($LASTEXITCODE -ne 0) { throw 'Diagnostic report projection failed; full evidence remains in artifact' }
 
       - name: Upload diagnostic reports without redistributing Core
         if: always()
