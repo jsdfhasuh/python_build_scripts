@@ -1,0 +1,393 @@
+{
+  "schema_version": 1,
+  "run": {
+    "id": 45652987042,
+    "attempt": 1,
+    "url": "https://github.com/jsdfhasuh/python_build_scripts/actions/runs/45652987042",
+    "builder_sha": "0d48c66b90bf95df45ae8f0a12cc882c87f58b16",
+    "app_sha": "e44eacec0e3732801e872a69a318c74dd5e03bba",
+    "conclusion": "failure"
+  },
+  "scope": "Preparation Qt child rendered actual ASCII/Chinese; the parent identity check failed before CRT/assets/reuse/Core construction. This is not a frozen product result.",
+  "evidence_artifact": {
+    "id": 15041344101,
+    "bytes": 4565634,
+    "sha256": "d2fe73b974e7db48aee807a2ebf5342a75e10361626ff512ad84c6a5583ec0a6",
+    "downloaded_bytes_verified": true
+  },
+  "statuses": {
+    "source_preflight": "PASS with one explicitly unprepared-font skip",
+    "registered_defender_signature_api": "PASS",
+    "qt_child_rendering": "PASS",
+    "qt_parent_identity_gate": "FAIL",
+    "module_reuse": "NOT_RUN",
+    "core_build": "NOT_RUN",
+    "product_matrix": "NOT_RUN",
+    "gpu": "NOT_RUN",
+    "release": "NOT_QUALIFIED"
+  },
+  "source_guard_suite": {
+    "name": "pytest",
+    "errors": "0",
+    "failures": "0",
+    "skipped": "1",
+    "tests": "243",
+    "time": "14.226",
+    "timestamp": "2026-11-25T16:23:49.741812+00:00",
+    "hostname": "runnervmbpeip",
+    "passed": 242,
+    "skips": [
+      {
+        "test": "test_supplied_official_otf_loads_unchanged_through_both_vendor_aliases",
+        "reason": "set VISIONWORKSHOP_TEST_FONT_DIR to the verified build font sources"
+      }
+    ]
+  },
+  "registered_defender_signature_api": {
+    "test": "test_actual_windows_registered_defender_signature_probe",
+    "classname": "tests.test_module_runtime_check_security",
+    "seconds": 0.052,
+    "status": "PASS",
+    "skipped": false,
+    "scope": "Actual Windows registered-provider signature API test; product EXE native audit NOT_RUN"
+  },
+  "qt_child_original": {
+    "application_font": "MS Shell Dlg 2,8.25,-1,5,50,0,0,0,0,0",
+    "chinese_visual_acceptance": "Probe glyphs and raster only; inspect the actual product screenshots separately",
+    "executable": "D:\\a\\_temp\\vw-p4-dependencies\\Scripts\\python.exe",
+    "font": {
+      "exact_match": true,
+      "family": "MS Shell Dlg 2",
+      "pixel_size": 24,
+      "style": ""
+    },
+    "font_families": [
+      "Arial",
+      "Arial Black",
+      "Bahnschrift",
+      "Bahnschrift Condensed",
+      "Bahnschrift Light",
+      "Bahnschrift Light Condensed",
+      "Bahnschrift Light SemiCondensed",
+      "Bahnschrift SemiBold",
+      "Bahnschrift SemiBold Condensed",
+      "Bahnschrift SemiBold SemiConden",
+      "Bahnschrift SemiCondensed",
+      "Bahnschrift SemiLight",
+      "Bahnschrift SemiLight Condensed",
+      "Bahnschrift SemiLight SemiConde",
+      "Calibri",
+      "Calibri Light",
+      "Cambria",
+      "Cambria Math",
+      "Candara",
+      "Candara Light",
+      "Cascadia Code",
+      "Cascadia Code ExtraLight",
+      "Cascadia Code Light",
+      "Cascadia Code SemiBold",
+      "Cascadia Code SemiLight",
+      "Cascadia Mono",
+      "Cascadia Mono ExtraLight",
+      "Cascadia Mono Light",
+      "Cascadia Mono SemiBold",
+      "Cascadia Mono SemiLight",
+      "Comic Sans MS",
+      "Consolas",
+      "Constantia",
+      "Corbel",
+      "Corbel Light",
+      "Courier",
+      "Courier New",
+      "Dotum",
+      "DotumChe",
+      "Ebrima",
+      "Fixedsys",
+      "Franklin Gothic Medium",
+      "Gabriola",
+      "Gadugi",
+      "Georgia",
+      "Gulim",
+      "GulimChe",
+      "Impact",
+      "Ink Free",
+      "Javanese Text",
+      "Leelawadee UI",
+      "Leelawadee UI Semilight",
+      "Lucida Console",
+      "Lucida Sans Unicode",
+      "MS Gothic",
+      "MS PGothic",
+      "MS Sans Serif",
+      "MS Serif",
+      "MS Shell Dlg 2",
+      "MS UI Gothic",
+      "MV Boli",
+      "Malgun Gothic",
+      "Malgun Gothic Semilight",
+      "Marlett",
+      "Microsoft Himalaya",
+      "Microsoft JhengHei",
+      "Microsoft JhengHei Light",
+      "Microsoft JhengHei UI",
+      "Microsoft JhengHei UI Light",
+      "Microsoft New Tai Lue",
+      "Microsoft PhagsPa",
+      "Microsoft Sans Serif",
+      "Microsoft Tai Le",
+      "Microsoft YaHei",
+      "Microsoft YaHei Light",
+      "Microsoft YaHei UI",
+      "Microsoft YaHei UI Light",
+      "Microsoft Yi Baiti",
+      "MingLiU",
+      "MingLiU-ExtB",
+      "MingLiU_HKSCS",
+      "MingLiU_HKSCS-ExtB",
+      "MingLiU_MSCS",
+      "MingLiU_MSCS-ExtB",
+      "Modern",
+      "Mongolian Baiti",
+      "Myanmar Text",
+      "NSimSun",
+      "Nirmala Text",
+      "Nirmala Text Semilight",
+      "Nirmala UI",
+      "Nirmala UI Semilight",
+      "PMingLiU",
+      "PMingLiU-ExtB",
+      "Palatino Linotype",
+      "Roman",
+      "Sans Serif Collection",
+      "Script",
+      "Segoe Fluent Icons",
+      "Segoe MDL2 Assets",
+      "Segoe Print",
+      "Segoe Script",
+      "Segoe UI",
+      "Segoe UI Black",
+      "Segoe UI Emoji",
+      "Segoe UI Historic",
+      "Segoe UI Light",
+      "Segoe UI Semibold",
+      "Segoe UI Semilight",
+      "Segoe UI Symbol",
+      "Segoe UI Variable Display",
+      "Segoe UI Variable Display Light",
+      "Segoe UI Variable Display Semib",
+      "Segoe UI Variable Display Semil",
+      "Segoe UI Variable Small",
+      "Segoe UI Variable Small Light",
+      "Segoe UI Variable Small Semibol",
+      "Segoe UI Variable Small Semilig",
+      "Segoe UI Variable Text",
+      "Segoe UI Variable Text Light",
+      "Segoe UI Variable Text Semibold",
+      "Segoe UI Variable Text Semiligh",
+      "SimSun",
+      "SimSun-ExtB",
+      "SimSun-ExtG",
+      "Sitka Banner",
+      "Sitka Banner Semibold",
+      "Sitka Display",
+      "Sitka Display Semibold",
+      "Sitka Heading",
+      "Sitka Heading Semibold",
+      "Sitka Small",
+      "Sitka Small Semibold",
+      "Sitka Subheading",
+      "Sitka Subheading Semibold",
+      "Sitka Text",
+      "Sitka Text Semibold",
+      "Small Fonts",
+      "Sylfaen",
+      "Symbol",
+      "System",
+      "Tahoma",
+      "Terminal",
+      "Times New Roman",
+      "Trebuchet MS",
+      "Verdana",
+      "Webdings",
+      "Wingdings",
+      "Yu Gothic",
+      "Yu Gothic Light",
+      "Yu Gothic Medium",
+      "Yu Gothic UI",
+      "Yu Gothic UI Light",
+      "Yu Gothic UI Semibold",
+      "Yu Gothic UI Semilight"
+    ],
+    "pid": 5160,
+    "platform_name": "windows",
+    "pyqt_version": "5.15.9",
+    "python": "3.12.10 (tags/v3.12.10:0cc8128, Apr  8 2025, 12:21:36) [MSC v.1943 64 bit (AMD64)]",
+    "qt_module": "D:\\a\\_temp\\vw-p4-dependencies\\Lib\\site-packages\\PyQt5\\QtCore.pyd",
+    "qt_version": "5.15.2",
+    "requested_platform": "windows",
+    "samples": {
+      "ascii": {
+        "glyph_runs": [
+          {
+            "family": "Tahoma",
+            "font_valid": true,
+            "indexes": [
+              57,
+              76,
+              86,
+              76,
+              82,
+              81,
+              58,
+              82,
+              85,
+              78,
+              86,
+              75,
+              82,
+              83,
+              3,
+              36,
+              37,
+              38,
+              3,
+              19,
+              20,
+              21,
+              22
+            ]
+          }
+        ],
+        "image": "ascii.png",
+        "image_sha256": "ea0060941b278eb52112bfdbfa6bd92d9281c5369eb3733df6d7bc1fa0f807b2",
+        "pixels": {
+          "blank_rgba_sha256": "dc4d71ed3a427a299e960e324caa5909df33b87d6519849ea78d806a0c202b2e",
+          "bounds": [
+            16,
+            39,
+            291,
+            62
+          ],
+          "changed_pixels": 1783,
+          "height": 96,
+          "rendered_rgba_sha256": "6f7e0b932fb980e2c9a4867882586e5cd48b196b3c1f7e75c1222ee0a04ad691",
+          "stride": 2560,
+          "width": 640
+        },
+        "status": "PASS",
+        "text": "VisionWorkshop ABC 0123"
+      },
+      "chinese": {
+        "glyph_runs": [
+          {
+            "family": "SimSun",
+            "font_valid": true,
+            "indexes": [
+              13551,
+              3463,
+              16861,
+              13555
+            ]
+          },
+          {
+            "family": "MS UI Gothic",
+            "font_valid": true,
+            "indexes": [
+              9913,
+              7565,
+              5561,
+              3982
+            ]
+          }
+        ],
+        "image": "chinese.png",
+        "image_sha256": "bc46d22a9e312bd8d8c1492f74e2e719f30a7b3cfacb5106aa3f51c298f4264d",
+        "pixels": {
+          "blank_rgba_sha256": "dc4d71ed3a427a299e960e324caa5909df33b87d6519849ea78d806a0c202b2e",
+          "bounds": [
+            18,
+            38,
+            205,
+            59
+          ],
+          "changed_pixels": 1684,
+          "height": 96,
+          "rendered_rgba_sha256": "2de9dc4a12f08d5bfa6ad0d13b61c3bf312da59509fe4e30ff845be4373d968f",
+          "stride": 2560,
+          "width": 640
+        },
+        "status": "PASS",
+        "text": "离线模块训练平台"
+      }
+    },
+    "scope": "Prepared interpreter font rendering; frozen product visual acceptance NOT_RUN",
+    "status": "PASS"
+  },
+  "qt_parent_original": {
+    "command": [
+      "D:\\a\\_temp\\vw-p4-dependencies\\Scripts\\python.exe",
+      "D:\\a\\python_build_scripts\\python_build_scripts\\packager\\scripts\\verify_windows_qt_fonts.py",
+      "--child",
+      "--output",
+      "D:\\a\\python_build_scripts\\python_build_scripts\\reports\\qt-font-probe"
+    ],
+    "elapsed_seconds": 2.109,
+    "error": "Qt font probe process identity/platform/result mismatch",
+    "exit_code": 0,
+    "pid": 1840,
+    "requested_platform": "windows",
+    "status": "FAIL",
+    "timeout_seconds": 120,
+    "traceback": "Traceback (most recent call last):\n  File \"D:\\a\\python_build_scripts\\python_build_scripts\\packager\\scripts\\verify_windows_qt_fonts.py\", line 179, in main\n    raise RuntimeError('Qt font probe process identity/platform/result mismatch')\nRuntimeError: Qt font probe process identity/platform/result mismatch\n"
+  },
+  "process_chain_interpretation": {
+    "status": "INFERENCE_ONLY",
+    "observation": "Popen PID 1840 differs from child os.getpid 5160; the child exited 0 and rendered both samples. The original report contains no ppid or native image/argv observations.",
+    "explanation": "The difference is consistent with the fixed CPython 3.12.10 Windows venv redirector creating and waiting for its base-Python child; it is not retroactive proof of this run parent chain.",
+    "fixed_source": "https://github.com/python/cpython/blob/v3.12.10/PC/launcher.c",
+    "git_blob": "dc265533740b6763124480162e791e6a9fd92e27",
+    "next_gate": "Fresh nonce and pyvenv.cfg identity plus actual process/parent PID, image and argv and interpreter prefix/base fields; accept only direct launch or the exact single venv redirector child."
+  },
+  "report_bindings": [
+    {
+      "path": "reports/module-repair-annotation-source.xml",
+      "bytes": 38801,
+      "sha256": "85a66243d15f8505c32334c2ab96da1d3139039f4916915eff5f77243d39951d"
+    },
+    {
+      "path": "reports/qt-font-probe/qt-font-probe.json",
+      "bytes": 6961,
+      "sha256": "4f1d0ea62927885b6e009dd83b21db50ceb03803f4e4c2569fdefc6882f2818b"
+    },
+    {
+      "path": "reports/qt-font-probe/qt-font-probe.process.json",
+      "bytes": 865,
+      "sha256": "6d2ca4e0c4aafa9912949bf5718bfd49f70abc3ef50fe7f280f9f8992efc43fd"
+    },
+    {
+      "path": "reports/qt-font-probe/ascii.png",
+      "bytes": 3208,
+      "sha256": "ea0060941b278eb52112bfdbfa6bd92d9281c5369eb3733df6d7bc1fa0f807b2"
+    },
+    {
+      "path": "reports/qt-font-probe/chinese.png",
+      "bytes": 4494,
+      "sha256": "bc46d22a9e312bd8d8c1492f74e2e719f30a7b3cfacb5106aa3f51c298f4264d"
+    },
+    {
+      "path": "reports/qt-font-probe/blank.png",
+      "bytes": 551,
+      "sha256": "1029989a726188a406e07c41ecc1a28eae6999fc71d72bf0a513b5ec1fa4579a"
+    },
+    {
+      "path": "reports/qt-font-probe/stdout.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "reports/qt-font-probe/stderr.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ]
+}

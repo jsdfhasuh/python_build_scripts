@@ -245,6 +245,14 @@ rendering or unsupported ASCII fails; visible Chinese missing-glyph boxes are
 explicitly `UNSUPPORTED`, with the probe marked `LIMITED`, not Chinese visual
 acceptance. No system font or product UI is changed by the probe.
 
+The probe also binds each fresh invocation to a nonce, selected `pyvenv.cfg`
+bytes and the observed native process/parent images, commands and PIDs. Windows
+CPython virtual environments use a redirector: the selected venv executable may
+launch the base interpreter while `sys.executable` still names the venv. The
+check accepts only the exact direct process, or the driver, selected venv
+launcher and its one base-Python child, with matching script/output/nonce and
+interpreter prefix/base paths. Different PIDs alone never waive this check.
+
 Only this probe and the actual product acceptance use `QT_QPA_PLATFORM=windows`.
 The product driver overrides the shared clean environment's `offscreen` value
 and records the requested platform; the app independently checks the actual Qt
@@ -452,6 +460,34 @@ report bindings are preserved in
 Further Core-only candidates continue to select the original `45616400076`
 source. A reused run's fresh installed report is not automatically treated as
 the original module's retained RECORD provenance.
+
+[Run 45652987042](https://github.com/jsdfhasuh/python_build_scripts/actions/runs/45652987042)
+at builder `0d48c66b90bf95df45ae8f0a12cc882c87f58b16`, app
+`e44eacec0e3732801e872a69a318c74dd5e03bba`, stopped at the early font probe's
+parent identity check, before CRT/model preparation, module reuse or freezing.
+Its actual Qt child reported `windows`, 155 font families, 1,783 changed ASCII
+pixels and 1,684 changed Chinese pixels, with valid nonzero fallback glyphs.
+Both PNGs contain visible text. These are prepared-interpreter observations;
+the frozen product visual result remains `NOT_RUN` for this run.
+
+The parent expected its `Popen.pid` (1840) to equal the Python child's reported
+PID (5160), despite an exit code of zero. The discrepancy is consistent with
+the [fixed CPython 3.12.10 venv redirector](https://github.com/python/cpython/blob/v3.12.10/PC/launcher.c)
+creating a base-Python child and waiting for it. The old report contains no
+parent PID or native image/command observations, so that explanation remains an
+inference for this run. The new exact process-chain gate described above must
+collect and prove those fields in the next actual run; no identity assertion is
+removed and no old report is rewritten as passed.
+
+The source-guard JUnit records 242 passes and one skip: only the real official
+font test was skipped before asset preparation. The actual Windows registered
+Defender signature API test executed and passed in 0.052 seconds; this is not a
+claim that the later product EXE native audit ran. All three protocol-3 worker
+permission checks also passed. Evidence artifact `15041344101` is 4,565,634
+bytes with downloaded SHA-256
+`d2fe73b974e7db48aee807a2ebf5342a75e10361626ff512ad84c6a5583ec0a6`.
+Original child/parent reports, JUnit results and PNG/report hashes are preserved
+in `docs/evidence/visionworkshop-modular-candidate-45652987042.json`.
 
 ## Initial Windows gate result
 
