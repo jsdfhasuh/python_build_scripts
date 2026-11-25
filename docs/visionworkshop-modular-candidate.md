@@ -51,6 +51,50 @@ The application installs an immutable version at
 `VisionWorkshop/modules/<module-id>/<manifest-sha256>/payload`. The Core ZIP has
 the `VisionWorkshop/` prefix and one `VisionWorkshop.exe` entry point.
 
+## Independent module index
+
+The builder writes `archives/module-index.json` only after all Core and module
+ZIPs have completed their existing whole-archive and per-file verification.
+This separate canonical JSON index contains no temporary download URL or
+artifact ID that is unknown at build time. Its safe archive basenames identify
+the files to prepare for offline use; each entry includes the actual compressed
+byte count, SHA-256, file count and expanded size.
+
+The header binds the current Core's application SHA, builder SHA, build ID,
+Python version/ABI/platform and dependency-lock SHA. The Core entry binds its
+version, exact `core.json` SHA and complete ZIP identity. Each module entry
+retains its actual original manifest SHA and build identity, including when an
+older compatible ZIP is reused, together with its ID, label, kind, version,
+Core version range, dependencies, package versions, import roots and resources.
+The original module ZIP and metadata are never rewritten to match a newer Core.
+
+Construction requires exactly the complete Core catalog, unique module IDs and
+Windows-safe unique asset basenames. It rechecks each ZIP's size/SHA, canonical
+metadata and declared member inventory, then applies the application's existing
+Core/module/combined compatibility validators. Per-payload-file hashing remains
+the prior `compressPackage`/`reuseArchive` verification; this new index check does
+not relabel its own work as another native or per-file execution test.
+
+The index uses the shared contract's canonical JSON format and metadata byte
+limit. Its own size/SHA is stored in `modular-build-summary.json`; the index is
+outside all ZIPs and never includes its own hash, avoiding a self-reference.
+The product driver binds and verifies it against the current Core and complete
+actual module ZIP set before starting any product process, and writes
+`module-index-verification.json`. A separate small Actions artifact delivers the
+index, with a byte-identical copy in the evidence artifact.
+
+The 12 focused source tests use real small LZMA ZIPs and cover new Core/original
+module builds, independent asset corruption, missing/duplicate modules,
+ABI/lock/Core-range/dependency conflicts, source-build substitution, unsafe or
+colliding asset paths, canonical/size/type boundaries and false qualification
+claims. At this implementation checkpoint, no actual Windows candidate has yet
+generated this index. Build/native/Release qualifications remain distinct;
+the index records `NOT_QUALIFIED` for Release and points native execution to its
+separate report.
+The complete focused source check was 69 tests, zero failures/errors/skips;
+input hashes and the exact 12/10/35/12 group counts are recorded in
+`docs/evidence/visionworkshop-modular-index-source-tests.json`.
+
 ## Input and bootstrap integrity
 
 The build requires exact clean application, vendor and builder commits. Model
@@ -284,6 +328,10 @@ path with isolated user directories and an empty current directory. It checks:
   real session children exercise a missing deployment and cancellation. The
   helper checks child cleanup and inherited module identity. Successful model
   loading, prediction/numerics and full worker import auditing remain `NOT_RUN`.
+- With all modules active, a separate 360-second CPU DataLoader diagnostic uses
+  one spawned worker, the same product EXE and verified runtime snapshot, then
+  checks normal child cleanup. This controlled data-loading case does not
+  qualify every training pipeline, GPU operation or cancellation behavior.
 - Cold repair through the real EXE: deliberately corrupt one registered small
   ORT file in the disposable installation, require `status` to report `broken`
   and ordinary same-version installation to return `MODULE_REPAIR_REQUIRED`,
@@ -331,7 +379,8 @@ removal, complete native/worker execution and rollback. Only the explicit root
 file and its before/after digests are retained in the repair evidence.
 
 The workflow uploads evidence, Core and each of the eleven optional module ZIPs
-as thirteen separate reviewable Actions artifacts. Reports and selected offline
+as fourteen separate reviewable Actions artifacts, including the independent
+module index. Reports and selected offline
 modules can be downloaded independently. Existing ZIPs are uploaded with outer
 compression disabled.
 A successful bounded CPU matrix is `LIMITED`; GPU hardware execution, existing

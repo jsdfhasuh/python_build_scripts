@@ -19,6 +19,7 @@ from build_records import objectHash
 from build_records import rejectLinks
 from build_records import scanFiles
 from vision_train_modular_build import loadContract
+from vision_train_modular_index import verifyModuleIndex
 from scripts.verify_vision_train_modules import cleanEnvironment
 from scripts.verify_vision_train_modules import writeReport
 
@@ -448,14 +449,17 @@ def main(argv=None) -> int:
     if build['status'] != 'BUILT':
       raise RuntimeError('No successful modular candidate build')
     archives = {item['module_id']: Path(item['path']) for item in build['module_archives']}
-    for item in [build['core_archive'], *build['module_archives']]:
-      if fileHash(Path(item['path'])) != item['sha256']:
-        raise RuntimeError('A candidate archive changed since its build verification')
+    if fileHash(Path(build['core_archive']['path'])) != build['core_archive']['sha256']:
+      raise RuntimeError('The Core archive changed before its verified contract could be loaded')
     executable = extractCore(Path(build['core_archive']['path']), output / '中文 模块验收')
     core = json.loads((executable.parent / 'core.json').read_text(encoding='utf-8'))
     coreDigest = fileHash(executable.parent / 'core.json')
     if core != build['core'] or coreDigest != build['core_sha256']:
       raise RuntimeError('Extracted Core differs from build identity')
+    contract = loadContract(executable.parent / 'python')
+    indexPath = Path(build['module_index']['path'])
+    summary['module_index'] = verifyModuleIndex(indexPath, build, contract)
+    writeReport(reports / 'module-index-verification.json', summary['module_index'])
     baseline = coreInventory(executable.parent)
     writeReport(reports / 'core-inventory-before.json', {'files': baseline})
     summary['core_inventory_before'] = {'inventory_sha256': objectHash(baseline),
@@ -529,7 +533,8 @@ def main(argv=None) -> int:
     if set(identity['modules']) != set(archives):
       raise RuntimeError('The complete candidate set did not activate')
     checkpoint('complete-install-and-activation')
-    for case, timeout in (('torch', 300), ('ort', 300), ('dino', 300), ('dino-worker', 600), ('sklearn', 180),
+    for case, timeout in (('torch', 300), ('dataloader-spawn', 360), ('ort', 300),
+                          ('dino', 300), ('dino-worker', 600), ('sklearn', 180),
                           ('image-simplification', 240), ('cnn-pretrained', 180),
                           ('dino-pretrained', 240), ('yolo-pretrained', 300),
                           ('yolo', 900), ('pt', args.pt_timeout)):

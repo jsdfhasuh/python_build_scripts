@@ -154,6 +154,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Immutable source-module receipt qualification failed' }
           & $env:BUILD_PYTHON -m unittest discover -s tests -p test_windows_qt_fonts.py -v
           if ($LASTEXITCODE -ne 0) { throw 'Native Qt font probe guards failed' }
+          & $env:BUILD_PYTHON -m unittest discover -s tests -p test_vision_train_modular_index.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'Module index binding checks failed' }
           Pop-Location
           Push-Location source
           & $env:BUILD_PYTHON -m unittest discover -s tests -p test_module_contract.py -v
@@ -165,6 +167,7 @@ jobs:
             tests/test_module_runtime_check_resources.py `
             tests/test_module_runtime_check_dino.py `
             tests/test_module_runtime_check_security.py tests/test_module_runtime_check_native.py `
+            tests/test_module_runtime_check_spawn.py `
             -q --junitxml ../reports/module-repair-annotation-source.xml
           if ($LASTEXITCODE -ne 0) { throw 'Repair and annotation guard checks failed or did not collect tests' }
           & $env:BUILD_PYTHON -m pytest -p no:cacheprovider tests/test_cnn_onnx_entry.py::test_export_worker_requires_actual_run_permission -q
@@ -288,6 +291,16 @@ jobs:
             modular-candidate/reports/**
             modular-acceptance/reports/**
             modular-acceptance/isolated-user/AppData/Local/VisionWorkshop/logs/**
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
+      - name: Upload the independent module index
+        if: ${{ !cancelled() && steps.build-candidate.outcome == 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: visionworkshop-module-index-${{ github.run_id }}-${{ github.run_attempt }}
+          path: modular-candidate/archives/module-index.json
           if-no-files-found: error
           compression-level: 0
           retention-days: 7

@@ -34,6 +34,8 @@ from vision_train_modular_archive import compressPackage
 from vision_train_modular_crt import loadRuntimeProfile
 from vision_train_modular_crt import prepareRuntime
 from vision_train_modular_crt import qualifyVendorCrt
+from vision_train_modular_index import INDEX_FILE
+from vision_train_modular_index import writeModuleIndex
 from vision_train_modular_receipts import selectSourceStaging
 from vision_train_modular_reuse import readReuseSource
 from vision_train_modular_reuse import reuseArchive
@@ -812,7 +814,7 @@ def buildCandidate(args) -> dict:
                                     maximumBytes=contract.MAX_ARCHIVE_BYTES))
       result['module_archives'].append(dict(artifact, module_id=name,
                                             manifest_sha256=contract.manifest_digest(manifests[name])))
-    result.update(status='BUILT', core=metadata, core_sha256=contract.manifest_digest(metadata),
+    result.update(core=metadata, core_sha256=contract.manifest_digest(metadata),
                   dependency_lock=lock,
                   release_gate='NOT_QUALIFIED', compatibility_findings=lock['compatibility_findings'],
                   core_bytes=sum(record['size'] for record in records),
@@ -823,6 +825,9 @@ def buildCandidate(args) -> dict:
                   module_reuse={'enabled': reuse is not None, 'files': reuseReports},
                   module_builds={name: manifest['build'] for name, manifest in manifests.items()},
                   packager=packagerState, branding=branding)
+    result['module_index'] = writeModuleIndex(archives / INDEX_FILE, result, contract)
+    copyFile(archives / INDEX_FILE, reports / INDEX_FILE)
+    result['status'] = 'BUILT'
     return result
   except Exception as error:
     result.update(error=str(error), traceback=traceback.format_exc())
