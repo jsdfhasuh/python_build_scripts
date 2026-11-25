@@ -1,6 +1,8 @@
 """Check read-only bounded CI projections without running a native product."""
 
+from contextlib import redirect_stdout
 import hashlib
+import io
 import json
 from pathlib import Path
 import tempfile
@@ -108,9 +110,10 @@ class DiagnosticReportTests(unittest.TestCase):
       self.assertTrue(all(root == diagnostic and '/reports/' in relative for _, root, relative, _ in plan))
       (diagnostic / 'diagnostic-summary.json').write_text(json.dumps({
         'status': 'FAIL', 'source_request': {'schema_version': 3}, 'cases': []}), encoding='utf-8')
-      lines = []
-      with patch('builtins.print', side_effect=lines.append):
+      captured = io.StringIO()
+      with redirect_stdout(captured):
         result = reports.collectReports(diagnostic, parent / 'fixtures', parent / 'source')
+      lines = captured.getvalue().splitlines()
       self.assertEqual(result, 0)  # Missing reports are labelled, never promoted to product PASS.
       chunks = [json.loads(line[len(reports.PREFIX):]) for line in lines if line.startswith(reports.PREFIX)]
       labels = {chunk['label'] for chunk in chunks}
@@ -121,8 +124,15 @@ class DiagnosticReportTests(unittest.TestCase):
       self.assertNotIn('core-native', labels)
       self.assertNotIn('gui-native', labels)
       for label, *_ in plan:
-        pieces = [chunk for chunk in chunks if chunk['label'] == label]
-        payload = json.loads(''.join(chunk['text'] for chunk in pieces))
+        pieces = sorted((chunk for chunk in chunks if chunk['label'] == label),
+                        key=lambda chunk: chunk['chunk'])
+        self.assertEqual([chunk['chunk'] for chunk in pieces], list(range(1, len(pieces) + 1)))
+        self.assertTrue(all(chunk['chunks'] == len(pieces) for chunk in pieces))
+        text = ''.join(chunk['text'] for chunk in pieces)
+        digest = hashlib.sha256(text.encode('ascii')).hexdigest()
+        self.assertTrue(all(chunk['projection_bytes'] == len(text)
+                            and chunk['projection_sha256'] == digest for chunk in pieces))
+        payload = json.loads(text)
         self.assertEqual(payload['source']['status'], 'MISSING')
         self.assertIsNone(payload['projection'])
 

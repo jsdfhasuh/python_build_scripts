@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "scope": "Preflight source-test failure only; actual native fixtures and original Core were skipped",
+  "run": {
+    "id": 45684317001,
+    "run_attempt": 1,
+    "diagnostic_attempt": 5,
+    "head_sha": "6bbbc45f7d05ebeac278f74ad71cec1f04768a01",
+    "job_id": 139452745560,
+    "conclusion": "failure"
+  },
+  "artifact": {
+    "id": 15054429955,
+    "bytes": 782,
+    "api_digest": "sha256:9c4625b4995bd8b27d2a034a8006f2a56aad87335c2a2bd80c5dbb6ae77ff57f",
+    "scope": "Request only; outer ZIP not independently rehashed locally"
+  },
+  "source_tests": [
+    {
+      "file": "test_vision_train_core_diagnostic.py",
+      "tests": 26,
+      "seconds": 1.221,
+      "status": "PASS",
+      "skipped": 0
+    },
+    {
+      "file": "test_vision_train_native_debug.py",
+      "tests": 17,
+      "seconds": 0.044,
+      "status": "PASS",
+      "skipped": 0
+    },
+    {
+      "file": "test_vision_train_diagnostic_reports.py",
+      "tests": 6,
+      "seconds": 0.027,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 0,
+      "status": "FAIL"
+    }
+  ],
+  "failure": {
+    "test": "test_schema3_collects_each_fixed_run_without_changing_its_core_path",
+    "line": 117,
+    "assertion": "self.assertTrue({label for label, *_ in plan}.issubset(labels))",
+    "exception": "AssertionError: False is not true",
+    "cause": "The test patched builtins.print after emitPayload's default writer=print had been bound; emitted chunks reached real stdout instead of the mock's lines list.",
+    "correction": "Capture actual stdout with contextlib.redirect_stdout(io.StringIO()); preserve all label, source-path and MISSING assertions and the production logger unchanged."
+  },
+  "not_run": [
+    "actual default/noheap native fixtures",
+    "exact Core download",
+    "same-path original Core comparisons",
+    "DLL registration observation"
+  ],
+  "always_report_step": "SUCCESS; only MISSING actual-source projections. Fixture chunks from the failing test must be distinguished by their earlier step/time from actual always-step projections.",
+  "preserved": {
+    "source_run_id": 45659615499,
+    "source_run_attempt": 1,
+    "source_head_sha": "d3ace70e41a41b4334a9e44d2dbec0d4907f077d",
+    "source_app_sha": "591f8bef7b2292caf50f4848e3047518e490742c",
+    "core_sha256": "9b508d684ec2d594cbd2b162063fd6dc45b9982553f9276ef2bb8010b27064ad",
+    "original_full_candidate": "FAIL",
+    "ongoing_new_candidate_run": 45683439884,
+    "ongoing_new_candidate_head": "e7ca8fcd40b84591427032daa6529960339c073c"
+  },
+  "new_local_test_execution": "NOT_RUN; local executor unavailable"
+}
