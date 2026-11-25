@@ -4,9 +4,117 @@
 `jsdfhasuh/emo-vision-train@bb3772003f0b8cbd872d9342a48aa4a82d5bb861`；
 构建与验证均为非发布操作，没有创建正式 Release。
 
-当前状态：`673273a` 的真实冻结 CNN PatchCore 人工 CKPT 数值与重载验收已通过，
-同一包的 DINO worker 初始化失败。复用原包的 A/B 诊断已证实 MSVCP 加载顺序问题；
-正式 runtime hook 修复后的冻结验收仍待新的完整构建。完整 ZIP 的发布尺寸门槛仍阻断。
+当前状态（2026-11-25）：打包器 `a63f320` 的新完整构建已完成。DINO worker 启动与环境
+inspect、真实冻结 CNN PatchCore 人工 CKPT 导出、CPU 数值比较和最终图新进程重载均通过；
+两套冻结检查脚本均为 `PASS`。该次构建流程仍因完整 ZIP 超过既有发布尺寸上限而失败，
+没有发布 Release。DINO 模型推理、业务模型、训练、GPU、完整交互 GUI 和断电更新等
+仍未执行，不能据此称为完整产品验收通过。`673273a` 的历史 DINO 失败和 A/B 证据保留如下。
+
+## a63f320 最终完整构建结果
+
+[Windows 完整构建 45544329988](https://github.com/jsdfhasuh/python_build_scripts/actions/runs/45544329988)
+直接使用打包器 `a63f320f86ca6dbfaf48d57afbd9853b8333ddc2`，应用仍固定为文首的
+`bb3772003f0b8cbd872d9342a48aa4a82d5bb861`。本节记录这次产物的实际结果；后续仅补充
+文档的提交不会成为该产物的构建提交，也不会改变已验证 ZIP 的身份。
+
+| 产物身份 | 实际值 |
+| --- | --- |
+| 构建 ID | `20261125T041832Z-524aee200c44` |
+| 产品 ZIP | `VisionWorkshop-windows-x86_64-20261125T041832Z-524aee200c44-full.zip` |
+| 产品 ZIP 大小 | 2,715,516,448 字节 |
+| 产品 ZIP SHA256 | `186b9c02076b02c017f0e84203740d53bff8efa1b820da6cb4a32503b653ae90` |
+| 主 EXE SHA256 | `b124cc74abb097bd5ea9b8758901379b167329622c2a78053a7b8fad325db4d4` |
+| 完整安装清单 `files_sha256` | `3d734def66fc4107b9f21df5ab56ae6da746ef95757a71f8852e41318f7f5522` |
+| 协议 3 应用清单 `files_sha256` | `6816492952cd3ba67a65c5ab1fd9801001774740dddfee34423d55eb9965e945` |
+| 协议 3 `identity_sha256` | `156c4df2a79aa84994c5c5dd13818b08497b71acdd65ad8d836916c1c83a9c8a` |
+| 生产工具链 | CPython 3.12.10、PyInstaller 6.18.0、pyinstaller-hooks-contrib 2026.0 |
+
+正式 runtime 安装、两次 `pip check`、依赖版本及原生文件归属检查、实际 imports、P4
+CPU encoder 特征计算均通过。生产环境前置 unittest 为 443 项、`OK (skipped=2)`，
+应用定向回归为 **400 passed / 1 skipped**。固定启动器、主应用、更新器三个 EXE 编译
+和冻结静态检查均通过；ZIP/LZMA 使用 256 MiB 字典。
+`archive-selection.json` 与 `oversize-archive.json` 均将产物标为 `blocked-size`，
+`published: false`，后者另记 `publishable: false`。完整 ZIP 校验后保留作诊断；未生成
+可发布的 `build-summary.json`，未执行发布 stage 或上传 Release。独立冻结检查继续运行，
+没有覆盖尺寸门槛造成的原构建失败。
+
+[双平台 CI 45544309187](https://github.com/jsdfhasuh/python_build_scripts/actions/runs/45544309187)
+对应 PR head `a63f320`，实际测试 checkout 为 GitHub 合并候选
+`60bf6f9b8f80a3f0b7b796620f332c6068fb5447`；这不表示 PR 已合并。
+Windows、Ubuntu 每平台均执行 443 项 unittest，分别 `OK (skipped=1)` 和
+`OK (skipped=2)`。Windows 另完成四组真实 fixture 的编译、解包、启动、记录重用和适用
+图标检查，见[fixture 证据 artifact 14990313743](https://github.com/jsdfhasuh/python_build_scripts/actions/runs/45544309187/artifacts/14990313743)。
+该 fixture 使用 PyInstaller 6.22.2，不是本次产品包的 6.18.0 编译工具链；其 Windows
+unittest 跳过数也不等于生产环境前置测试的跳过数。
+
+本次正式 profile 的核心固定版本未改变，但两轮 `production-freeze.txt` 显示传递依赖
+`regex` 从 2026.11.23 变为 2026.11.24，不能声称 a63 与 673 的全部环境或二进制相同。
+这不改变下文在同一个 673 原包内进行 A/B 的控制条件与根因证据。
+
+### 冻结检查范围与 DINO 修复结果
+
+| 检查 | a63f320 实际结果 | 证据文件 |
+| --- | --- | --- |
+| 冻结 smoke 脚本 | `PASS`，限下列启动与 CPU 检查 | `frozen-smoke/frozen-smoke.json` |
+| DINO worker inspect | `PASS`，退出码 0；CPU 启动与环境检查 | `frozen-smoke/dino-inspect.process.json`、`dino-inspection.json` |
+| DINO 模型推理 | `NOT_RUN` | `frozen-smoke/frozen-smoke.json` |
+| ONNX CPU schema smoke | `PASS`，真实冻结 ORT session 的形状、dtype、有限值检查；该 schema 报告的模型数值资格仍为 `PENDING` | `frozen-smoke/onnx-cpu-worker.json` |
+| CNN 人工 CKPT → 完整 ONNX → 数值比较 → 新进程重载 | `PASS`，两个样本、CPU | `frozen-patchcore/frozen-patchcore.json` 及三个 worker 报告 |
+| launcher 启动观察 | `GUARD_ACCEPTED`、`CREATING_WINDOW`，继续存活 5 秒 | 两套检查各自的 `launcher-observation.json` |
+| GUI 就绪与正常退出 | 均 `NOT_OBSERVED`；`close_messages: 0`，`forced_cleanup: true` | 两套检查各自的 `launcher-observation.json` |
+| 业务模型、训练、GPU、交互 GUI、产品 UI 模型导入、独立 `predict.py`、断电更新 | `NOT_RUN` | 两套检查的范围声明；断电更新未执行 |
+
+新冻结 DINO 进程的 stderr 明确记录 `DINO CRT preload ok`，路径为该包
+`app/_internal/msvcp140.dll`；inspect 退出码为 0，报告的
+`training_modules_imported` 为空列表。实际运行表明本次修复消除了旧包已复现的 ORT
+初始化失败，并保留了不导入训练模块的 DINO 入口边界。此结果只覆盖 worker 启动与
+CPU 环境检查，没有加载 DINO 业务模型推理，也没有执行 CUDA provider。
+日志仍有 ORT 对 Windows Server 2025 名称的支持提示，不把该提示写成已完成平台认证。
+
+### 当前产物的 CNN 数值与重载证据
+
+本次仍使用固定 WideResNet 离线权重、`layer2/layer3`、`[7,1536]` 人工 memory bank、
+两张固定种子的 RGB 图片；原 PNG 分别为 81×97、97×81，模型输入张量为
+`[1,3,64,64]`。fixture Python 进程只生成原生 CKPT 和参考数据；
+严格恢复 CKPT、导出完整 ONNX、两次 ORT 比较分别由三个独立的冻结
+`VisionWorkshopApp.exe` 进程执行，PID 为 **6168、8352、5308**，退出码均为 0。
+worker 的 phase/run_id 与各自 job 匹配，逐样本报告为 `PASS`，memory bank SHA 保持
+`f998913f741d830ff2093108fec54eee0b05e7dec76a80b15d72e792e86557b7`。
+
+| 最大绝对误差 | 图 0 | 图 1 |
+| --- | ---: | ---: |
+| 预处理张量 | 1.3113021851e-6 | 1.0728836060e-6 |
+| 原生 CKPT → 稳定图 score | 7.62939453125e-6 | 7.62939453125e-6 |
+| 原生 CKPT → 稳定图 map | 3.0517578125e-5 | 2.288818359375e-5 |
+| 稳定图参考 → ORT score | 7.62939453125e-6 | 7.62939453125e-6 |
+| 稳定图参考 → ORT map | 2.44140625e-4 | 2.0599365234375e-4 |
+
+本次两次 verify 均使用 ORT 1.23.2、`CPUExecutionProvider`、BASIC 优化，完整样本结果
+相同；阈值判断均一致。容差保持 `atol=1e-5`、`rtol=1e-4`，逐元素按
+`abs(actual-reference) <= atol + rtol*abs(reference)` 判定；ORT map 最大容差占用比
+分别为 **0.0288034、0.0258052**，均小于 1。此处只说明本次两个 verify 的一致性，
+并不声称与 `673273a` 的全部误差或文件字节相同。
+
+最终 `model.onnx` 为 64,824 字节，SHA256 为
+`bed1c096ca87ac30f0454a10c4a07cce5ded00cb1b9ae1cc6646080ac3493eda`；
+`model.onnx.data` 为 99,415,044 字节，SHA256 为
+`10f64e2ef20da691344a8ff67ddda1cdeb6166c45268fe33cec1ef34a2609e61`。
+新进程从独立重载目录读取与最终部署清单相同 SHA 的图文件再计算，部署清单复查通过。
+相关记录为 `ckpt-export.worker.json`、`onnx-parity.worker.json`、
+`onnx-reload.worker.json`、三个对应 `process.json`、`deployment/deployment.json`
+和 `deployment/verification.json`。
+
+`_is_fitted=True` 仍为人工构造，阈值 1000.0 未经训练校准；两个样本均远离阈值。
+该结果证明这组人工 fixture 的软件通路与数值一致性，不覆盖训练、业务模型质量、
+阈值边界、正负类别切换或 GPU。轻量证据不包含完整 CKPT/ONNX/EXE；实际执行发生在
+该次 Windows 运行中，未声称下载轻量报告后又重新执行了一次模型。
+
+### 本次证据下载与摘要
+
+- [完整诊断 artifact 14994508030](https://github.com/jsdfhasuh/python_build_scripts/actions/runs/45544329988/artifacts/14994508030)：保留在 GitHub，包含上述完整产品 ZIP。GitHub artifact 外层 ZIP 为 2,718,301,174 字节，平台记录 SHA256 为 `759f8b5aca80714b9b40515b7984baab89716bc0e12abc2c871661ca25888f0d`；它与内层产品 ZIP 是两个不同文件，摘要不可互换。
+- [轻量证据 artifact 14993523793](https://github.com/jsdfhasuh/python_build_scripts/actions/runs/45544329988/artifacts/14993523793)：下载 ZIP 为 2,733,944 字节，SHA256 为 `2d485ea4695fe3f18414f30aec5a8b81aa34c39e4d4e8801f104e8c6115dff98`。包含构建记录、依赖安装及测试证据、`archive-members.json`、冻结检查、逐样本数值和重载报告。
+
+完整包仍是 `publishable: false` 的诊断产物，不能因两套冻结检查 `PASS` 而称为正式发布包。
 
 ## 首次生产路径实测
 
@@ -114,8 +222,9 @@ A/B 初始均未加载 `MSVCP140.dll`，`preload_failures` 均为空。两组使
 
 生产修复限定为 Windows 冻结 DINO 入口在 Qt 初始化前，以绝对路径预载已有的
 `app/_internal/msvcp140.dll`，继续避免导入 Torch Python，并跳过原有四项 Torch native 预载。
-**A/B 通过是 DLL 加载根因与修复方向证据；正式 hook 修复后的 DINO worker、CPU 数值和
-完整冻结验收仍待新的完整构建，不提前标为 PASS，也不改写 673273a 的历史失败。**
+A/B 通过是 DLL 加载根因与修复方向证据；正式 hook 修复后的新包结果见文首
+`a63f320` 完整构建节。该新包的 DINO inspect、CNN 人工 CKPT 数值与重载结果独立绑定
+新构建身份，不改写 `673273a` 的历史失败，也不扩大为 DINO 模型推理或完整产品验收。
 
 ## 真实体积与发布边界
 
@@ -124,12 +233,17 @@ A/B 初始均未加载 `MSVCP140.dll`，`preload_failures` 均为空。两组使
 | 旧 v1.0.39 完整 ZIP | 2,127,212,894 |
 | f8 首次构建 45524514970 的 ZIP | 2,715,520,634 |
 | 673 重跑 45532992462 的 ZIP | 2,715,519,943 |
+| a63 修复后 45544329988 的 ZIP | 2,715,516,448 |
 | 既有发布资产上限 | 2,147,483,647 |
 | 673 重跑超出 | 568,036,296 |
 | 673 与旧版 ZIP 差额 | 588,307,049 |
+| a63 修复后超出 | 568,032,801 |
+| a63 与旧版 ZIP 差额 | 588,303,554 |
 
-两次 CP312 构建实际使用 ZIP/LZMA、最高压缩等级和 256 MiB 字典。673 包需要减少
-20.918% 才能满足既有上限。旧版本只剩 20,270,753 字节余量。
+以上三次 CP312 构建实际使用 ZIP/LZMA、最高压缩等级和 256 MiB 字典。
+673 历史包与 a63 新包均需减少约 20.918% 才能满足既有上限。
+旧版本只剩 20,270,753 字节余量。以下历史分析明确按原构建区分，不能把 673 的逐成员
+统计直接标作 a63 实测。
 
 ### 首次构建的原始体积比较
 
@@ -152,7 +266,7 @@ Torch 占 app 原始增量的 93.06%。模型目录中的 13 个文件与旧版�
 
 这些原始字节统计与以下实际压缩统计使用不同分母，不能混用。
 
-### 旧新 ZIP 逐成员压缩实测
+### 历史 673 与旧版 ZIP 逐成员压缩实测
 
 [旧 v1.0.39 发布包](https://github.com/jsdfhasuh/emo-vision-train-release/releases/tag/v1.0.39)
 的构建 ID 为 `20261120T063559Z-c2865e86f235`。旧包使用真实 ZIP central directory
@@ -180,14 +294,36 @@ Torch/lib 和 CUDA/NVIDIA 子集均包含在 Torch 中，不能叠加求和。To
 大小减少 19,764,736 字节，实际压缩负载却增加 42,689,396 字节，也说明原始体积不能
 用于推导压缩收益。当前未实施模型/CUDA 拆包、外置安装、更新协议变化或依赖版本降级。
 
-## 正式修复后的待验证项
+### a63 新包的逐成员压缩复核
 
-新的完整构建需重新记录修复提交、工具链、build ID、ZIP SHA/大小，并分别运行已有的
-启动观察、DINO worker、CPU schema、人工原生 CKPT 导出/数值比较/最终图重载检查。
-新的结果必须绑定新的实际产物；本记录的 673273a CPU 成功与 A/B 原生加载成功不替代
-修复后产物的正式验收。
+按本次 artifact 的 `archive-members.json` 使用相同的路径归一化方法重新汇总，
+新包相对 673 只减少 **3,495 字节**，相对旧 v1.0.39 仍增加 **588,303,554 字节**。
+下面列出的目录压缩负载与 673 的对应统计相同；这不表示整个 ZIP 或全部依赖相同。
 
-发布与 stage 继续遵守 2,147,483,647 字节上限；超限诊断保留仍使原构建失败，不生成
-可发布摘要、不上传 Release。DINO 初始化修复和发布体积是两项独立问题。
-真实业务模型、GPU、交互式 GUI、GUI 正常退出、训练和断电更新等未执行或未观察到的项目，
-继续按各自实际状态记录，不填写为完整产品验收通过。
+| 分组 | 旧压缩字节 | a63 压缩字节 | 增量 |
+| --- | ---: | ---: | ---: |
+| Torch | 1,274,783,032 | 1,842,001,613 | +567,218,581 |
+| 其中 Torch/lib | 1,266,687,343 | 1,832,806,218 | +566,118,875 |
+| 模型目录 13 个文件 | 396,641,352 | 396,641,352 | 0 |
+| ONNX Runtime | 97,240,288 | 97,246,299 | +6,011 |
+| PyQt5 | 79,077,996 | 79,077,583 | −413 |
+| Transformers 文件目录 | 0 | 8,155,932 | +8,155,932 |
+
+Torch/lib 包含在 Torch 中，不能叠加求和。Torch 压缩负载增量占新旧 ZIP 总增量的
+**96.4160%**。新包超限 **568,032,801 字节（约 541.718 MiB）**。即使按成员数据扣除
+整个模型目录的 396,641,352 压缩字节，仍超限 **171,391,449 字节**；即使再假设全部 ZIP
+结构开销为零，仍超限 **167,576,387 字节**。这些是基于实际压缩成员的反事实算术，
+不是删除资源后的重建实测，也没有实施拆包或修改更新协议。
+
+## 仍未覆盖的验收与发布边界
+
+正式修复后的 `a63f320` 完整构建已重新记录提交、工具链、build ID、ZIP SHA/大小，
+并完成上述启动观察、DINO inspect、CPU schema、人工原生 CKPT 导出/数值比较/最终图
+重载。结论绑定该次实际产物，不能转移到后续改变二进制、依赖或拆包方式的新构建。
+
+发布与 stage 继续遵守 2,147,483,647 字节上限；本次超限 **568,032,801 字节**。
+诊断保留仍使原构建失败，不生成可发布摘要、不上传 Release。DINO 初始化修复和发布
+体积是两项独立问题；本轮没有实施模型/CUDA 拆包、外置安装、更新协议变化或依赖降级。
+真实业务模型、DINO 模型推理、GPU、完整交互式 GUI、产品 UI 模型导入、训练和断电更新
+保持 `NOT_RUN`；GUI 就绪与正常退出保持 `NOT_OBSERVED`。这些项目没有因当前限定范围的
+冻结检查通过而变为完整产品验收通过。本轮未合并 PR，也未发布 Release。

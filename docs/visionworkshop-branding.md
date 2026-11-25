@@ -5,6 +5,13 @@
 基础配置为 `configs/emo-vision-train.json`；只有显式选择外观时才加载 `profiles/visionworkshop.json`。
 应用源码的 `pyinstaller_config.json` 不参与此向导的配置合并。
 
+当前 CP312 实测（2026-11-25）：打包器 `a63f320` 的完整构建已通过 DINO worker
+启动与环境 inspect，以及真实冻结 CNN 人工 CKPT 导出、CPU 数值比较和新进程重载。
+完整 ZIP 为 2,715,516,448 字节，超出既有单资产上限 568,032,801 字节，因此构建仍为
+`blocked-size`，没有发布 Release。DINO 模型推理、业务模型、训练、GPU、完整交互 GUI
+和断电更新等未验收；完整身份与限定范围见
+[CP312 生产构建验证](evidence/visionworkshop-cp312-production-validation.md)。
+
 ## 布局与迁移
 
 ```text
@@ -152,8 +159,10 @@ Windows 冻结入口为 `--dino-onnx-worker` 时，自定义 runtime hook 在 Qt
 已有的 `msvcp140.dll`，防止 Qt 目录中的旧同名运行库先占据加载结果。该分支仍不导入
 Torch Python，也不执行原有四项 Torch native 预载；缺失或加载错误沿用既有 debug 日志
 规则，不自动改用 Qt/System32 副本，不替换 DLL、依赖版本或安装身份记录。
-复用原包的 A/B 已证实加载顺序影响 ORT 初始化；正式 hook 修复后的冻结验收仍待新构建，
-不能把原生 DLL 加载通过当成 DINO worker 或模型推理已通过。
+复用原包的 A/B 已证实加载顺序影响 ORT 初始化。正式 hook 修复后，`a63f320` 新包的
+冻结 DINO inspect 退出码为 0，debug 日志记录根目录 MSVCP 预载成功，
+`training_modules_imported` 为空。该结果覆盖 worker 启动与 CPU 环境检查；DINO 模型
+推理仍为 `NOT_RUN`，不能把 inspect 通过当作模型推理验收。
 
 P4 DINO 核心的 Transformers、Hub、tokenizers 版本由 CI runtime profile 统一约束，
 其模型模块和版本元数据显式进入冻结包。编译前会构造不下载权重的 encoder，验证 CPU
@@ -174,13 +183,21 @@ EXE 导出完整 ONNX、比较分数/异常图/阈值判断，并在新冻结进
 冻结 EXE 执行。人工 memory bank 和图片验证软件通路，不代表训练、业务模型或 GPU
 验收。诊断报告不改写原构建摘要，也不免除原有发布大小限制。
 
-历史 `673273a` 产物已通过真实冻结 CNN 人工 CKPT 数值与最终图重载，DINO worker 则在
-ORT 原生绑定初始化时失败。launcher 观察到创建窗口阶段，但 GUI 正常退出未观察到，
-使用了隔离进程清理。该完整 ZIP 为 2,715,519,943 字节，仍不可发布；相对旧包的压缩
-增量主要来自 Torch，模型目录中的 13 个文件（包含许可证和说明）压缩负载没有增长。
-构建身份、逐样本误差、DLL A/B 对照、真实压缩字节比较和正式修复后的待测边界统一记录在
-[CP312 生产构建验证](evidence/visionworkshop-cp312-production-validation.md)，后续结果按新的
-构建身份追加，业务模型、训练和 GPU 等未执行项保持明确标记。
+最终完整构建 [45544329988](https://github.com/jsdfhasuh/python_build_scripts/actions/runs/45544329988)
+直接绑定打包器 `a63f320f86ca6dbfaf48d57afbd9853b8333ddc2` 和应用
+`bb3772003f0b8cbd872d9342a48aa4a82d5bb861`，build ID 为
+`20261125T041832Z-524aee200c44`；后续文档提交不是该产品包的构建提交。
+两套冻结脚本均为 `PASS`，包括本次 DINO inspect 和 CNN 人工 CKPT 数值与最终图重载。
+launcher 仅观察到 `CREATING_WINDOW` 并继续存活 5 秒；GUI 就绪与正常退出均为
+`NOT_OBSERVED`，`close_messages: 0`，随后强制清理。独立 CPU schema smoke 的模型
+数值资格仍为 `PENDING`，不得与已有逐样本比较的 CNN fixture 混为一项。
+
+新完整 ZIP 仍不可发布；原 `673273a` 的 DINO 失败与 MSVCP A/B 诊断保留为历史证据。
+构建身份、证据下载链接、每次独立的逐样本误差与图文件摘要、真实压缩字节比较，以及
+未覆盖的产品验收范围统一记录在
+[CP312 生产构建验证](evidence/visionworkshop-cp312-production-validation.md)。
+本次未实施模型/CUDA 拆包、外置安装或更新协议变化；业务模型、DINO 模型推理、训练、
+GPU、完整交互 GUI、产品 UI 模型导入和断电更新等未执行项保持 `NOT_RUN`。
 
 外部仓库：`python -m unittest discover -s tests -v`。
 应用仓库：`python scripts/verify_update_windows.py` 干净编译测试应用与真实更新器，执行连续更新及
