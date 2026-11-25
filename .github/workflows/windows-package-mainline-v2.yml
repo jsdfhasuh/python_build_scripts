@@ -9,7 +9,7 @@ permissions:
   contents: read
 jobs:
   windows:
-    if: github.repository == 'jsdfhasuh/emo_master_ci' && github.repository_id == '1468905732' && github.ref == 'refs/heads/dot/windows-package-v2-20261124'
+    if: github.repository == 'jsdfhasuh/emo_master_ci' && github.repository_id == '1468905732' && github.event_name == 'push' && github.ref == 'refs/heads/dot/mainline-ci-migration-20261124'
     runs-on: windows-latest
     timeout-minutes: 90
     strategy:
@@ -36,7 +36,7 @@ jobs:
           $tool = Join-Path $env:RUNNER_TEMP 'emo-age'
           Expand-Archive $zip $tool
       - name: Checkout packager
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: jsdfhasuh/python_build_scripts
           ref: e0204fe6fe83b0f31818d88e4f296c70e230d172
@@ -49,7 +49,7 @@ jobs:
         working-directory: packager
         env:
           TARGET: ${{ matrix.target }}
-          SOURCE_REF: 5b08d7455b665ba1ac83f46890c83194bc92014f
+          SOURCE_REF: e1c19fcdbbee523b51c34ece905d45152033dfda
           RELEASE_TAG: v0.6.6
           RELEASE_REPO_INPUT: jsdfhasuh/emo_master
         run: |
@@ -119,10 +119,10 @@ jobs:
           Add-Content -Path $env:GITHUB_OUTPUT -Value "inno_version=$innoVersion"
 
       - name: Checkout source
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: jsdfhasuh/emo_master
-          ref: 5b08d7455b665ba1ac83f46890c83194bc92014f
+          ref: e1c19fcdbbee523b51c34ece905d45152033dfda
           path: source
           submodules: recursive
           fetch-depth: 0
@@ -133,7 +133,7 @@ jobs:
         shell: pwsh
         env:
           SOURCE_REPO: ${{ steps.config.outputs.source_repo }}
-          REQUESTED_SOURCE_REF: 5b08d7455b665ba1ac83f46890c83194bc92014f
+          REQUESTED_SOURCE_REF: e1c19fcdbbee523b51c34ece905d45152033dfda
           REQUESTED_PACKAGER_REF: e0204fe6fe83b0f31818d88e4f296c70e230d172
           PUBLISH_RELEASE_INPUT: 'false'
         run: |
@@ -162,7 +162,7 @@ jobs:
           Add-Content $env:GITHUB_OUTPUT "packager_sha=$($packagerSha.Trim())"
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
         with:
           python-version: ${{ steps.config.outputs.python_version }}
 
@@ -271,7 +271,7 @@ jobs:
               $sourceRoot = Join-Path $env:GITHUB_WORKSPACE 'source'
               $outputDirectory = Join-Path $env:GITHUB_WORKSPACE 'packager/release-output'
               New-Item -ItemType Directory $outputDirectory -Force | Out-Null
-              .\scripts\publish-local-release.ps1 -Target '${{ matrix.target }}' -ReleaseTag v0.6.6 -ReleaseRepo jsdfhasuh/emo_master -SourceRoot $sourceRoot -SourceRef 5b08d7455b665ba1ac83f46890c83194bc92014f -OutputDirectory $outputDirectory -BuildOnly
+              .\scripts\publish-local-release.ps1 -Target '${{ matrix.target }}' -ReleaseTag v0.6.6 -ReleaseRepo jsdfhasuh/emo_master -SourceRoot $sourceRoot -SourceRef e1c19fcdbbee523b51c34ece905d45152033dfda -PreviousSourceRef e1c19fcdbbee523b51c34ece905d45152033dfda -OutputDirectory $outputDirectory -BuildOnly
             } *> $log
           } catch {
             $_ | Out-String | Add-Content -LiteralPath $log
@@ -371,12 +371,35 @@ jobs:
         run: |
           $dir = Join-Path $env:RUNNER_TEMP 'package-private-logs'
           New-Item -ItemType Directory $dir -Force | Out-Null
-          Set-Content -LiteralPath (Join-Path $dir 'capture-status.txt') -Value 'V2 pilot; inspect the GitHub job conclusion independently.'
+          $stage = Join-Path $env:RUNNER_TEMP 'package-bounded-logs'
+          New-Item -ItemType Directory -Path $stage | Out-Null
+          $names = @('capture-status.txt')
+          Set-Content -LiteralPath (Join-Path $stage $names[0]) -Value 'V2 pilot; inspect the GitHub job conclusion independently.'
+          foreach ($i in 1..7) {
+            $name = "phase-$i.log"
+            $path = Join-Path $dir $name
+            if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { continue }
+            $src = Get-Item -LiteralPath $path
+            if ($src.LinkType -or $src.Attributes.HasFlag([IO.FileAttributes]::ReparsePoint)) { throw 'Invalid diagnostic log' }
+            if ($src.Length -eq 0) { continue }
+            $reader = [IO.File]::OpenRead($src.FullName)
+            try {
+              $max = 256KB
+              $reader.Position = [Math]::Max(0, $reader.Length - $max)
+              $writer = [IO.File]::Open((Join-Path $stage $name), [IO.FileMode]::CreateNew)
+              try {
+                $buffer = New-Object byte[] $max
+                $read = $reader.Read($buffer, 0, $max)
+                $writer.Write($buffer, 0, $read)
+              } finally { $writer.Dispose() }
+            } finally { $reader.Dispose() }
+            $names += $name
+          }
           $tar = Join-Path $env:RUNNER_TEMP 'emo-diagnostics.tar'
           $out = Join-Path $env:RUNNER_TEMP 'emo-diagnostics.tar.age'
           $age = Join-Path $env:RUNNER_TEMP 'emo-age/age/age.exe'
           try {
-            tar.exe -cf $tar -C $dir . *> $null
+            tar.exe -cf $tar -C $stage @names *> $null
             if ($LASTEXITCODE -ne 0) { throw 'Diagnostics archive failed' }
             & $age -r $env:AGE_RECIPIENT -o $out $tar *> $null
             if ($LASTEXITCODE -ne 0) { throw 'Diagnostics encryption failed' }
