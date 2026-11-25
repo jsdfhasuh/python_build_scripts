@@ -91,21 +91,27 @@ Actions 公开资产暂存步骤在共享发布入口成功返回后执行；发
 
 ### CI GPU 依赖检查
 
-Vision Train 使用 `ci/vision-train-runtime.json` 的独立 CI 依赖配置。源码依赖文件、
-目标 JSON、现有运行时 hook 和 Master 安装流程不变。CI 在临时目录合并源码依赖、
-目标补充依赖与以下明确覆盖，然后由 pip 一次解析，失败就停止：
+Vision Train 使用 `ci/vision-train-runtime.json` 的统一 CPython 3.12.10 依赖配置。
+Actions 先创建独立 venv，prepare、依赖安装、build 和 stage 均使用同一解释器，
+避免 runner 预装工具进入产品依赖检查。CI 在临时目录合并源码依赖、目标补充依赖与
+以下明确覆盖，不改写源码 requirements；解析或检查失败就停止后续构建：
 
-- Torch 2.5.1、TorchVision 0.20.1、TorchAudio 2.5.1 使用官方 cu121 构建。
+- Torch 2.10.0、TorchVision 0.25.0、TorchAudio 2.10.0 使用官方 cu128 构建。
 - 补齐 Polars、Anomalib、Kornia、Lightning、Timm 和视频依赖。
 - Kaggle 固定 2.2.4，KaggleSDK 覆盖为 0.1.37，避免旧 0.1.31 缺少 API 类型。
-- platformdirs 覆盖为 4.10.0，满足 Anomalib；imagecodecs 固定 2025.3.30，
-  保留源码 NumPy <= 1.26.4 约束，不升级到 NumPy 2。
+- NumPy 固定 2.0.2、SymPy 1.14.0、lapx 0.5.9.post1；platformdirs 固定 4.10.0，
+  imagecodecs 固定 2025.3.30。
+- P4 DINO 核心使用 Transformers 4.46.3、Hugging Face Hub 0.26.5、tokenizers 0.20.3、
+  safetensors 0.8.0，覆盖源码中不匹配的旧 Hub/tokenizers 约束。
+- 目标配置的 `runtime_excludes` 仅排除 Qt Designer 开发工具：pyqt5-tools、pyqt5-plugins、
+  qt5-tools、qt5-applications。PyQt5、Qt5、sip 和 PyQtWebEngine 运行库仍正常安装。
 - 最后重装相同版本的 ONNX Runtime GPU 与 OpenCV contrib 二进制包，防止共享
   导入路径被 CPU/非 contrib 包覆盖；随后必须通过 `pip check`。
 
 Actions 的共享入口强制传入 `--verify-vision-train-runtime`：编译前验证 GPU 构建版本、
-关键功能导入和 Git 中自带模型；编译后、压缩和任何发布前读取主 EXE 的 PYZ 模块表，
-验证 Polars 原生扩展、CUDA/cuDNN 文件及 PE 导入依赖。缺模块或缺 DLL 即失败。
+关键功能导入、P4 DINO encoder 的 CPU 小张量计算和必需模型资源；编译后、压缩和任何
+发布前读取主 EXE 的 PYZ 模块表，验证 Polars 原生扩展、CUDA/cuDNN 文件、PE 导入依赖和
+P4 的精确版本元数据。缺模块、缺 DLL 或版本不匹配即失败。
 运行时配置也计入构建输入指纹，公开摘要记录检查结果。
 
 这些检查不要求 runner 有显卡，不以 `torch.cuda.is_available()` 为通过条件。

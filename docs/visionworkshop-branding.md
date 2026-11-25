@@ -5,6 +5,13 @@
 基础配置为 `configs/emo-vision-train.json`；只有显式选择外观时才加载 `profiles/visionworkshop.json`。
 应用源码的 `pyinstaller_config.json` 不参与此向导的配置合并。
 
+当前 CP312 实测（2026-11-25）：打包器 `a63f320` 的完整构建已通过 DINO worker
+启动与环境 inspect，以及真实冻结 CNN 人工 CKPT 导出、CPU 数值比较和新进程重载。
+完整 ZIP 为 2,715,516,448 字节，超出既有单资产上限 568,032,801 字节，因此构建仍为
+`blocked-size`，没有发布 Release。DINO 模型推理、业务模型、训练、GPU、完整交互 GUI
+和断电更新等未验收；完整身份与限定范围见
+[CP312 生产构建验证](evidence/visionworkshop-cp312-production-validation.md)。
+
 ## 布局与迁移
 
 ```text
@@ -59,7 +66,10 @@ The `rfc3987_syntax` grammar data is collected for frozen `nbformat`/Kaggle conv
 The target-only analysis hook delegates to the upstream Torch hook and collects its
 submodules as inspectable `.py` files without duplicate PYZ copies. The small Torch package
 initializer remains in PYZ, preserving the existing frozen-runtime admission gate.
-Runtime hooks are unchanged; do not remove CUDA DLLs or model files manually from a build.
+The Windows DINO worker runtime hook explicitly preloads the bundled runtime-root
+`msvcp140.dll` before Qt initialization. This narrow load-order fix keeps the DINO branch
+free of Torch Python imports and the four existing Torch native preloads; other entrypoints
+retain their existing behavior. Do not remove CUDA DLLs or model files manually from a build.
 
 `zip_lzma_dictionary_mib` selects 64, 128 or 256 MiB; the default for other targets remains
 64 MiB. Vision Train selects 256 MiB with Unicode ZIP/LZMA and the existing single-thread
@@ -139,11 +149,55 @@ Pillow 的包元数据；完整运行时包检查要求 DINO 文件和这些元�
 请使用包含此脚本的应用源码版本。预览、notes-only、显式记录重归档不运行准备脚本。
 重归档仍按原构建记录校验输入和产物，不补写旧包中的权重。
 
-独立 DINO 运行时目录 `dino_runtime` 由准备脚本生成，不进入 Git。
-配置通过 `generated_data_paths: ["dino_runtime"]` 显式声明该生成资源。
-品牌构建和便携发布的 dry-run 允许声明中与 `add_data` 源路径完全匹配的目录暂时缺失，
-但仍检查准备脚本、源码目录边界及其他普通资源；预览不会执行准备脚本或创建占位目录。
-正式构建先准备资源，再严格检查所有 `add_data` 源路径，检查通过后才生成输入快照并编译。
+当前 DINO ONNX worker 与桌面应用共用 CPython 3.12 主运行时，由同一主 EXE 启动独立
+worker 进程；安装包不再包含第二套 `dino_runtime` Python 环境。worker 允许主环境安装
+Torch，但自身不得导入训练模块。冻结检查要求 `python312.dll`、ONNX Runtime 原生绑定、
+worker 模块及依赖元数据齐全，并拒绝误带旧的 `dino_runtime` 目录。
+
+Windows 冻结入口为 `--dino-onnx-worker` 时，自定义 runtime hook 在 Qt 相关初始化前，
+通过绝对路径和 `winmode=0x1100` 预载冻结运行时根目录（本布局为 `app/_internal`）
+已有的 `msvcp140.dll`，防止 Qt 目录中的旧同名运行库先占据加载结果。该分支仍不导入
+Torch Python，也不执行原有四项 Torch native 预载；缺失或加载错误沿用既有 debug 日志
+规则，不自动改用 Qt/System32 副本，不替换 DLL、依赖版本或安装身份记录。
+复用原包的 A/B 已证实加载顺序影响 ORT 初始化。正式 hook 修复后，`a63f320` 新包的
+冻结 DINO inspect 退出码为 0，debug 日志记录根目录 MSVCP 预载成功，
+`training_modules_imported` 为空。该结果覆盖 worker 启动与 CPU 环境检查；DINO 模型
+推理仍为 `NOT_RUN`，不能把 inspect 通过当作模型推理验收。
+
+P4 DINO 核心的 Transformers、Hub、tokenizers 版本由 CI runtime profile 统一约束，
+其模型模块和版本元数据显式进入冻结包。编译前会构造不下载权重的 encoder，验证 CPU
+特征形状；这不改变应用已有的 P4 开发入口边界，也不代表完成真实模型或 GPU 验收。
+
+非发布构建的 ZIP 超过现有单资产上限时，构建仍失败，不生成可交付的
+`build-summary.json`，也不导出或暂存发布资产。只有 ZIP 完整内容、构建记录和归档
+SHA-256 复查均通过时，才在输出目录的 `diagnostics/` 中保留超限 ZIP、
+`oversize-archive.json` 和 `archive-members.json`。这些文件用于诊断和独立冻结验收；
+`publishable: false` 与 `status: blocked-size` 不得改写为发布通过。
+
+实际冻结包可分别运行 `scripts/verify_vision_train_frozen.py` 和
+`scripts/verify_vision_train_patchcore_frozen.py`，两者均要求 `--zip`、`--source-root`
+及全新的 `--output` 目录，并将 ZIP 内源码身份与 checkout 核对。前者观察启动器、DINO
+worker 和 ONNX CPU schema；后者通过独立进程生成明确标注的人工 CKPT，使用真实冻结
+EXE 导出完整 ONNX、比较分数/异常图/阈值判断，并在新冻结进程中重载最终图文件。
+后者的 `--fixture-python` 可指定隔离的 CP312 夹具解释器；实际导出与 ORT 推理均由
+冻结 EXE 执行。人工 memory bank 和图片验证软件通路，不代表训练、业务模型或 GPU
+验收。诊断报告不改写原构建摘要，也不免除原有发布大小限制。
+
+最终完整构建 [45544329988](https://github.com/jsdfhasuh/python_build_scripts/actions/runs/45544329988)
+直接绑定打包器 `a63f320f86ca6dbfaf48d57afbd9853b8333ddc2` 和应用
+`bb3772003f0b8cbd872d9342a48aa4a82d5bb861`，build ID 为
+`20261125T041832Z-524aee200c44`；后续文档提交不是该产品包的构建提交。
+两套冻结脚本均为 `PASS`，包括本次 DINO inspect 和 CNN 人工 CKPT 数值与最终图重载。
+launcher 仅观察到 `CREATING_WINDOW` 并继续存活 5 秒；GUI 就绪与正常退出均为
+`NOT_OBSERVED`，`close_messages: 0`，随后强制清理。独立 CPU schema smoke 的模型
+数值资格仍为 `PENDING`，不得与已有逐样本比较的 CNN fixture 混为一项。
+
+新完整 ZIP 仍不可发布；原 `673273a` 的 DINO 失败与 MSVCP A/B 诊断保留为历史证据。
+构建身份、证据下载链接、每次独立的逐样本误差与图文件摘要、真实压缩字节比较，以及
+未覆盖的产品验收范围统一记录在
+[CP312 生产构建验证](evidence/visionworkshop-cp312-production-validation.md)。
+本次未实施模型/CUDA 拆包、外置安装或更新协议变化；业务模型、DINO 模型推理、训练、
+GPU、完整交互 GUI、产品 UI 模型导入和断电更新等未执行项保持 `NOT_RUN`。
 
 外部仓库：`python -m unittest discover -s tests -v`。
 应用仓库：`python scripts/verify_update_windows.py` 干净编译测试应用与真实更新器，执行连续更新及

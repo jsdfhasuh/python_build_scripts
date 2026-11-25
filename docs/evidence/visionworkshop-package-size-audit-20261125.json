@@ -1,0 +1,1222 @@
+{
+  "source": {
+    "build_id": "20261125T041832Z-524aee200c44",
+    "run_id": 45544329988,
+    "artifact_id": 14993523793,
+    "member_report": "archive-members.json",
+    "zip_bytes": 2715516448,
+    "raw_bytes": 6371667282,
+    "total_compressed_member_bytes": 2711701386,
+    "app_sha": "bb3772003f0b8cbd872d9342a48aa4a82d5bb861",
+    "tested_packager_sha": "a63f320f86ca6dbfaf48d57afbd9853b8333ddc2",
+    "zip_sha256": "186b9c02076b02c017f0e84203740d53bff8efa1b820da6cb4a32503b653ae90",
+    "evidence_url": "https://github.com/jsdfhasuh/python_build_scripts/actions/runs/45544329988/artifacts/14993523793"
+  },
+  "nonoverlapping_breakdown": [
+    {
+      "category": "Torch GPU/CUDA DLLs (filename classified)",
+      "files": 27,
+      "compressed_bytes": 1780413175,
+      "compressed_MiB": 1697.9343175888062,
+      "raw_bytes": 4099215808,
+      "share_of_product_zip_pct": 65.56444083817975
+    },
+    {
+      "category": "Bundled model weights and licenses",
+      "files": 13,
+      "compressed_bytes": 396641352,
+      "compressed_MiB": 378.2666702270508,
+      "raw_bytes": 441545473,
+      "share_of_product_zip_pct": 14.606479452265134
+    },
+    {
+      "category": "Three application EXEs",
+      "files": 3,
+      "compressed_bytes": 131088061,
+      "compressed_MiB": 125.0153169631958,
+      "raw_bytes": 131627737,
+      "share_of_product_zip_pct": 4.827371275786137
+    },
+    {
+      "category": "ORT CUDA/TensorRT provider DLLs",
+      "files": 2,
+      "compressed_bytes": 88523212,
+      "compressed_MiB": 84.42231369018555,
+      "raw_bytes": 367069280,
+      "share_of_product_zip_pct": 3.2599033625886547
+    },
+    {
+      "category": "Qt/PyQt5",
+      "files": 1560,
+      "compressed_bytes": 79077583,
+      "compressed_MiB": 75.4142599105835,
+      "raw_bytes": 255233027,
+      "share_of_product_zip_pct": 2.912064224771729
+    },
+    {
+      "category": "Torch other files (not a validated CPU build)",
+      "files": 2144,
+      "compressed_bytes": 61588438,
+      "compressed_MiB": 58.73531150817871,
+      "raw_bytes": 331001157,
+      "share_of_product_zip_pct": 2.2680193318423973
+    },
+    {
+      "category": "Other files",
+      "files": 8510,
+      "compressed_bytes": 49082182,
+      "compressed_MiB": 46.80841636657715,
+      "raw_bytes": 197192042,
+      "share_of_product_zip_pct": 1.8074713572863617
+    },
+    {
+      "category": "Scientific/image/data stack",
+      "files": 824,
+      "compressed_bytes": 41321388,
+      "compressed_MiB": 39.40714645385742,
+      "raw_bytes": 168184042,
+      "share_of_product_zip_pct": 1.5216769550570588
+    },
+    {
+      "category": "OpenCV",
+      "files": 14,
+      "compressed_bytes": 29552357,
+      "compressed_MiB": 28.183323860168457,
+      "raw_bytes": 118023452,
+      "share_of_product_zip_pct": 1.0882775916075025
+    },
+    {
+      "category": "Polars native runtime",
+      "files": 1,
+      "compressed_bytes": 25458725,
+      "compressed_MiB": 24.279332160949707,
+      "raw_bytes": 158973440,
+      "share_of_product_zip_pct": 0.9375279247065713
+    },
+    {
+      "category": "PyAV/media native libraries",
+      "files": 73,
+      "compressed_bytes": 20231826,
+      "compressed_MiB": 19.294572830200195,
+      "raw_bytes": 68566016,
+      "share_of_product_zip_pct": 0.7450452386285822
+    },
+    {
+      "category": "ORT core/shared files",
+      "files": 3,
+      "compressed_bytes": 8723087,
+      "compressed_MiB": 8.318984031677246,
+      "raw_bytes": 35035808,
+      "share_of_product_zip_pct": 0.3212312341700093
+    },
+    {
+      "category": "ZIP headers/central directory/other structure",
+      "files": null,
+      "compressed_bytes": 3815062,
+      "compressed_MiB": 3.638326644897461,
+      "raw_bytes": null,
+      "share_of_product_zip_pct": 0.1404912131101185
+    }
+  ],
+  "largest_20_files": [
+    {
+      "compressed_size": 370276594,
+      "is_directory": false,
+      "path": "VisionWorkshop/app/_internal/torch/lib/cublasLt64_12.dll",
+      "size": 674667520,
+      "p": "app/_internal/torch/lib/cublasLt64_12.dll"
+    },
+    {
+      "compressed_size": 316280724,
+      "is_directory": false,
+      "path": "VisionWorkshop/app/_internal/torch/lib/torch_cuda.dll",
+      "size": 908187136,
+      "p": "app/_internal/torch/lib/torch_cuda.dll"
+    },
+    {
+      "compressed_size": 248192886,
+      "is_directory": false,
+      "path": "VisionWorkshop/app/_internal/static/models/patchcore_wide_resnet50_2.racm_in1k.safetensors",
+      "size": 275835296,
+      "p": "app/_internal/static/models/patchcore_wide_resnet50_2.racm_in1k.safetensors"
+    },
+    {
+      "compressed_size": 232036256,
+      "is_directory": false,
+      "path": "VisionWorkshop/app/_internal/torch/lib/cudnn_engines_precompiled64_9.dll",
+      "size": 513926688,
+      "p": "app/_internal/torch/lib/cudnn_engines_precompiled64_9.dll"
+    },
+    {
+      "compressed_size": 157193910,
+      "is_directory": false,
+      "path": "VisionWorkshop/app/_internal/torch/lib/cusparse64_12.dll",
+      "size": 379535872,
+      "p": "app/_internal/torch/lib/cusparse64_12.dll"
+    },
+    {
+      "compressed_size": 142445962,
+      "is_directory": false,
+      "path": "VisionWorkshop/app/_internal/torch/lib/cufft64_11.dll",
+      "size": 276121600,
+      "p": "app/_internal/torch/lib/cufft64_11.dll"
+    },
+    {
+      "compressed_size": 133861306,
+      "is_directory": false,
+      "path": "VisionWorkshop/app/_internal/torch/lib/cudnn_adv64_9.dll",
+      "size": 282445872,
+      "p": "app/_internal/torch/lib/cudnn_adv64_9.dll"
+    },
+    {
+      "compressed_size": 93158730,
+      "is_directory": false,
+      "path": "VisionWorkshop/app/_internal/torch/lib/cusolver64_11.dll",
+      "size": 225683456,
+      "p": "app/_internal/torch/lib/cusolver64_11.dll"
+    },
+    {
+      "compressed_size": 88276598,
+      "is_directory": false,
+      "path": "VisionWorkshop/app/_internal/onnxruntime/capi/onnxruntime_providers_cuda.dll",
+      "size": 366219296,
+      "p": "app/_internal/onnxruntime/capi/onnxruntime_providers_cuda.dll"
+    },
+    {
+      "compressed_size": 80616076,
+      "is_directory": false,
+      "path": "VisionWorkshop/app/_internal/static/models/image_simplification/dinov2_vits14/model.safetensors",
+      "size": 88240510,
+      "p": "app/_internal/static/models/image_simplification/dinov2_vits14/model.safetensors"
+    },
+    {
+      "compressed_size": 79329649,
+      "is_directory": false,
+      "path": "VisionWorkshop/app/VisionWorkshopApp.exe",
+      "size": 79609803,
+      "p": "app/VisionWorkshopApp.exe"
+    },
+    {
+      "compressed_size": 68123534,
+      "is_directory": false,
+      "path": "VisionWorkshop/app/_internal/torch/lib/cudnn_ops64_9.dll",
+      "size": 126508576,
+      "p": "app/_internal/torch/lib/cudnn_ops64_9.dll"
+    },
+    {
+      "compressed_size": 63387431,
+      "is_directory": false,
+      "path": "VisionWorkshop/app/_internal/torch/lib/cublas64_12.dll",
+      "size": 113716224,
+      "p": "app/_internal/torch/lib/cublas64_12.dll"
+    },
+    {
+      "compressed_size": 55227386,
+      "is_directory": false,
+      "path": "VisionWorkshop/app/_internal/torch/lib/cusolverMg64_11.dll",
+      "size": 157071360,
+      "p": "app/_internal/torch/lib/cusolverMg64_11.dll"
+    },
+    {
+      "compressed_size": 47560136,
+      "is_directory": false,
+      "path": "VisionWorkshop/app/_internal/torch/lib/torch_cpu.dll",
+      "size": 265089024,
+      "p": "app/_internal/torch/lib/torch_cpu.dll"
+    },
+    {
+      "compressed_size": 46060034,
+      "is_directory": false,
+      "path": "VisionWorkshop/app/_internal/torch/lib/curand64_10.dll",
+      "size": 71955968,
+      "p": "app/_internal/torch/lib/curand64_10.dll"
+    },
+    {
+      "compressed_size": 42291045,
+      "is_directory": false,
+      "path": "VisionWorkshop/app/VisionWorkshopUpdater.exe",
+      "size": 42403032,
+      "p": "app/VisionWorkshopUpdater.exe"
+    },
+    {
+      "compressed_size": 32961882,
+      "is_directory": false,
+      "path": "VisionWorkshop/app/_internal/PyQt5/Qt5/bin/Qt5WebEngineCore.dll",
+      "size": 102009328,
+      "p": "app/_internal/PyQt5/Qt5/bin/Qt5WebEngineCore.dll"
+    },
+    {
+      "compressed_size": 25458725,
+      "is_directory": false,
+      "path": "VisionWorkshop/app/_internal/_polars_runtime_32/_polars_runtime.pyd",
+      "size": 158973440,
+      "p": "app/_internal/_polars_runtime_32/_polars_runtime.pyd"
+    },
+    {
+      "compressed_size": 25410726,
+      "is_directory": false,
+      "path": "VisionWorkshop/app/_internal/torch/lib/nvrtc64_120_0.alt.dll",
+      "size": 86794240,
+      "p": "app/_internal/torch/lib/nvrtc64_120_0.alt.dll"
+    }
+  ],
+  "torch_gpu_members": [
+    {
+      "compressed_size": 130154,
+      "is_directory": false,
+      "path": "VisionWorkshop/app/_internal/torch/lib/c10_cuda.dll",
+      "size": 398336,
+      "p": "app/_internal/torch/lib/c10_cuda.dll"
+    },
+    {
+      "compressed_size": 7221,
+      "is_directory": false,
+      "path": "VisionWorkshop/app/_internal/torch/lib/caffe2_nvrtc.dll",
+      "size": 17920,
+      "p": "app/_internal/torch/lib/caffe2_nvrtc.dll"
+    },
+    {
+      "compressed_size": 63387431,
+      "is_directory": false,
+      "path": "VisionWorkshop/app/_internal/torch/lib/cublas64_12.dll",
+      "size": 113716224,
+      "p": "app/_internal/torch/lib/cublas64_12.dll"
+    },
+    {
+      "compressed_size": 370276594,
+      "is_directory": false,
+      "path": "VisionWorkshop/app/_internal/torch/lib/cublasLt64_12.dll",
+      "size": 674667520,
+      "p": "app/_internal/torch/lib/cublasLt64_12.dll"
+    },
+    {
+      "compressed_size": 130328,
+      "is_directory": false,
+      "path": "VisionWorkshop/app/_internal/torch/lib/cudart64_12.dll",
+      "size": 573952,
+      "p": "app/_internal/torch/lib/cudart64_12.dll"
+    },
+    {
+      "compressed_size": 99425,
+      "is_directory": false,
+      "path": "VisionWorkshop/app/_internal/torch/lib/cudnn64_9.dll",
+      "size": 266288,
+      "p": "app/_internal/torch/lib/cudnn64_9.dll"
+    },
+    {
+      "compressed_size": 133861306,
+      "is_directory": false,
+      "path": "VisionWorkshop/app/_internal/torch/lib/cudnn_adv64_9.dll",
+      "size": 282445872,
+      "p": "app/_internal/torch/lib/cudnn_adv64_9.dll"
+    },
+    {
+      "compressed_size": 1695084,
+      "is_directory": false,
+      "path": "VisionWorkshop/app/_internal/torch/lib/cudnn_cnn64_9.dll",
+      "size": 4618272,
+      "p": "app/_internal/torch/lib/cudnn_cnn64_9.dll"
+    },
+    {
+      "compressed_size": 232036256,
+      "is_directory": false,
+      "path": "VisionWorkshop/app/_internal/torch/lib/cudnn_engines_precompiled64_9.dll",
+      "size": 513926688,
+      "p": "app/_internal/torch/lib/cudnn_engines_precompiled64_9.dll"
+    },
+    {
+      "compressed_size": 8710801,
+      "is_directory": false,
+      "path": "VisionWorkshop/app/_internal/torch/lib/cudnn_engines_runtime_compiled64_9.dll",
+      "size": 20201008,
+      "p": "app/_internal/torch/lib/cudnn_engines_runtime_compiled64_9.dll"
+    },
+    {
+      "compressed_size": 704006,
+      "is_directory": false,
+      "path": "VisionWorkshop/app/_internal/torch/lib/cudnn_graph64_9.dll",
+      "size": 2420256,
+      "p": "app/_internal/torch/lib/cudnn_graph64_9.dll"
+    },
+    {
+      "compressed_size": 13913961,
+      "is_directory": false,
+      "path": "VisionWorkshop/app/_internal/torch/lib/cudnn_heuristic64_9.dll",
+      "size": 56823328,
+      "p": "app/_internal/torch/lib/cudnn_heuristic64_9.dll"
+    },
+    {
+      "compressed_size": 68123534,
+      "is_directory": false,
+      "path": "VisionWorkshop/app/_internal/torch/lib/cudnn_ops64_9.dll",
+      "size": 126508576,
+      "p": "app/_internal/torch/lib/cudnn_ops64_9.dll"
+    },
+    {
+      "compressed_size": 142445962,
+      "is_directory": false,
+      "path": "VisionWorkshop/app/_internal/torch/lib/cufft64_11.dll",
+      "size": 276121600,
+      "p": "app/_internal/torch/lib/cufft64_11.dll"
+    },
+    {
+      "compressed_size": 71826,
+      "is_directory": false,
+      "path": "VisionWorkshop/app/_internal/torch/lib/cufftw64_11.dll",
+      "size": 163328,
+      "p": "app/_internal/torch/lib/cufftw64_11.dll"
+    },
+    {
+      "compressed_size": 952004,
+      "is_directory": false,
+      "path": "VisionWorkshop/app/_internal/torch/lib/cupti64_2025.1.1.dll",
+      "size": 4483664,
+      "p": "app/_internal/torch/lib/cupti64_2025.1.1.dll"
+    },
+    {
+      "compressed_size": 46060034,
+      "is_directory": false,
+      "path": "VisionWorkshop/app/_internal/torch/lib/curand64_10.dll",
+      "size": 71955968,
+      "p": "app/_internal/torch/lib/curand64_10.dll"
+    },
+    {
+      "compressed_size": 93158730,
+      "is_directory": false,
+      "path": "VisionWorkshop/app/_internal/torch/lib/cusolver64_11.dll",
+      "size": 225683456,
+      "p": "app/_internal/torch/lib/cusolver64_11.dll"
+    },
+    {
+      "compressed_size": 55227386,
+      "is_directory": false,
+      "path": "VisionWorkshop/app/_internal/torch/lib/cusolverMg64_11.dll",
+      "size": 157071360,
+      "p": "app/_internal/torch/lib/cusolverMg64_11.dll"
+    },
+    {
+      "compressed_size": 157193910,
+      "is_directory": false,
+      "path": "VisionWorkshop/app/_internal/torch/lib/cusparse64_12.dll",
+      "size": 379535872,
+      "p": "app/_internal/torch/lib/cusparse64_12.dll"
+    },
+    {
+      "compressed_size": 23138776,
+      "is_directory": false,
+      "path": "VisionWorkshop/app/_internal/torch/lib/nvJitLink_120_0.dll",
+      "size": 77860352,
+      "p": "app/_internal/torch/lib/nvJitLink_120_0.dll"
+    },
+    {
+      "compressed_size": 1716889,
+      "is_directory": false,
+      "path": "VisionWorkshop/app/_internal/torch/lib/nvperf_host.dll",
+      "size": 21641792,
+      "p": "app/_internal/torch/lib/nvperf_host.dll"
+    },
+    {
+      "compressed_size": 284571,
+      "is_directory": false,
+      "path": "VisionWorkshop/app/_internal/torch/lib/nvrtc-builtins64_128.dll",
+      "size": 6356480,
+      "p": "app/_internal/torch/lib/nvrtc-builtins64_128.dll"
+    },
+    {
+      "compressed_size": 25410726,
+      "is_directory": false,
+      "path": "VisionWorkshop/app/_internal/torch/lib/nvrtc64_120_0.alt.dll",
+      "size": 86794240,
+      "p": "app/_internal/torch/lib/nvrtc64_120_0.alt.dll"
+    },
+    {
+      "compressed_size": 25377467,
+      "is_directory": false,
+      "path": "VisionWorkshop/app/_internal/torch/lib/nvrtc64_120_0.dll",
+      "size": 86728192,
+      "p": "app/_internal/torch/lib/nvrtc64_120_0.dll"
+    },
+    {
+      "compressed_size": 18069,
+      "is_directory": false,
+      "path": "VisionWorkshop/app/_internal/torch/lib/nvToolsExt64_1.dll",
+      "size": 48128,
+      "p": "app/_internal/torch/lib/nvToolsExt64_1.dll"
+    },
+    {
+      "compressed_size": 316280724,
+      "is_directory": false,
+      "path": "VisionWorkshop/app/_internal/torch/lib/torch_cuda.dll",
+      "size": 908187136,
+      "p": "app/_internal/torch/lib/torch_cuda.dll"
+    }
+  ],
+  "ort_gpu_members": [
+    {
+      "compressed_size": 88276598,
+      "is_directory": false,
+      "path": "VisionWorkshop/app/_internal/onnxruntime/capi/onnxruntime_providers_cuda.dll",
+      "size": 366219296,
+      "p": "app/_internal/onnxruntime/capi/onnxruntime_providers_cuda.dll"
+    },
+    {
+      "compressed_size": 246614,
+      "is_directory": false,
+      "path": "VisionWorkshop/app/_internal/onnxruntime/capi/onnxruntime_providers_tensorrt.dll",
+      "size": 849984,
+      "p": "app/_internal/onnxruntime/capi/onnxruntime_providers_tensorrt.dll"
+    }
+  ],
+  "model_groups": [
+    {
+      "group": "EdgeSAM",
+      "files": 2,
+      "compressed_bytes": 35503957,
+      "compressed_MiB": 33.859211921691895,
+      "raw_bytes": 40677516,
+      "share_of_product_zip_pct": 1.3074476873873828,
+      "members": [
+        {
+          "compressed_size": 15072535,
+          "is_directory": false,
+          "path": "VisionWorkshop/app/_internal/static/models/edge_sam_decoder.onnx",
+          "size": 18641271,
+          "p": "app/_internal/static/models/edge_sam_decoder.onnx"
+        },
+        {
+          "compressed_size": 20431422,
+          "is_directory": false,
+          "path": "VisionWorkshop/app/_internal/static/models/edge_sam_encoder.onnx",
+          "size": 22036245,
+          "p": "app/_internal/static/models/edge_sam_encoder.onnx"
+        }
+      ]
+    },
+    {
+      "group": "Image simplification DINOv2",
+      "files": 3,
+      "compressed_bytes": 80620719,
+      "compressed_MiB": 76.88590908050537,
+      "raw_bytes": 88253453,
+      "share_of_product_zip_pct": 2.9688908369300364,
+      "members": [
+        {
+          "compressed_size": 80616076,
+          "is_directory": false,
+          "path": "VisionWorkshop/app/_internal/static/models/image_simplification/dinov2_vits14/model.safetensors",
+          "size": 88240510,
+          "p": "app/_internal/static/models/image_simplification/dinov2_vits14/model.safetensors"
+        },
+        {
+          "compressed_size": 3850,
+          "is_directory": false,
+          "path": "VisionWorkshop/app/_internal/static/models/image_simplification/LICENSE.txt",
+          "size": 11560,
+          "p": "app/_internal/static/models/image_simplification/LICENSE.txt"
+        },
+        {
+          "compressed_size": 793,
+          "is_directory": false,
+          "path": "VisionWorkshop/app/_internal/static/models/image_simplification/README.md",
+          "size": 1383,
+          "p": "app/_internal/static/models/image_simplification/README.md"
+        }
+      ]
+    },
+    {
+      "group": "CNN PatchCore pretrained",
+      "files": 4,
+      "compressed_bytes": 248203193,
+      "compressed_MiB": 236.70501041412354,
+      "raw_bytes": 275886962,
+      "share_of_product_zip_pct": 9.140183745998065,
+      "members": [
+        {
+          "compressed_size": 3850,
+          "is_directory": false,
+          "path": "VisionWorkshop/app/_internal/static/models/patchcore_pretrained-LICENSE.txt",
+          "size": 11560,
+          "p": "app/_internal/static/models/patchcore_pretrained-LICENSE.txt"
+        },
+        {
+          "compressed_size": 6161,
+          "is_directory": false,
+          "path": "VisionWorkshop/app/_internal/static/models/patchcore_pretrained-MODEL_CARD.md",
+          "size": 39697,
+          "p": "app/_internal/static/models/patchcore_pretrained-MODEL_CARD.md"
+        },
+        {
+          "compressed_size": 296,
+          "is_directory": false,
+          "path": "VisionWorkshop/app/_internal/static/models/patchcore_pretrained.json",
+          "size": 409,
+          "p": "app/_internal/static/models/patchcore_pretrained.json"
+        },
+        {
+          "compressed_size": 248192886,
+          "is_directory": false,
+          "path": "VisionWorkshop/app/_internal/static/models/patchcore_wide_resnet50_2.racm_in1k.safetensors",
+          "size": 275835296,
+          "p": "app/_internal/static/models/patchcore_wide_resnet50_2.racm_in1k.safetensors"
+        }
+      ]
+    },
+    {
+      "group": "YOLO presets",
+      "files": 4,
+      "compressed_bytes": 32313483,
+      "compressed_MiB": 30.81653881072998,
+      "raw_bytes": 36727542,
+      "share_of_product_zip_pct": 1.1899571819496488,
+      "members": [
+        {
+          "compressed_size": 5368550,
+          "is_directory": false,
+          "path": "VisionWorkshop/app/_internal/static/models/yolo11n-pose.pt",
+          "size": 6255593,
+          "p": "app/_internal/static/models/yolo11n-pose.pt"
+        },
+        {
+          "compressed_size": 4880705,
+          "is_directory": false,
+          "path": "VisionWorkshop/app/_internal/static/models/yolo11n.pt",
+          "size": 5613764,
+          "p": "app/_internal/static/models/yolo11n.pt"
+        },
+        {
+          "compressed_size": 17276465,
+          "is_directory": false,
+          "path": "VisionWorkshop/app/_internal/static/models/yolo11s.pt",
+          "size": 19313732,
+          "p": "app/_internal/static/models/yolo11s.pt"
+        },
+        {
+          "compressed_size": 4787763,
+          "is_directory": false,
+          "path": "VisionWorkshop/app/_internal/static/models/yolo26n.pt",
+          "size": 5544453,
+          "p": "app/_internal/static/models/yolo26n.pt"
+        }
+      ]
+    }
+  ],
+  "counterfactuals": [
+    {
+      "scenario": "remove_Torch_GPU_payload_only",
+      "removed": {
+        "files": 27,
+        "compressed_bytes": 1780413175,
+        "compressed_MiB": 1697.9343175888062,
+        "raw_bytes": 4099215808,
+        "share_of_product_zip_pct": 65.56444083817975
+      },
+      "residual_bytes": 935103273,
+      "residual_decimal_MB": 935.103273,
+      "residual_MiB": 891.783974647522,
+      "over_limit_bytes": 0
+    },
+    {
+      "scenario": "remove_all_named_GPU_payload",
+      "removed": {
+        "files": 29,
+        "compressed_bytes": 1868936387,
+        "compressed_MiB": 1782.3566312789917,
+        "raw_bytes": 4466285088,
+        "share_of_product_zip_pct": 68.8243442007684
+      },
+      "residual_bytes": 846580061,
+      "residual_decimal_MB": 846.580061,
+      "residual_MiB": 807.3616609573364,
+      "over_limit_bytes": 0
+    },
+    {
+      "scenario": "remove_models_only",
+      "removed": {
+        "files": 13,
+        "compressed_bytes": 396641352,
+        "compressed_MiB": 378.2666702270508,
+        "raw_bytes": 441545473,
+        "share_of_product_zip_pct": 14.606479452265134
+      },
+      "residual_bytes": 2318875096,
+      "residual_decimal_MB": 2318.875096,
+      "residual_MiB": 2211.4516220092773,
+      "over_limit_bytes": 171391449
+    },
+    {
+      "scenario": "remove_all_named_GPU_and_models",
+      "removed": {
+        "files": 42,
+        "compressed_bytes": 2265577739,
+        "compressed_MiB": 2160.6233015060425,
+        "raw_bytes": 4907830561,
+        "share_of_product_zip_pct": 83.43082365303353
+      },
+      "residual_bytes": 449938709,
+      "residual_decimal_MB": 449.938709,
+      "residual_MiB": 429.09499073028564,
+      "over_limit_bytes": 0
+    },
+    {
+      "scenario": "remove_all_Torch_and_models",
+      "removed": {
+        "files": 2184,
+        "compressed_bytes": 2238642965,
+        "compressed_MiB": 2134.9362993240356,
+        "raw_bytes": 4871762438,
+        "share_of_product_zip_pct": 82.43893962228728
+      },
+      "residual_bytes": 476873483,
+      "residual_decimal_MB": 476.873483,
+      "residual_MiB": 454.7819929122925,
+      "over_limit_bytes": 0
+    },
+    {
+      "scenario": "remove_all_Torch_models_and_ORT_GPU",
+      "removed": {
+        "files": 2186,
+        "compressed_bytes": 2327166177,
+        "compressed_MiB": 2219.358613014221,
+        "raw_bytes": 5238831718,
+        "share_of_product_zip_pct": 85.69884298487592
+      },
+      "residual_bytes": 388350271,
+      "residual_decimal_MB": 388.350271,
+      "residual_MiB": 370.35967922210693,
+      "over_limit_bytes": 0
+    }
+  ],
+  "candidate_categories_not_necessarily_safe_to_remove": [
+    {
+      "category": "headers",
+      "files": 15,
+      "compressed_bytes": 13868,
+      "compressed_MiB": 0.013225555419921875,
+      "raw_bytes": 134270,
+      "share_of_product_zip_pct": 0.000510694752381776
+    },
+    {
+      "category": "link_libraries",
+      "files": 69,
+      "compressed_bytes": 35254,
+      "compressed_MiB": 0.03362083435058594,
+      "raw_bytes": 145228,
+      "share_of_product_zip_pct": 0.0012982429189837851
+    },
+    {
+      "category": "debug_symbols",
+      "files": 0,
+      "compressed_bytes": 0,
+      "compressed_MiB": 0.0,
+      "raw_bytes": 0,
+      "share_of_product_zip_pct": 0.0
+    },
+    {
+      "category": "tests_all_paths",
+      "files": 207,
+      "compressed_bytes": 799906,
+      "compressed_MiB": 0.7628498077392578,
+      "raw_bytes": 5104126,
+      "share_of_product_zip_pct": 0.029456864479283022
+    },
+    {
+      "category": "examples_all_paths",
+      "files": 46,
+      "compressed_bytes": 24120,
+      "compressed_MiB": 0.02300262451171875,
+      "raw_bytes": 53422,
+      "share_of_product_zip_pct": 0.0008882288309380183
+    },
+    {
+      "category": "qt_qml",
+      "files": 1281,
+      "compressed_bytes": 6625378,
+      "compressed_MiB": 6.318452835083008,
+      "raw_bytes": 18422526,
+      "share_of_product_zip_pct": 0.243982245251346
+    },
+    {
+      "category": "qt_translations",
+      "files": 179,
+      "compressed_bytes": 5177686,
+      "compressed_MiB": 4.937826156616211,
+      "raw_bytes": 24913209,
+      "share_of_product_zip_pct": 0.19067039729453333
+    },
+    {
+      "category": "qt_webengine_devtools",
+      "files": 1,
+      "compressed_bytes": 1693971,
+      "compressed_MiB": 1.6154966354370117,
+      "raw_bytes": 1768648,
+      "share_of_product_zip_pct": 0.0623811725113145
+    },
+    {
+      "category": "bytecode",
+      "files": 0,
+      "compressed_bytes": 0,
+      "compressed_MiB": 0.0,
+      "raw_bytes": 0,
+      "share_of_product_zip_pct": 0.0
+    },
+    {
+      "category": "torch_bin",
+      "files": 1,
+      "compressed_bytes": 831838,
+      "compressed_MiB": 0.7933025360107422,
+      "raw_bytes": 2800640,
+      "share_of_product_zip_pct": 0.030632773394271114
+    },
+    {
+      "category": "ui",
+      "files": 87,
+      "compressed_bytes": 302178,
+      "compressed_MiB": 0.2881793975830078,
+      "raw_bytes": 1508856,
+      "share_of_product_zip_pct": 0.011127828013067517
+    },
+    {
+      "category": "anomaly_func",
+      "files": 48,
+      "compressed_bytes": 153407,
+      "compressed_MiB": 0.1463003158569336,
+      "raw_bytes": 564652,
+      "share_of_product_zip_pct": 0.005649275301314618
+    },
+    {
+      "category": "my_ultralytics_func",
+      "files": 6,
+      "compressed_bytes": 19801,
+      "compressed_MiB": 0.018883705139160156,
+      "raw_bytes": 76208,
+      "share_of_product_zip_pct": 0.0007291798955805846
+    },
+    {
+      "category": "ultralytics",
+      "files": 298,
+      "compressed_bytes": 1046642,
+      "compressed_MiB": 0.9981555938720703,
+      "raw_bytes": 3504552,
+      "share_of_product_zip_pct": 0.03854301824505097
+    },
+    {
+      "category": "static",
+      "files": 20,
+      "compressed_bytes": 396645132,
+      "compressed_MiB": 378.2702751159668,
+      "raw_bytes": 441554605,
+      "share_of_product_zip_pct": 14.606618652305803
+    },
+    {
+      "category": "X-AnyLabeling",
+      "files": 738,
+      "compressed_bytes": 2039707,
+      "compressed_MiB": 1.945216178894043,
+      "raw_bytes": 8459746,
+      "share_of_product_zip_pct": 0.07511304162794745
+    },
+    {
+      "category": "jedi",
+      "files": 1790,
+      "compressed_bytes": 921333,
+      "compressed_MiB": 0.8786516189575195,
+      "raw_bytes": 3502626,
+      "share_of_product_zip_pct": 0.03392846324604549
+    },
+    {
+      "category": "transformers",
+      "files": 1537,
+      "compressed_bytes": 8155932,
+      "compressed_MiB": 7.778102874755859,
+      "raw_bytes": 41055367,
+      "share_of_product_zip_pct": 0.3003455201314251
+    }
+  ],
+  "identical_payload_groups": {
+    "group_count": 327,
+    "theoretical_compressed_saving": 557851,
+    "raw_saving": 2001799,
+    "largest_20": [
+      {
+        "compressed_saving": 141201,
+        "raw_saving": 575056,
+        "sha256": "a4c2229bdc2a2a630acdc095b4d86008e5c3e3bc7773174354f3da4f5beb9cde",
+        "paths": [
+          "app/_internal/msvcp140.dll",
+          "app/_internal/pandas.libs/msvcp140-a4c2229bdc2a2a630acdc095b4d86008.dll"
+        ]
+      },
+      {
+        "compressed_saving": 130328,
+        "raw_saving": 573952,
+        "sha256": "c2c9a9c22a9bcba90e261825968836787b331038047a26770cffb7a583c28344",
+        "paths": [
+          "app/_internal/torch/lib/cudart64_12.dll",
+          "app/_internal/torchvision/cudart64_12.dll"
+        ]
+      },
+      {
+        "compressed_saving": 13445,
+        "raw_saving": 86971,
+        "sha256": "1700af47dc012a48cec89cf1dfae6d1d0d2f40ed731eff6ca55296a055a11c00",
+        "paths": [
+          "app/_internal/_tcl_data/encoding/euc-cn.enc",
+          "app/_internal/_tcl_data/encoding/gb2312.enc"
+        ]
+      },
+      {
+        "compressed_saving": 8118,
+        "raw_saving": 21984,
+        "sha256": "c85495070dca42687df6a1c3ee780a27cbcb82f1844750ea6f642833a44d29b4",
+        "paths": [
+          "app/_internal/pytz/zoneinfo/Europe/Belfast",
+          "app/_internal/pytz/zoneinfo/Europe/Guernsey",
+          "app/_internal/pytz/zoneinfo/Europe/Isle_of_Man",
+          "app/_internal/pytz/zoneinfo/Europe/Jersey",
+          "app/_internal/pytz/zoneinfo/Europe/London",
+          "app/_internal/pytz/zoneinfo/GB",
+          "app/_internal/pytz/zoneinfo/GB-Eire"
+        ]
+      },
+      {
+        "compressed_saving": 7874,
+        "raw_saving": 18822,
+        "sha256": "586b4207e6c76722de82adcda6bf49d761f668517f45a673f64da83b333eecc4",
+        "paths": [
+          "app/_internal/pytz/zoneinfo/zone.tab",
+          "app/_internal/tzdata/zoneinfo/zone.tab"
+        ]
+      },
+      {
+        "compressed_saving": 7700,
+        "raw_saving": 23120,
+        "sha256": "3ddf9be5c28fe27dad143a5dc76eea25222ad1dd68934a047064e56ed2fa40c5",
+        "paths": [
+          "app/_internal/onnx-1.16.0.dist-info/LICENSE",
+          "app/_internal/static/models/image_simplification/LICENSE.txt",
+          "app/_internal/static/models/patchcore_pretrained-LICENSE.txt"
+        ]
+      },
+      {
+        "compressed_saving": 7532,
+        "raw_saving": 48853,
+        "sha256": "f82a9bc5999d69cc046f0a11bb26cb6ac96eaeef52f3049269611fab9ed97d4f",
+        "paths": [
+          "app/_internal/jedi/third_party/typeshed/stdlib/2/__builtin__.pyi",
+          "app/_internal/jedi/third_party/typeshed/stdlib/2/builtins.pyi"
+        ]
+      },
+      {
+        "compressed_saving": 6755,
+        "raw_saving": 17470,
+        "sha256": "a587a1a1607439f7bac283e1815f2bdbafb9649a453d18e06c2e44e6996d888f",
+        "paths": [
+          "app/_internal/pytz/zoneinfo/America/Montreal",
+          "app/_internal/pytz/zoneinfo/America/Nassau",
+          "app/_internal/pytz/zoneinfo/America/Nipigon",
+          "app/_internal/pytz/zoneinfo/America/Thunder_Bay",
+          "app/_internal/pytz/zoneinfo/America/Toronto",
+          "app/_internal/pytz/zoneinfo/Canada/Eastern"
+        ]
+      },
+      {
+        "compressed_saving": 4532,
+        "raw_saving": 11732,
+        "sha256": "812f55aeb6e8cde9ddf4786e15eb4256b21e82cf5f5d28da1bad17d94570cac0",
+        "paths": [
+          "app/_internal/pytz/zoneinfo/CET",
+          "app/_internal/pytz/zoneinfo/Europe/Amsterdam",
+          "app/_internal/pytz/zoneinfo/Europe/Brussels",
+          "app/_internal/pytz/zoneinfo/Europe/Luxembourg",
+          "app/_internal/pytz/zoneinfo/MET"
+        ]
+      },
+      {
+        "compressed_saving": 4370,
+        "raw_saving": 11490,
+        "sha256": "5ee475f71a0fc1a32faeb849f8c39c6e7aa66d6d41ec742b97b3a7436b3b0701",
+        "paths": [
+          "app/_internal/pytz/zoneinfo/Arctic/Longyearbyen",
+          "app/_internal/pytz/zoneinfo/Atlantic/Jan_Mayen",
+          "app/_internal/pytz/zoneinfo/Europe/Berlin",
+          "app/_internal/pytz/zoneinfo/Europe/Copenhagen",
+          "app/_internal/pytz/zoneinfo/Europe/Oslo",
+          "app/_internal/pytz/zoneinfo/Europe/Stockholm"
+        ]
+      },
+      {
+        "compressed_saving": 4158,
+        "raw_saving": 15344,
+        "sha256": "3f1fa28dc91c59f598e69fa4c73ff70a61452fb2737900cfba31b2579161719e",
+        "paths": [
+          "app/_internal/X-AnyLabeling/anylabeling/services/auto_labeling/visualgd/model/ops/build/lib.linux-x86_64-cpython-310/modules/ms_deform_attn.py",
+          "app/_internal/X-AnyLabeling/anylabeling/services/auto_labeling/visualgd/model/ops/build/lib.linux-x86_64-cpython-39/modules/ms_deform_attn.py",
+          "app/_internal/X-AnyLabeling/anylabeling/services/auto_labeling/visualgd/model/ops/modules/ms_deform_attn.py"
+        ]
+      },
+      {
+        "compressed_saving": 3972,
+        "raw_saving": 9594,
+        "sha256": "676541f0b8ad457c744c093f807589adcad909e3fd03f901787d08786eedbd33",
+        "paths": [
+          "app/_internal/tzdata/zoneinfo/Europe/Belfast",
+          "app/_internal/tzdata/zoneinfo/Europe/Guernsey",
+          "app/_internal/tzdata/zoneinfo/Europe/Isle_of_Man",
+          "app/_internal/tzdata/zoneinfo/Europe/Jersey",
+          "app/_internal/tzdata/zoneinfo/Europe/London",
+          "app/_internal/tzdata/zoneinfo/GB",
+          "app/_internal/tzdata/zoneinfo/GB-Eire"
+        ]
+      },
+      {
+        "compressed_saving": 3892,
+        "raw_saving": 9840,
+        "sha256": "32e819c00a43b3c348f539d700d425504f20b8d068c16418d26fa9b693e775c9",
+        "paths": [
+          "app/_internal/pytz/zoneinfo/America/Denver",
+          "app/_internal/pytz/zoneinfo/America/Shiprock",
+          "app/_internal/pytz/zoneinfo/MST7MDT",
+          "app/_internal/pytz/zoneinfo/Navajo",
+          "app/_internal/pytz/zoneinfo/US/Mountain"
+        ]
+      },
+      {
+        "compressed_saving": 3845,
+        "raw_saving": 9600,
+        "sha256": "3a95adb06156044fd2fa662841c0268c2b5af47c1b19000d9d299563d387093a",
+        "paths": [
+          "app/_internal/pytz/zoneinfo/Europe/Belgrade",
+          "app/_internal/pytz/zoneinfo/Europe/Ljubljana",
+          "app/_internal/pytz/zoneinfo/Europe/Podgorica",
+          "app/_internal/pytz/zoneinfo/Europe/Sarajevo",
+          "app/_internal/pytz/zoneinfo/Europe/Skopje",
+          "app/_internal/pytz/zoneinfo/Europe/Zagreb"
+        ]
+      },
+      {
+        "compressed_saving": 3841,
+        "raw_saving": 11340,
+        "sha256": "3cde47ddcc15df15bd9ef51729c07f5ce1fad1c5aa9deeaa2b748013c348ef8b",
+        "paths": [
+          "app/_internal/kaggle/LICENSE",
+          "app/_internal/kagglesdk-0.1.37.dist-info/licenses/LICENSE"
+        ]
+      },
+      {
+        "compressed_saving": 3525,
+        "raw_saving": 8585,
+        "sha256": "815ab4db7a1b1292867d2f924b718e1bba32455ce9f92205db2feb65029c6761",
+        "paths": [
+          "app/_internal/tzdata/zoneinfo/America/Montreal",
+          "app/_internal/tzdata/zoneinfo/America/Nassau",
+          "app/_internal/tzdata/zoneinfo/America/Nipigon",
+          "app/_internal/tzdata/zoneinfo/America/Thunder_Bay",
+          "app/_internal/tzdata/zoneinfo/America/Toronto",
+          "app/_internal/tzdata/zoneinfo/Canada/Eastern"
+        ]
+      },
+      {
+        "compressed_saving": 3203,
+        "raw_saving": 56020,
+        "sha256": "1d70465589fb3eb70b7d842bcfe293ccc9b2dc85b73850c06902697b42571f7a",
+        "paths": [
+          "app/_internal/X-AnyLabeling/anylabeling/services/auto_labeling/visualgd/model/csrc/MsDeformAttn/ms_deform_im2col_cuda.cuh",
+          "app/_internal/X-AnyLabeling/anylabeling/services/auto_labeling/visualgd/model/ops/src/cuda/ms_deform_im2col_cuda.cuh"
+        ]
+      },
+      {
+        "compressed_saving": 3099,
+        "raw_saving": 8811,
+        "sha256": "ba96ee35c718a0964e11e6ae5d5b9e800b9350cafd2ec0d9e84d1cf4f0ac2702",
+        "paths": [
+          "app/_internal/jedi/third_party/typeshed/stdlib/2/ntpath.pyi",
+          "app/_internal/jedi/third_party/typeshed/stdlib/2/os/path.pyi",
+          "app/_internal/jedi/third_party/typeshed/stdlib/2/os2emxpath.pyi",
+          "app/_internal/jedi/third_party/typeshed/stdlib/2/posixpath.pyi"
+        ]
+      },
+      {
+        "compressed_saving": 2925,
+        "raw_saving": 7374,
+        "sha256": "4a5b95ef1cd99b6e0b80c5d2515b75703d40944ef2fdb744eb91e10c87572dcb",
+        "paths": [
+          "app/_internal/pytz/zoneinfo/America/Ensenada",
+          "app/_internal/pytz/zoneinfo/America/Santa_Isabel",
+          "app/_internal/pytz/zoneinfo/America/Tijuana",
+          "app/_internal/pytz/zoneinfo/Mexico/BajaNorte"
+        ]
+      },
+      {
+        "compressed_saving": 2895,
+        "raw_saving": 7311,
+        "sha256": "8000e3a323e8fd0212414e9426b020707a771c368ca0e151747f9ddb7b814b27",
+        "paths": [
+          "app/_internal/pytz/zoneinfo/Antarctica/McMurdo",
+          "app/_internal/pytz/zoneinfo/Antarctica/South_Pole",
+          "app/_internal/pytz/zoneinfo/NZ",
+          "app/_internal/pytz/zoneinfo/Pacific/Auckland"
+        ]
+      }
+    ]
+  },
+  "largest_20_compressed_increases_vs_v1_0_39": [
+    {
+      "path": "app/_internal/torch/lib/cublasLt64_12.dll",
+      "new_compressed_bytes": 370276594,
+      "old_compressed_bytes": 205179084,
+      "delta_bytes": 165097510
+    },
+    {
+      "path": "app/_internal/torch/lib/cufft64_11.dll",
+      "new_compressed_bytes": 142445962,
+      "old_compressed_bytes": 45181429,
+      "delta_bytes": 97264533
+    },
+    {
+      "path": "app/_internal/torch/lib/cusparse64_12.dll",
+      "new_compressed_bytes": 157193910,
+      "old_compressed_bytes": 105122459,
+      "delta_bytes": 52071451
+    },
+    {
+      "path": "app/_internal/torch/lib/cusolver64_11.dll",
+      "new_compressed_bytes": 93158730,
+      "old_compressed_bytes": 44633319,
+      "delta_bytes": 48525411
+    },
+    {
+      "path": "app/_internal/torch/lib/torch_cuda.dll",
+      "new_compressed_bytes": 316280724,
+      "old_compressed_bytes": 273591328,
+      "delta_bytes": 42689396
+    },
+    {
+      "path": "app/_internal/torch/lib/cudnn_adv64_9.dll",
+      "new_compressed_bytes": 133861306,
+      "old_compressed_bytes": 103370340,
+      "delta_bytes": 30490966
+    },
+    {
+      "path": "app/_internal/torch/lib/cusolverMg64_11.dll",
+      "new_compressed_bytes": 55227386,
+      "old_compressed_bytes": 27779846,
+      "delta_bytes": 27447540
+    },
+    {
+      "path": "app/_internal/torch/lib/nvrtc64_120_0.alt.dll",
+      "new_compressed_bytes": 25410726,
+      "old_compressed_bytes": 0,
+      "delta_bytes": 25410726
+    },
+    {
+      "path": "app/_internal/torch/lib/cublas64_12.dll",
+      "new_compressed_bytes": 63387431,
+      "old_compressed_bytes": 41685079,
+      "delta_bytes": 21702352
+    },
+    {
+      "path": "app/_internal/torch/lib/cudnn_ops64_9.dll",
+      "new_compressed_bytes": 68123534,
+      "old_compressed_bytes": 52329119,
+      "delta_bytes": 15794415
+    },
+    {
+      "path": "app/_internal/torch/lib/nvrtc64_120_0.dll",
+      "new_compressed_bytes": 25377467,
+      "old_compressed_bytes": 13636804,
+      "delta_bytes": 11740663
+    },
+    {
+      "path": "app/_internal/torch/lib/nvJitLink_120_0.dll",
+      "new_compressed_bytes": 23138776,
+      "old_compressed_bytes": 11690183,
+      "delta_bytes": 11448593
+    },
+    {
+      "path": "app/VisionWorkshopApp.exe",
+      "new_compressed_bytes": 79329649,
+      "old_compressed_bytes": 68219023,
+      "delta_bytes": 11110626
+    },
+    {
+      "path": "app/_internal/torch/lib/cudnn_engines_precompiled64_9.dll",
+      "new_compressed_bytes": 232036256,
+      "old_compressed_bytes": 221300490,
+      "delta_bytes": 10735766
+    },
+    {
+      "path": "app/_internal/torch/lib/cudnn_engines_runtime_compiled64_9.dll",
+      "new_compressed_bytes": 8710801,
+      "old_compressed_bytes": 3300796,
+      "delta_bytes": 5410005
+    },
+    {
+      "path": "app/_internal/numpy.libs/libscipy_openblas64_-caad452230ae4ddb57899b8b3a33c55c.dll",
+      "new_compressed_bytes": 3724094,
+      "old_compressed_bytes": 0,
+      "delta_bytes": 3724094
+    },
+    {
+      "path": "app/_internal/kornia_rs/kornia_rs.cp312-win_amd64.pyd",
+      "new_compressed_bytes": 3089054,
+      "old_compressed_bytes": 0,
+      "delta_bytes": 3089054
+    },
+    {
+      "path": "app/_internal/torch/lib/curand64_10.dll",
+      "new_compressed_bytes": 46060034,
+      "old_compressed_bytes": 43319581,
+      "delta_bytes": 2740453
+    },
+    {
+      "path": "app/_internal/torch/lib/torch_cpu.dll",
+      "new_compressed_bytes": 47560136,
+      "old_compressed_bytes": 44844363,
+      "delta_bytes": 2715773
+    },
+    {
+      "path": "app/_internal/torchvision/python312.dll",
+      "new_compressed_bytes": 1903202,
+      "old_compressed_bytes": 0,
+      "delta_bytes": 1903202
+    }
+  ],
+  "qualifications": [
+    "All residual sizes are existing per-member compressed-byte subtraction with current whole ZIP overhead retained; not measured output of a rebuilt split package.",
+    "CUDA-linked Torch/TorchVision binaries remain linked to CUDA libraries; removal is not a validated CPU build. Host/GPU libraries must be rebuilt/replaced or installed atomically as a compatible dependency set.",
+    "Moving payload into optional module ZIPs reduces Core and unnecessary downloads, not total bytes for installing every module.",
+    "SHA duplicates were taken from verified build-record inventory; no full EXE/ZIP payload downloaded again. Identical content still may require multiple paths, so theoretical dedup is not a deletion permission.",
+    "Prefix tests/examples and Qt QML/translations are candidate audit categories, not proven safe removals."
+  ],
+  "version_provenance": {
+    "old_v1_0_39_zip_metadata_directories": [
+      "app/_internal/torch-2.5.1+cu121.dist-info/",
+      "app/_internal/torchvision-0.20.1+cu121.dist-info/"
+    ],
+    "new_zip_metadata_directories": [
+      "app/_internal/torch-2.10.0+cu128.dist-info/",
+      "app/_internal/torchvision-0.25.0+cu128.dist-info/",
+      "app/_internal/torchaudio-2.10.0+cu128.dist-info/"
+    ],
+    "new_production_freeze": [
+      "torch==2.10.0+cu128",
+      "torchvision==0.25.0+cu128",
+      "torchaudio==2.10.0+cu128"
+    ],
+    "interpretation": "Observed Torch and CUDA wheel versions changed. GPU architecture or binary optimization causes were not examined; no such causal claim."
+  },
+  "additional_shipped_payload_checks": {
+    "torch_include_files": 0,
+    "torch_headers_static_libs_debug_symbols_files": 0,
+    "pyqt5_tools_files": 0,
+    "pyqt5_plugins_files": 0,
+    "qt5_applications_files": 0,
+    "qt5_tools_files": 0,
+    "pytest_files": 0,
+    "pip_files": 0,
+    "torchaudio_files": 79,
+    "torchaudio_compressed_bytes": 1118313,
+    "torchaudio_metadata_compressed_bytes": 8379,
+    "jedi_compressed_bytes": 921333
+  }
+}

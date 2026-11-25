@@ -33,6 +33,8 @@ DINO_MAIN_MODULES = [
 ]
 DINO_MAIN_METADATA = ('onnxruntime-gpu', 'onnx', 'numpy', 'Pillow', 'psutil',
                       'opencv-contrib-python-headless')
+PATCHCORE_DINO_METADATA = ('anomalib', 'transformers', 'torch', 'torchvision', 'numpy',
+                           'lightning', 'safetensors', 'huggingface-hub', 'tokenizers')
 
 # Frozen builders read these source bytes; PYZ imports cannot replace data files.
 KAGGLE_SOURCE_FILES = [
@@ -57,11 +59,13 @@ def readRequirements(path: Path) -> str:
   return data.decode(encoding)
 
 
-def makeRequirements(sourceText: str, extras: list[str], profile: dict) -> list[str]:
+def makeRequirements(sourceText: str, extras: list[str], profile: dict,
+                     runtimeExcludes: list[str] | None = None) -> list[str]:
   from packaging.requirements import Requirement
   from packaging.utils import canonicalize_name
 
   replacements = dict(profile['overrides'])
+  excluded = {canonicalize_name(name) for name in (runtimeExcludes or [])}
   for text in profile['torch_packages'] + profile['packages'] + profile['binary_owners']:
     replacements[canonicalize_name(Requirement(text).name)] = text
   result = []
@@ -75,7 +79,7 @@ def makeRequirements(sourceText: str, extras: list[str], profile: dict) -> list[
     except ValueError as exc:
       raise BuildConfigError(f'Unsupported source requirement: {text}') from exc
     name = canonicalize_name(requirement.name)
-    if name not in replacements:
+    if name not in replacements and name not in excluded:
       result.append(text)
   return result + list(replacements.values())
 
@@ -99,7 +103,8 @@ def installRuntime(source: Path, *, dryRun: bool = False) -> None:
   checkPlatform(profile)
   config = json.loads((ROOT / 'configs/emo-vision-train.json').read_text(encoding='utf-8'))
   requirements = makeRequirements(readRequirements(source / 'requirements.txt'),
-                                  config['ci_extra_packages'], profile)
+                                  config['ci_extra_packages'], profile,
+                                  config.get('runtime_excludes', []))
   with tempfile.TemporaryDirectory(prefix='vision-train-dependencies-') as directory:
     path = Path(directory) / 'requirements.txt'
     path.write_text('\n'.join(requirements) + '\n', encoding='utf-8')
@@ -154,8 +159,15 @@ def validateEnvironment(source: Path) -> None:
     'assert hasattr(cv2, "ximgproc"), "OpenCV contrib modules are missing"',
     'assert "CUDAExecutionProvider" in ort.get_available_providers(), '
     '"ONNX Runtime GPU provider is missing"',
+    'from patchcore_dino_runtime.model_factory import create_encoder',
+    'from patchcore_dino_runtime.features import DinoFeatures',
+    'encoder = create_encoder()',
+    'with torch.inference_mode():',
+    '  features = DinoFeatures(encoder)(torch.zeros(1, 3, 28, 28))',
+    'assert {name: list(value.shape) for name, value in features.items()} == '
+    '{"dino_layer_9": [1, 384, 2, 2], "dino_layer_12": [1, 384, 2, 2]}',
   ])
-  runCommand([sys.executable, '-B', '-c', code])
+  runCommand([sys.executable, '-B', '-c', code], cwd=source)
   runCommand([sys.executable, '-I', '-B', str(source / 'dino_onnx_entry.py'),
               '--dino-onnx-worker', 'inspect', 'CPUExecutionProvider'])
   print('Runtime environment verified; physical GPU execution remains untested.', flush=True)
@@ -239,6 +251,21 @@ def validateDinoMainRuntime(internal: Path, modules: set[str]) -> None:
     raise BuildConfigError('Missing DINO main-runtime metadata: ' + ', '.join(missing))
 
 
+def validatePatchcoreDinoMetadata(internal: Path, profile: dict) -> None:
+  def normalize(name: str) -> str:
+    return re.sub(r'[-_.]+', '-', name).casefold()
+
+  pins = profile['torch_packages'] + profile['packages'] + list(profile['overrides'].values())
+  expected = {normalize(name): version for name, version in
+              (text.split('==', 1) for text in pins)}
+  available = {normalize(item.metadata.get('Name', '')): item.version
+               for item in importlib.metadata.distributions(path=[str(ioPath(internal))])}
+  mismatches = [f'{name} expected {expected[name]}, found {available.get(name)}'
+                for name in PATCHCORE_DINO_METADATA if available.get(name) != expected[name]]
+  if mismatches:
+    raise BuildConfigError('Invalid PatchCore DINO metadata: ' + '; '.join(mismatches))
+
+
 def validateDinoRuntime(root: Path) -> None:
   requireFiles(root, ['runtime.json', *DINO_RUNTIME_FILES])
   document = json.loads(ioPath(root / 'runtime.json').read_text(encoding='utf-8'))
@@ -287,12 +314,14 @@ def validatePackage(appDir: Path, programName: str) -> dict:
   modules = readPackagedModules(appDir / f'{programName}.exe')
   validateModules(modules, profile['modules'])
   validateDinoMainRuntime(internal, modules)
+  validatePatchcoreDinoMetadata(internal, profile)
   if not list(ioPath(internal / '_polars_runtime_32').glob('*.pyd')):
     raise BuildConfigError('Missing packaged Polars native extension')
   validateCudaDependencies(internal)
   return {'status': 'passed', 'torch': version, 'cuda': cuda,
           'required_modules': profile['modules'], 'required_source_data': KAGGLE_SOURCE_FILES,
           'dino_runtime': 'main-application', 'dino_worker_modules': DINO_MAIN_MODULES,
+          'patchcore_dino_metadata': list(PATCHCORE_DINO_METADATA),
           'gpu_execution': 'not-run'}
 
 

@@ -43,6 +43,18 @@ try:
     import ctypes
     # DINO uses ORT and loads CUDA DLLs explicitly; it does not need Torch's CPU stack.
     dino_worker = len(sys.argv) > 1 and sys.argv[1] == '--dino-onnx-worker'
+    if dino_worker:
+      # Bind the bundled MSVCP before PyQt5's runtime hook imports its older CRT.
+      crtPath = os.path.abspath(os.path.join(base, 'msvcp140.dll'))
+      if os.path.isfile(crtPath):
+        try:
+          # LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_DEFAULT_DIRS.
+          ctypes.CDLL(crtPath, winmode=0x1100)
+          _log('DINO CRT preload ok: ' + crtPath)
+        except OSError as error:
+          _log('DINO CRT preload fail: ' + crtPath + ' err=' + str(error))
+      else:
+        _log('DINO CRT preload missing: ' + crtPath)
     torch_lib_dirs = [] if dino_worker else [
         d for d in seen if d.endswith(os.path.join('torch', 'lib')) and os.path.isdir(d)]
     for d in torch_lib_dirs:

@@ -71,7 +71,25 @@
     "tqdm",
     "six",
     "openai",
-    "termcolor"
+    "termcolor",
+    "transformers",
+    "transformers.models.dinov2.configuration_dinov2",
+    "transformers.models.dinov2.modeling_dinov2",
+    "huggingface_hub",
+    "patchcore_dino_runtime.environment",
+    "patchcore_dino_runtime.spec",
+    "patchcore_dino_runtime.model_factory",
+    "patchcore_dino_runtime.features",
+    "patchcore_dino_runtime.model",
+    "patchcore_dino_runtime.preprocess",
+    "patchcore_dino_runtime.weights",
+    "patchcore_dino_runtime.serialization",
+    "patchcore_dino_runtime.data",
+    "patchcore_dino_runtime.training",
+    "patchcore_dino_runtime.inference",
+    "patchcore_dino_runtime.calibration",
+    "patchcore_dino_runtime.threshold",
+    "anomaly_func.score_contract"
   ],
   "excludes": [
     "notebook",
@@ -135,7 +153,17 @@
     "--copy-metadata",
     "kaggle",
     "--copy-metadata",
-    "kagglesdk"
+    "kagglesdk",
+    "--copy-metadata",
+    "anomalib",
+    "--copy-metadata",
+    "lightning",
+    "--copy-metadata",
+    "transformers",
+    "--copy-metadata",
+    "huggingface-hub",
+    "--copy-metadata",
+    "tokenizers"
   ],
   "update_protocol": 3,
   "updater": {
@@ -156,5 +184,11 @@
     "extra_args": []
   },
   "launcher_min_capability": 1,
-  "layout_version": 1
+  "layout_version": 1,
+  "runtime_excludes": [
+    "pyqt5-tools",
+    "pyqt5-plugins",
+    "qt5-tools",
+    "qt5-applications"
+  ]
 }

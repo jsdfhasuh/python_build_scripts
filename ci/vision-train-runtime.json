@@ -12,7 +12,9 @@
     "kagglesdk": "kagglesdk==0.1.37",
     "numpy": "numpy==2.0.2",
     "sympy": "sympy==1.14.0",
-    "lapx": "lapx==0.5.9.post1"
+    "lapx": "lapx==0.5.9.post1",
+    "onnxruntime": "onnxruntime==1.23.2",
+    "opencv-python-headless": "opencv-python-headless==4.11.0.86"
   },
   "binary_owners": [
     "onnxruntime-gpu==1.23.2",
@@ -28,7 +30,11 @@
     "polars==1.37.1",
     "av==18.0.0",
     "kaggle==2.2.4",
-    "imagecodecs==2025.3.30"
+    "imagecodecs==2025.3.30",
+    "transformers==4.46.3",
+    "huggingface-hub==0.26.5",
+    "tokenizers==0.20.3",
+    "safetensors==0.8.0"
   ],
   "modules": [
     "torch",
@@ -44,7 +50,26 @@
     "sklearn",
     "skimage",
     "av",
-    "kaggle.api.kaggle_api_extended"
+    "kaggle.api.kaggle_api_extended",
+    "transformers",
+    "transformers.models.dinov2.configuration_dinov2",
+    "transformers.models.dinov2.modeling_dinov2",
+    "huggingface_hub",
+    "tokenizers",
+    "patchcore_dino_runtime.environment",
+    "patchcore_dino_runtime.spec",
+    "patchcore_dino_runtime.model_factory",
+    "patchcore_dino_runtime.features",
+    "patchcore_dino_runtime.model",
+    "patchcore_dino_runtime.preprocess",
+    "patchcore_dino_runtime.weights",
+    "patchcore_dino_runtime.serialization",
+    "patchcore_dino_runtime.data",
+    "patchcore_dino_runtime.training",
+    "patchcore_dino_runtime.inference",
+    "patchcore_dino_runtime.calibration",
+    "patchcore_dino_runtime.threshold",
+    "anomaly_func.score_contract"
   ],
   "imports": [
     "from anomalib.data import Folder, PredictDataset",
@@ -52,7 +77,8 @@
     "from anomalib.models import Patchcore",
     "from anomalib.models.components import TimmFeatureExtractor",
     "from PyQt5 import QtCore, QtWidgets, QtWebEngineWidgets",
-    "from kagglesdk.competitions.types.competition_api_service import ApiGetSubmissionLimitsRequest"
+    "from kagglesdk.competitions.types.competition_api_service import ApiGetSubmissionLimitsRequest",
+    "from transformers import Dinov2Config, Dinov2Model"
   ],
   "torch_dlls": [
     "torch_cuda.dll",

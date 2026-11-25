@@ -405,6 +405,36 @@ class WorkflowTests(unittest.TestCase):
     pythonStep = next(step for step in steps if 'setup-python' in step.get('uses', ''))
     self.assertIn('ci/vision-train-runtime.json', pythonStep['with']['cache-dependency-path'])
 
+  def test_release_phases_share_one_isolated_interpreter_and_stop_on_failure(self):
+    data, _ = self.load('visionworkshop-portable.yml')
+    job = data['jobs']['build']
+    steps = job['steps']
+    isolate = next(step for step in steps if step.get('name') ==
+                   'Create isolated build environment')
+    self.assertIn('python -m venv $venv', isolate['run'])
+    self.assertNotIn('--system-site-packages', isolate['run'])
+    self.assertIn('sys.prefix != sys.base_prefix', isolate['run'])
+    self.assertIn('BUILD_PYTHON=$buildPython', isolate['run'])
+    self.assertIn('$env:GITHUB_ENV', isolate['run'])
+    self.assertEqual(job['env']['PYTHONNOUSERSITE'], '1')
+    phases = {
+      'Install ICO validator': '-m pip install Pillow',
+      'Preflight before heavy dependencies': '-X utf8 actions_release.py prepare',
+      'Install verified Vision Train GPU dependencies':
+        '-X utf8 vision_train_runtime.py install',
+      'Build through the shared portable entry': '-X utf8 actions_release.py build',
+      'Verify and stage public protocol assets': '-X utf8 actions_release.py stage',
+    }
+    for name, command in phases.items():
+      with self.subTest(phase=name):
+        step = next(step for step in steps if step.get('name') == name)
+        self.assertLess(steps.index(isolate), steps.index(step))
+        self.assertIn('& $env:BUILD_PYTHON ' + command, step['run'])
+        self.assertNotRegex(step['run'], r'(?m)^\s*python(?:\.exe)?\s')
+        self.assertNotIn('continue-on-error', step)
+        self.assertIn(step.get('if', 'success()'), ('success()', '${{ success() }}'))
+        self.assertIn('$LASTEXITCODE', step['run'])
+
   def test_shared_preparation_and_execution_use_frozen_state(self):
     data, _ = self.load('visionworkshop-portable.yml')
     steps = data['jobs']['build']['steps']

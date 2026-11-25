@@ -287,6 +287,117 @@ class PortableTests(unittest.TestCase):
     self.assertNotIn(str(self.root), json.dumps(summary))
     self.assertTrue(readJsonObject(self.recordPath())['reusable'])
 
+  def test_verified_oversize_local_zip_is_retained_only_as_failed_diagnostics(self) -> None:
+    output = self.root / 'oversize-output'
+    runtime = {'status': 'passed', 'fixture': 'package validation only'}
+    with patch('portable_release.MAX_ASSET_BYTES', 1), \
+         patch('portable_release.validateEnvironment'), \
+         patch('portable_release.validatePackage', return_value=runtime), \
+         patch('portable_release.verifyArchive', wraps=portable_release.verifyArchive) as archiveCheck, \
+         patch('portable_release.verifyRecord', wraps=verifyRecord) as recordCheck, \
+         patch('portable_release.publishAssets') as publish, \
+         patch('portable_release.runProducer') as producer:
+      with self.assertRaisesRegex(BuildConfigError, 'exceeds the existing release size limit'):
+        self.runLocal('--build-only', '--verify-vision-train-runtime',
+                      '--output-directory', str(output))
+    archiveCheck.assert_called_once()
+    recordCheck.assert_called_once()
+    publish.assert_not_called()
+    producer.assert_not_called()
+    self.assertEqual(portable_release.MAX_ASSET_BYTES, 2147483647)
+    self.assertEqual({path.name for path in output.iterdir()}, {'diagnostics'})
+    diagnostics = output / 'diagnostics'
+    report = readJsonObject(diagnostics / 'oversize-archive.json')
+    archive = diagnostics / report['asset_name']
+    record = readJsonObject(self.recordPath())
+    self.assertEqual(report['schema_version'], 1)
+    self.assertEqual(report['status'], 'blocked-size')
+    self.assertIs(report['published'], False)
+    self.assertIs(report['publishable'], False)
+    self.assertEqual(report['asset_name'], archive.name)
+    self.assertEqual(report['asset_sha256'], fileHash(archive))
+    self.assertEqual(report['asset_size'], archive.stat().st_size)
+    self.assertGreater(report['asset_size'], report['maximum_asset_size'])
+    self.assertEqual(report['maximum_asset_size'], 1)
+    self.assertEqual(report['source_commit'], git(self.source, 'rev-parse', 'HEAD'))
+    self.assertEqual(report['packager_commit'], git(self.packager, 'rev-parse', 'HEAD'))
+    self.assertEqual(report['build_id'], record['build_id'])
+    self.assertEqual(report['files_sha256'], record['files_sha256'])
+    self.assertEqual(report['runtime_validation'], runtime)
+    self.assertEqual(report['archive_compression'], 'zip/deflate')
+    self.assertIsNone(report['archive_lzma_dictionary_mib'])
+    self.assertIsNone(report['update_protocol'])
+    self.assertEqual({path.name for path in diagnostics.iterdir()},
+                     {archive.name, 'oversize-archive.json', 'archive-members.json'})
+    sizes = readJsonObject(diagnostics / 'archive-members.json')
+    with zipfile.ZipFile(archive) as content:
+      members = [{'path': item.filename, 'size': item.file_size,
+                  'compressed_size': item.compress_size, 'is_directory': item.is_dir()}
+                 for item in content.infolist()]
+    self.assertEqual(sizes['members'], members)
+    self.assertEqual(sizes['member_count'], len(members))
+    self.assertEqual(sizes['file_count'] + sizes['directory_count'], len(members))
+    self.assertEqual(sizes['total_size'], sum(item['size'] for item in members))
+    self.assertEqual(sizes['total_compressed_size'],
+                     sum(item['compressed_size'] for item in members))
+    for name in ('asset_name', 'asset_sha256', 'asset_size'):
+      self.assertEqual(sizes[name], report[name])
+    self.assertFalse(list(output.rglob('build-summary.json')))
+    self.assertNotIn(str(self.root), json.dumps(report))
+
+  def test_publish_oversize_zip_is_deleted_without_diagnostics_or_upload(self) -> None:
+    output = self.root / 'publish-output'
+    with patch('portable_release.MAX_ASSET_BYTES', 1), \
+         patch('portable_release.runChecked') as upload, \
+         patch('portable_release.requireNewRelease'), \
+         patch('portable_release.verifyArchive') as archiveCheck, \
+         patch('portable_release.publishAssets') as publish, \
+         patch('portable_release.runProducer') as producer:
+      with self.assertRaisesRegex(BuildConfigError, 'exceeds the existing release size limit'):
+        self.runLocal('--program-name', 'emo-vision-train', '--publish', '--changelog-all',
+                      '--output-directory', str(output))
+    archiveCheck.assert_not_called()
+    upload.assert_not_called()
+    publish.assert_not_called()
+    producer.assert_not_called()
+    self.assertEqual(list(output.iterdir()), [])
+
+  def test_empty_broken_or_wrong_content_zip_is_not_retained(self) -> None:
+    for kind in ('empty', 'broken', 'wrong-content'):
+      with self.subTest(kind=kind):
+        output = self.root / kind
+        def compress(app, path, *, dictionaryMiB=64):
+          if kind == 'empty':
+            path.write_bytes(b'')
+          elif kind == 'broken':
+            path.write_bytes(b'not a ZIP archive')
+          else:
+            self.compress(app, path)
+            with zipfile.ZipFile(path, 'a') as archive:
+              archive.writestr(app.name + '/unexpected.txt', b'not in the build record')
+          return 'zip/deflate'
+        self.compressor.side_effect = compress
+        with patch('portable_release.MAX_ASSET_BYTES', 1), \
+             patch('portable_release.verifyRecord', wraps=verifyRecord) as recordCheck:
+          with self.assertRaises((BuildConfigError, zipfile.BadZipFile)):
+            self.runLocal('--build-only', '--output-directory', str(output))
+        recordCheck.assert_not_called()
+        self.assertEqual(list(output.iterdir()), [])
+
+  def test_oversize_zip_is_not_retained_when_build_inputs_changed(self) -> None:
+    output = self.root / 'changed-source-output'
+    def compress(app, path, *, dictionaryMiB=64):
+      result = self.compress(app, path)
+      (self.source / 'helper.py').write_text('VALUE = 2\n')
+      return result
+    self.compressor.side_effect = compress
+    with patch('portable_release.MAX_ASSET_BYTES', 1), \
+         patch('portable_release.verifyArchive', wraps=portable_release.verifyArchive) as archiveCheck:
+      with self.assertRaisesRegex(BuildConfigError, 'inputs or tool environment changed'):
+        self.runLocal('--build-only', '--output-directory', str(output))
+    archiveCheck.assert_called_once()
+    self.assertEqual(list(output.iterdir()), [])
+
   def test_runtime_environment_failure_prevents_compilation_and_publication(self) -> None:
     with patch('portable_release.validateEnvironment', side_effect=BuildConfigError('CPU torch')), \
          patch('portable_release.validatePackage') as package, \
@@ -601,11 +712,15 @@ class PortableTests(unittest.TestCase):
       archive = next(self.packager.glob('release-output/**/*.zip'))
       archive.write_bytes(archive.read_bytes() + b'changed')
       return result
-    with patch('portable_release.verifyRecord', side_effect=verify):
-      with self.assertRaisesRegex(BuildConfigError, 'ZIP changed before finalization'):
-        self.runLocal('--build-only')
+    for limit in (portable_release.MAX_ASSET_BYTES, 1):
+      with self.subTest(maximum=limit), \
+           patch('portable_release.MAX_ASSET_BYTES', limit), \
+           patch('portable_release.verifyRecord', side_effect=verify):
+        with self.assertRaisesRegex(BuildConfigError, 'ZIP changed before finalization'):
+          self.runLocal('--build-only')
     self.assertFalse(list(self.packager.rglob('build-summary.json')))
     self.assertFalse(list(self.packager.glob('release-output/**/*.zip')))
+    self.assertFalse(list(self.packager.rglob('oversize-archive.json')))
 
   def test_cancelled_content_verification_never_uploads_or_marks_success(self) -> None:
     with patch('portable_release.runChecked') as upload, \
