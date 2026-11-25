@@ -41,6 +41,14 @@ jobs:
         run: |
           python -B -m unittest discover -s tests -p test_vision_train_core_diagnostic.py -v
           if ($LASTEXITCODE -ne 0) { throw 'Core diagnostic guard checks failed' }
+          python -B -m unittest discover -s tests -p test_vision_train_native_debug.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'Native debugger and DLL registration guards failed' }
+
+      - name: Verify actual Windows normal and access-violation child fixtures
+        shell: pwsh
+        run: |
+          python -I -S -B packager/scripts/vision_train_native_debug.py --fixture-output native-debug-fixtures
+          if ($LASTEXITCODE -ne 0) { throw 'Actual Windows debugger fixtures failed' }
 
       - name: Download the exact original Core and evidence
         shell: pwsh
@@ -50,7 +58,7 @@ jobs:
           python -B packager/scripts/diagnose_vision_train_core.py prepare --request packager/ci/visionworkshop-core-diagnostic.json --output diagnostic-source
           if ($LASTEXITCODE -ne 0) { throw 'Original Core source binding failed' }
 
-      - name: Repeat original Core exit and read matching Windows events
+      - name: Observe original Core native exceptions and DLL directory registrations
         shell: pwsh
         run: |
           python -B packager/scripts/diagnose_vision_train_core.py run --source diagnostic-source --request packager/ci/visionworkshop-core-diagnostic.json --output core-exit-diagnostic
@@ -66,6 +74,8 @@ jobs:
             packager/ci/visionworkshop-core-diagnostic.json
             core-exit-diagnostic/diagnostic-summary.json
             core-exit-diagnostic/*/reports/**
+            native-debug-fixtures/native-fixture-summary.json
+            native-debug-fixtures/*/reports/**
           if-no-files-found: error
           retention-days: 7
 
@@ -76,4 +86,5 @@ jobs:
           @'
           Original immutable Core diagnostic only. The exact source candidate and its original failure remain identified in the request and reports.
           No rebuilding, module downloads, Release, or complete candidate qualification occurs here. A nonzero product exit always remains a failure.
+          Debugger observations preserve every non-initial exception; no target memory/register or WER changes occur.
           '@ | Out-File $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append

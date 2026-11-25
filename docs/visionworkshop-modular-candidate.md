@@ -618,7 +618,73 @@ error, together with
 the application name and time window. Missing events or collector errors are
 recorded explicitly; they do not erase a nonzero product exit. Original Core
 identity and the later diagnostic driver identity remain separate. This
-diagnostic has source guard coverage but has not yet run on Windows.
+diagnostic has now run on Windows as
+[45668883424](https://github.com/jsdfhasuh/python_build_scripts/actions/runs/45668883424),
+controller `841ba103fe10ad62bdcc5206b784e186fd14552e`. Its 16 source guards and
+exact source verification passed. The fixed Core check then exited 1 before
+GUI creation: NumPy's AddDllDirectory call returned WinError 206 for a
+136-character / 272-byte UTF16 directory. This observation does not prove a
+MAX_PATH cause. The normal no-argument GUI, PID 8824, exposed its stable owned
+window and received WM_CLOSE; it exited with `0xC0000005` without forced cleanup.
+Thus the native failure is also observed on the normal application close path.
+
+Both read-only event queries exited 0 but returned zero events; faulting module,
+offset and stack remain uncollected. Both 11,322-file / 627,769,495-byte Core
+copies were unchanged. Artifact `15049276123` is 15,951 bytes with verified SHA256
+`f08de528c65dea47175af87a0de0b432686d83a9b2d35ed400a7aec023a3935a`.
+The compact, explicitly failed observation is in
+`docs/evidence/visionworkshop-core-exit-diagnostic-45668883424.json`.
+
+### Debugger-observed follow-up request
+
+Diagnostic request schema 2 / attempt 2 continues to bind the same original
+Core/run/app/builder; it creates no new product build. Its two executable cases
+use shorter Chinese/space roots and assert their actual path lengths do not
+exceed the original candidate's 88-character root. The longer first-diagnostic
+path remains as a third verified extraction for a separate stdlib
+AddDllDirectory experiment. Separate child processes register the original
+launcher + runtime + NumPy sequence and a unique-directory sequence, retain
+every cookie until the observation ends, and close all returned cookies.
+The report records the first error/index, Windows error, successful count and
+cumulative UTF16 name bytes. Those byte totals are a defined diagnostic measure,
+not an assumed internal Windows buffer layout. An observed registration failure
+is retained; the comparison does not itself qualify a product fix.
+
+The exception controller uses the documented
+[DEBUG_ONLY_THIS_PROCESS flag](https://learn.microsoft.com/en-us/windows/win32/procthread/process-creation-flags)
+and same-thread
+[WaitForDebugEventEx](https://learn.microsoft.com/en-us/windows/win32/api/debugapi/nf-debugapi-waitfordebugeventex) /
+[ContinueDebugEvent](https://learn.microsoft.com/en-us/windows/win32/api/debugapi/nf-debugapi-continuedebugevent).
+All DWORD/BOOL fields have explicit 32-bit widths and the Win64 structures have
+size/offset assertions. Only the first expected initial-thread breakpoint in
+the actual system ntdll is continued as handled. Every other exception,
+including second-chance access violations, is passed back as
+DBG_EXCEPTION_NOT_HANDLED. Exception code/address, read/write/execute target,
+PID/TID, active DLL intervals and load/unload sequence are retained; previously
+unloaded address candidates are labelled separately. ReadProcessMemory is
+limited to validated AMD64 PE headers for SizeOfImage. No memory/register
+writes, symbol downloads, security-setting changes or WER reconfiguration occur.
+
+Normal EXIT is continued before waiting on Popen. Failure cleanup remains
+attached, terminates only the owned child, and performs a bounded event drain
+through EXIT; image-file handles are closed explicitly and Windows closes
+event process/thread handles on the EXIT continuation. A debug-API failure may
+fall back to detach, explicitly marking handle ownership unverified and the
+case failed. Cleanup never turns a process failure into a pass.
+
+Before downloading or executing Core, the Windows workflow must run the source
+guards and two actual base-CPython fixtures: normal exit and an unhandled null
+thread-start execution access violation. The latter must expose second-chance
+`0xC0000005` and preserve that real exit code; expected fixture failure is not
+reported as a successful product process. The debugger's presence is explicit
+instrumentation, not complete candidate acceptance.
+
+The editing executor became unavailable while this follow-up was being built.
+The final reviewed source is reconstructed from exact `841ba103` files and
+the recorded patches using Git objects. **New local tests are NOT_RUN**; prior
+29-test results apply only to the earlier controller. The Windows source guards
+and actual fixture gates must pass before this follow-up can supply any new
+native evidence.
 
 The independent cross-product Git-object baseline is preserved in
 `docs/evidence/visionworkshop-modular-other-product-baseline-d3ace70.json`.

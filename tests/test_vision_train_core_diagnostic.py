@@ -75,6 +75,15 @@ class CoreExitDiagnosticTests(unittest.TestCase):
     self.assertEqual(value['source_head_sha'], 'd3ace70e41a41b4334a9e44d2dbec0d4907f077d')
     self.assertEqual(value['core_archive']['bytes'], 180443076)
     self.assertEqual(set(value['artifacts']), {'core', 'evidence'})
+    self.assertEqual(value['schema_version'], 2)
+    self.assertEqual(value['diagnostic_attempt'], 2)
+    self.assertIs(value['debugger_observed'], True)
+    self.assertIs(value['dll_search_probe'], True)
+    for key in ('debugger_observed', 'dll_search_probe'):
+      for wrong in (False, 1, 'true', None):
+        changed = dict(value, **{key: wrong})
+        with self.subTest(key=key, wrong=wrong), self.assertRaises(diagnostic.BuildConfigError):
+          diagnostic.validateRequest(changed)
 
   def test_request_rejects_unknown_bool_oversized_and_unsafe_inputs(self):
     variants = []

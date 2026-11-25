@@ -108,6 +108,18 @@ class WorkflowSafetyTests(unittest.TestCase):
     for forbidden in ('build_vision_train_modular.py', 'pip install', 'submodules:', 'source_ref'):
       self.assertNotIn(forbidden, text)
     self.assertIn('diagnose_vision_train_core.py run', text)
+    steps = getSteps(data)
+    fixtures = [index for index, step in enumerate(steps)
+                if '--fixture-output native-debug-fixtures' in step.get('run', '')]
+    downloads = [index for index, step in enumerate(steps)
+                 if 'diagnose_vision_train_core.py prepare' in step.get('run', '')]
+    actual = [index for index, step in enumerate(steps)
+              if 'diagnose_vision_train_core.py run' in step.get('run', '')]
+    self.assertEqual(len(fixtures), 1)
+    self.assertLess(fixtures[0], downloads[0])
+    self.assertLess(downloads[0], actual[0])
+    self.assertIn('test_vision_train_native_debug.py', text)
+    self.assertIn('native-debug-fixtures/*/reports/**', text)
 
   def test_release_checkouts_use_explicit_refs_without_persisting_tokens(self) -> None:
     for name in PRODUCTION:

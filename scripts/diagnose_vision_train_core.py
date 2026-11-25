@@ -33,6 +33,7 @@ from vision_train_modular_reuse import (
 from scripts.verify_vision_train_modular_product import (
   checkCase, coreInventory, productEnvironment, terminateTree, verifyCoreUnchanged,
 )
+from scripts.vision_train_native_debug import debugProcess
 
 SUMMARY = 'modular-candidate/reports/modular-build-summary.json'
 INVENTORY = 'modular-candidate/reports/core-files.json'
@@ -64,10 +65,15 @@ def relativePath(value):
 
 
 def validateRequest(request):
-  require(set(request) == {'schema_version', 'diagnostic_attempt', 'source_run_id',
-          'source_run_attempt', 'source_head_sha', 'source_app_sha', 'core_sha256',
-          'core_archive', 'artifacts', 'normal_gui_comparison'}, 'Unexpected diagnostic request fields')
-  require(type(request['schema_version']) is int and request['schema_version'] == 1,
+  fields = {'schema_version', 'diagnostic_attempt', 'source_run_id',
+            'source_run_attempt', 'source_head_sha', 'source_app_sha', 'core_sha256',
+            'core_archive', 'artifacts', 'normal_gui_comparison'}
+  if request.get('schema_version') == 2:
+    fields.update(('debugger_observed', 'dll_search_probe'))
+    require(request.get('debugger_observed') is True and request.get('dll_search_probe') is True,
+            'Schema 2 requires explicit debugger and DLL-search observations')
+  require(set(request) == fields, 'Unexpected diagnostic request fields')
+  require(type(request['schema_version']) is int and request['schema_version'] in (1, 2),
           'Unknown diagnostic request schema')
   for key in ('diagnostic_attempt', 'source_run_id', 'source_run_attempt'):
     require(type(request[key]) is int and request[key] > 0, 'Expected a positive exact run/attempt')
@@ -418,6 +424,108 @@ def normalGui(executable, environment, reports):
   return record
 
 
+def debugCase(executable, environment, reports, name, coreDigest):
+  output = reports / (name + '.json')
+  require(not output.exists(), 'Debugger case output must be new')
+  command = [str(executable)]
+  closeWindow = None
+  if name == 'core-without-modules':
+    command.extend(['--modular-runtime-check', '--case', 'core', '--output', str(output)])
+  else:
+    stability = {}
+    def closeWindow(pid, record, elapsed):
+      gui = record.setdefault('gui', {})
+      if gui.get('close_message'):
+        return
+      require(elapsed < 90, 'Debugger-observed GUI did not expose a stable owned window')
+      records = visibleProductWindows(pid)
+      gui['observed_windows'] = records
+      window = stableWindow(records, pid, stability, time.monotonic())
+      gui['window_stability'] = dict(stability, minimum_seconds=1.0)
+      if window is None:
+        return
+      require(window in visibleProductWindows(pid), 'Owned debugger-observed window changed before close')
+      from ctypes import wintypes
+      api = ctypes.WinDLL('user32', use_last_error=True)
+      api.PostMessageW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
+      api.PostMessageW.restype = wintypes.BOOL
+      require(api.PostMessageW(window['hwnd'], 0x0010, 0, 0), 'Debugger-observed WM_CLOSE failed')
+      gui.update(close_message='WM_CLOSE', close_window=window)
+  native = debugProcess(command, reports, environment, timeout=300 if closeWindow is None else 135,
+                        closeWindow=closeWindow)
+  process = {key: native.get(key) for key in ('status', 'command', 'pid', 'exit_code',
+             'debug_exit_code', 'elapsed_seconds', 'debugger_observed', 'forced_cleanup', 'error')}
+  process['native_report'] = {'path': 'native-debug.json', 'sha256': fileHash(reports / 'native-debug.json')}
+  writeJson(reports / (name + '.process.json'), process)
+  result = {'status': 'FAIL', 'process': process}
+  try:
+    require(native['status'] == 'PASS' and native.get('exit_code') == 0,
+            'Debugger-observed process did not exit successfully: ' + str(native.get('exit_code')))
+    if name == 'core-without-modules':
+      report = readJsonObject(output)
+      require(report.get('status') == 'PASS' and report.get('case') == 'core'
+              and report.get('pid') == native['pid'] and report.get('frozen') is True
+              and Path(report.get('executable', '')).resolve() == executable.resolve()
+              and report.get('runtime_identity') == {'core_sha256': coreDigest, 'generation': 0, 'modules': {}},
+              'Debugger-observed Core report is incomplete or has a different identity')
+      result['internal_report_sha256'] = fileHash(output)
+    else:
+      require(native.get('gui', {}).get('close_message') == 'WM_CLOSE', 'No owned normal close was observed')
+    result['status'] = 'PASS'
+  except Exception as error:
+    result.update(error=str(error), traceback=traceback.format_exc())
+  if output.is_file() and name == 'core-without-modules':
+    result['internal_report'] = readJsonObject(output)
+  return result
+
+
+def dllSearchProbe(source, output, evidence, request):
+  # Retain the first diagnostic's longer path for this separate API observation.
+  case = output / 'core-without-modules'
+  reports = case / 'reports'
+  reports.mkdir(parents=True)
+  (case / 'empty-cwd').mkdir()
+  root, _ = extractCore(source, evidence, request, case / '中文 模块验收')
+  plan = reports / 'dll-search-input.json'
+  writeJson(plan, {'core_root': str(root), 'core_sha256': request['core_sha256']})
+  result = {'status': 'FAIL', 'root': str(root), 'root_unicode_characters': len(str(root)),
+            'root_utf16_bytes': len(str(root).encode('utf-16-le')), 'observations': []}
+  try:
+    for mode in ('duplicate', 'unique'):
+      destination = reports / ('dll-search-' + mode + '.json')
+      command = [sys.executable, '-I', '-S', '-B', str(Path(__file__).resolve().with_name('vision_train_dll_search_probe.py')),
+                 '--input', str(plan), '--mode', mode, '--output', str(destination)]
+      process = subprocess.Popen(command, cwd=case / 'empty-cwd', env=productEnvironment(case),
+                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+      record = {'mode': mode, 'pid': process.pid, 'command': command}
+      try:
+        stdout, stderr = process.communicate(timeout=60)
+        (reports / ('dll-search-' + mode + '.stdout.txt')).write_bytes(stdout)
+        (reports / ('dll-search-' + mode + '.stderr.txt')).write_bytes(stderr)
+        record['exit_code'] = process.returncode
+        require(process.returncode == 0, 'DLL registration observer failed')
+        observation = readJsonObject(destination)
+        require(observation.get('status') == 'OBSERVED' and observation.get('pid') == process.pid
+                and observation.get('core_sha256') == request['core_sha256']
+                and observation.get('input_sha256') == fileHash(plan) and observation.get('mode') == mode
+                and observation.get('handles_closed') == observation.get('successful_directory_count')
+                and not observation.get('cleanup_errors'), 'DLL observation identity or cleanup failed')
+        record['observation'] = observation
+        record['report_sha256'] = fileHash(destination)
+      finally:
+        if process.poll() is None:
+          process.kill()
+          process.wait(timeout=15)
+        result['observations'].append(record)
+    result['status'] = 'OBSERVED'
+  except Exception as error:
+    result.update(error=str(error), traceback=traceback.format_exc())
+  finally:
+    result['core_unchanged'] = verifyCoreUnchanged(root, evidence['files'], reports, 'after-dll-probe')
+    writeJson(reports / 'dll-search-summary.json', result)
+  return result
+
+
 def run(source, output, requestPath):
   require(os.name == 'nt', 'Core exit diagnostics require actual Windows')
   require(not output.exists(), 'Diagnostic run directory must be new')
@@ -445,21 +553,33 @@ def run(source, output, requestPath):
             'source_build': evidence['summary']['core']['build'],
             'source_product_status': evidence['product']['status'],
             'diagnostic_builder_sha': os.environ.get('GITHUB_SHA'), 'cases': [],
-            'scope': 'One original Core exit reproduction and optional no-argument GUI comparison; no rebuild/modules/full candidate matrix'}
+            'debugger_observed': request.get('debugger_observed', False),
+            'scope': 'Original immutable Core diagnostic observations; no rebuild/modules/full candidate matrix'}
   try:
+    if request.get('dll_search_probe'):
+      result['dll_search_probe'] = dllSearchProbe(source, output, evidence, request)
     for name in (['core-without-modules', 'gui-close'] if request['normal_gui_comparison'] else ['core-without-modules']):
-      caseOutput = output / name
+      observed = request.get('debugger_observed', False)
+      caseOutput = output / (('c' if name == 'core-without-modules' else 'g') if observed else name)
       reports = caseOutput / 'reports'
       reports.mkdir(parents=True)
       (caseOutput / 'empty-cwd').mkdir()
-      root, core = extractCore(source, evidence, request, caseOutput / '中文 模块验收')
+      root, core = extractCore(source, evidence, request, caseOutput / ('中 文' if observed else '中文 模块验收'))
       executable = root / 'VisionWorkshop.exe'
       environment = productEnvironment(caseOutput)
       start = datetime.now(timezone.utc)
       record = {'name': name, 'status': 'FAIL', 'executable_sha256': fileHash(executable),
-                'core_inventory_sha256': objectHash(evidence['files']), 'start_utc': start.isoformat()}
+                'core_inventory_sha256': objectHash(evidence['files']), 'start_utc': start.isoformat(),
+                'root_unicode_characters': len(str(root)), 'root_utf16_bytes': len(str(root).encode('utf-16-le')),
+                'source_root_unicode_characters': len(str(PureWindowsPath(evidence['product']['executable']).parent)),
+                'debugger_observed': observed}
       try:
-        if name == 'core-without-modules':
+        if observed:
+          require(record['root_unicode_characters'] <= record['source_root_unicode_characters'],
+                  'Debugger installation path exceeds the original candidate root length')
+          record['result'] = debugCase(executable, environment, reports, name, request['core_sha256'])
+          record['status'] = record['result']['status']
+        elif name == 'core-without-modules':
           record['result'] = checkCase(executable, 'core', reports, name, environment, core,
             {'core_sha256': request['core_sha256'], 'generation': 0, 'modules': {}}, timeout=300)
           record['status'] = 'PASS'
@@ -474,11 +594,13 @@ def run(source, output, requestPath):
         processPath = reports / (name + '.process.json')
         if processPath.is_file():
           record['process'] = readJsonObject(processPath)
-          record['events'] = collectEvents(record['process']['pid'], executable, start, end, reports, name)
+          if type(record['process'].get('pid')) is int and record['process']['pid'] > 0:
+            record['events'] = collectEvents(record['process']['pid'], executable, start, end, reports, name)
         record['core_unchanged'] = verifyCoreUnchanged(root, evidence['files'], reports, 'after-exit')
         writeJson(reports / 'diagnostic-case.json', record)
         result['cases'].append(record)
-    result['status'] = 'PASS' if all(x['status'] == 'PASS' for x in result['cases']) else 'FAIL'
+    result['status'] = 'PASS' if (all(x['status'] == 'PASS' for x in result['cases'])
+      and result.get('dll_search_probe', {}).get('status', 'OBSERVED') == 'OBSERVED') else 'FAIL'
   except Exception as error:
     result.update(error=str(error), traceback=traceback.format_exc())
   finally:

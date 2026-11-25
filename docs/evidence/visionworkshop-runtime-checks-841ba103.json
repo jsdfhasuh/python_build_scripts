@@ -1,0 +1,2407 @@
+{
+  "schema_version": 1,
+  "type": "visionworkshop-builder-runtime-checks-source-audit",
+  "status": "SOURCE_INVENTORY_COMPLETE",
+  "repository": "jsdfhasuh/python_build_scripts",
+  "commit": "841ba103fe10ad62bdcc5206b784e186fd14552e",
+  "tree": "dacdf4c4ff370aad6269b214469d49507ea3632c",
+  "equivalent_local_commit": "96111da04b21fce79f2008b4dbb50eda714b9d03",
+  "scope": "B0.2/B0.5 fixed builder source, current P3/P4/B2 callers and historical fixtures; no tests/product execution",
+  "source_verification": {
+    "remote_tree_truncated": false,
+    "all_remote_blobs_match_local_tree": true,
+    "remote_blobs": 172,
+    "verified_text_files": 170,
+    "verified_text_bytes": 3495094,
+    "python_ast_files": 95,
+    "syntax_errors": [],
+    "missing": [],
+    "mismatches": [],
+    "method": "Before executor loss, the entire remote tree was matched to local git ls-tree; 170 UTF-8 files were extracted at the equivalent commit, Git blob SHA/size verified, SHA256 recorded, all 95 Python files AST-parsed. This portable attachment preserves authenticated remote blob identities rather than reproducing inaccessible scratch SHA256/raw rg files.",
+    "original_scratch_verification_sha256": "f20e3f33d102222429748a8dae44d37384a7a1899ba1ad0dc407b9bf7b8154cb",
+    "files": [
+      {
+        "path": ".github/workflows/.gitattributes",
+        "git_blob_sha": "81855769f552ce7d70bd55d255b5d4c8f9a75346",
+        "bytes": 72,
+        "classification": "repository-metadata"
+      },
+      {
+        "path": ".github/workflows/diagnose-baseline-startup.yml",
+        "git_blob_sha": "b106da49fbb5731a3947e6bafe70918ecb04d2b7",
+        "bytes": 2556,
+        "classification": "workflow"
+      },
+      {
+        "path": ".github/workflows/diagnose-updater-fixtures.yml",
+        "git_blob_sha": "329fe47e8f5b227c32435b0953d34e26adc5e42e",
+        "bytes": 4308,
+        "classification": "workflow"
+      },
+      {
+        "path": ".github/workflows/published-update-retest.yml",
+        "git_blob_sha": "4b467858ad07d82d0581ef713bc01ca69cbb6e81",
+        "bytes": 2717,
+        "classification": "workflow"
+      },
+      {
+        "path": ".github/workflows/release-emo-master.yml",
+        "git_blob_sha": "f0d159ae827407ea11a7db753727bf89d0ce9492",
+        "bytes": 7063,
+        "classification": "workflow"
+      },
+      {
+        "path": ".github/workflows/release-windows.yml",
+        "git_blob_sha": "a45bfc958de468d22357434eb6ad2819466908b1",
+        "bytes": 17813,
+        "classification": "workflow"
+      },
+      {
+        "path": ".github/workflows/visionworkshop-core-diagnostic.yml",
+        "git_blob_sha": "b418900fd4e483b2c56e4fff2912d07d4ee7ae3b",
+        "bytes": 2916,
+        "classification": "workflow"
+      },
+      {
+        "path": ".github/workflows/visionworkshop-modular-candidate.yml",
+        "git_blob_sha": "97f1313c5b0eb9bbea5d73b7a29189be9acefb41",
+        "bytes": 21873,
+        "classification": "workflow"
+      },
+      {
+        "path": ".github/workflows/visionworkshop-modular-loader-probe.yml",
+        "git_blob_sha": "dc1dfe1c3b0cbf35f554c51565e680256779b029",
+        "bytes": 8244,
+        "classification": "workflow"
+      },
+      {
+        "path": ".github/workflows/visionworkshop-portable.yml",
+        "git_blob_sha": "ca3a7a2a2c82b84db9877e0d39cbb67bb42fe748",
+        "bytes": 9727,
+        "classification": "workflow"
+      },
+      {
+        "path": ".github/workflows/visionworkshop-tests.yml",
+        "git_blob_sha": "ff526d71c5aa4922287298b7b1fd9ca04bd84baf",
+        "bytes": 1989,
+        "classification": "workflow"
+      },
+      {
+        "path": ".gitignore",
+        "git_blob_sha": "da378e2b6960d952bcaacf53bce3db3c12a0aae7",
+        "bytes": 115,
+        "classification": "repository-metadata"
+      },
+      {
+        "path": "AGENTS.md",
+        "git_blob_sha": "99fb92c261ddc582a0b4d3bd6e877bb0fab8faa5",
+        "bytes": 6220,
+        "classification": "docs-evidence"
+      },
+      {
+        "path": "README-legacy.md",
+        "git_blob_sha": "6757e74405a3d95032bd1813574b8176d9801a7a",
+        "bytes": 8062,
+        "classification": "docs-evidence"
+      },
+      {
+        "path": "README.md",
+        "git_blob_sha": "b940fe8ca7ff80030a5043b7cf4f43eaf927d3ef",
+        "bytes": 5311,
+        "classification": "docs-evidence"
+      },
+      {
+        "path": "_dll_probe.py",
+        "git_blob_sha": "06a0d4a003b43f85600609d0ca0d7a04f69970c7",
+        "bytes": 633,
+        "classification": "historical-manual-probe"
+      },
+      {
+        "path": "_import_dist_torch.py",
+        "git_blob_sha": "08331e6c27814b7dbaba6ca2c0b191d38671f343",
+        "bytes": 482,
+        "classification": "historical-manual-probe"
+      },
+      {
+        "path": "_omp_probe.py",
+        "git_blob_sha": "56c78645b8844efb4153677eb7c020df0d9ceb1b",
+        "bytes": 646,
+        "classification": "historical-manual-probe"
+      },
+      {
+        "path": "_torch_full_probe.py",
+        "git_blob_sha": "c169c81a7fa41e048258f32e9790d75146b0b9c9",
+        "bytes": 615,
+        "classification": "historical-manual-probe"
+      },
+      {
+        "path": "actions_release.py",
+        "git_blob_sha": "d7cd78774c6cbc92e2fcb9c96a4e0091718b43de",
+        "bytes": 20127,
+        "classification": "code"
+      },
+      {
+        "path": "assets/README.md",
+        "git_blob_sha": "a7a3b033da61c854b59c8af9715447e1c42712a9",
+        "bytes": 752,
+        "classification": "repository-metadata"
+      },
+      {
+        "path": "assets/branding.json",
+        "git_blob_sha": "a45b062f4f67f0cfbb70832e921d8b72f4a41ff5",
+        "bytes": 84,
+        "classification": "config-lock"
+      },
+      {
+        "path": "assets/icons/README.md",
+        "git_blob_sha": "219b3dd2f33bfb8e91fe5b5564260384eafb97a6",
+        "bytes": 667,
+        "classification": "repository-metadata"
+      },
+      {
+        "path": "branding_build.py",
+        "git_blob_sha": "f53ba00fe91a0f7e34bf4cd901c275d0cd134e84",
+        "bytes": 11764,
+        "classification": "code"
+      },
+      {
+        "path": "build.py",
+        "git_blob_sha": "c7a2c908c260ea0b926c2ebea568ae1a79667b63",
+        "bytes": 20858,
+        "classification": "code"
+      },
+      {
+        "path": "build_config.py",
+        "git_blob_sha": "e4b6fe5bcc44e886e29a55e53d8751a62537a0b1",
+        "bytes": 20993,
+        "classification": "code"
+      },
+      {
+        "path": "build_environment.py",
+        "git_blob_sha": "cc46d0ace06972fcd5fe8e24e3f1e0777a641af5",
+        "bytes": 765,
+        "classification": "code"
+      },
+      {
+        "path": "build_records.py",
+        "git_blob_sha": "5b266a42e0c241c23f1589222e5e5999c65194f5",
+        "bytes": 16758,
+        "classification": "code"
+      },
+      {
+        "path": "ci/vision-train-modular-probe-constraints.txt",
+        "git_blob_sha": "241e2aa8c8a60858c4a0ce386475a213edcc15cc",
+        "bytes": 4322,
+        "classification": "config-lock"
+      },
+      {
+        "path": "ci/vision-train-runtime.json",
+        "git_blob_sha": "82223df97d4829d9d5e8b18543553972bff72895",
+        "bytes": 3126,
+        "classification": "config-lock"
+      },
+      {
+        "path": "ci/visionworkshop-core-diagnostic.json",
+        "git_blob_sha": "20323161f76688e87b70a24c5cc7e6e84630c232",
+        "bytes": 992,
+        "classification": "config-lock"
+      },
+      {
+        "path": "ci/visionworkshop-modular-candidate.json",
+        "git_blob_sha": "426b41016c82fb6b705f3010e4308d310184b88b",
+        "bytes": 121,
+        "classification": "config-lock"
+      },
+      {
+        "path": "ci/visionworkshop-modular.json",
+        "git_blob_sha": "4ac63c1c1649ebcb37d4cb2f4933f97a3024f77b",
+        "bytes": 4266,
+        "classification": "config-lock"
+      },
+      {
+        "path": "ci/visionworkshop-msvc-runtime.json",
+        "git_blob_sha": "62d7aa66a36bc266cdaa1695293f1356f11552cc",
+        "bytes": 6644,
+        "classification": "config-lock"
+      },
+      {
+        "path": "configs/emo-master-runtime.json",
+        "git_blob_sha": "3b949a2d60643d2750e69a806f5e5dfe279ca84c",
+        "bytes": 2047,
+        "classification": "config-lock"
+      },
+      {
+        "path": "configs/emo-master.json",
+        "git_blob_sha": "a93dcf4ef1c9d540621a5ad54d3ebac29c2ec7d3",
+        "bytes": 2091,
+        "classification": "config-lock"
+      },
+      {
+        "path": "configs/emo-vision-train.json",
+        "git_blob_sha": "2c4ed029bcc39c02717037f145eb6f9140f7afe0",
+        "bytes": 4962,
+        "classification": "config-lock"
+      },
+      {
+        "path": "console_utils.py",
+        "git_blob_sha": "f4527ea34abf23cb5f5f933167a188151db0359f",
+        "bytes": 479,
+        "classification": "code"
+      },
+      {
+        "path": "docs/actions-emo-vision-train.md",
+        "git_blob_sha": "8b967032f365a7de81addfb3ec864b02b50c606f",
+        "bytes": 11779,
+        "classification": "docs-evidence"
+      },
+      {
+        "path": "docs/emo-master-publication-safety.md",
+        "git_blob_sha": "2d23cd0ca3a304559ce7a187d301767f2a0cc438",
+        "bytes": 6900,
+        "classification": "docs-evidence"
+      },
+      {
+        "path": "docs/evidence/branch-integration-20261004.md",
+        "git_blob_sha": "99c1c503a4c580dff3b130a47b0531a920e2cbd3",
+        "bytes": 3882,
+        "classification": "docs-evidence"
+      },
+      {
+        "path": "docs/evidence/emo-master-dual-release-20261026.md",
+        "git_blob_sha": "0f83ae4b27aec1578fde7bc2e3d3e21dd0bc88b7",
+        "bytes": 8874,
+        "classification": "docs-evidence"
+      },
+      {
+        "path": "docs/evidence/kaggle-source-resources-20260926/README.md",
+        "git_blob_sha": "a72313c60471e82c363fb71026cda4aa100dae29",
+        "bytes": 2807,
+        "classification": "docs-evidence"
+      },
+      {
+        "path": "docs/evidence/kaggle-source-resources-20260926/effective-config.json",
+        "git_blob_sha": "77c60040f44724ed4b39f5e350da245d15da37ba",
+        "bytes": 6193,
+        "classification": "docs-evidence"
+      },
+      {
+        "path": "docs/evidence/kaggle-source-resources-20260926/verification.json",
+        "git_blob_sha": "82cd5002160e7fe9d8bcb10d236b58f888384275",
+        "bytes": 3494,
+        "classification": "docs-evidence"
+      },
+      {
+        "path": "docs/evidence/visionworkshop-branding-m0-m1.md",
+        "git_blob_sha": "75dd00735e5b329b677c62369d579eb29ae1e17c",
+        "bytes": 4144,
+        "classification": "docs-evidence"
+      },
+      {
+        "path": "docs/evidence/visionworkshop-branding-review.md",
+        "git_blob_sha": "21b439e43eef28012cc15ce21c0ea89fb04b62e5",
+        "bytes": 5151,
+        "classification": "docs-evidence"
+      },
+      {
+        "path": "docs/evidence/visionworkshop-core-exit-diagnostic-source-tests.json",
+        "git_blob_sha": "60c26168468144e370312aee2fdedad3b339806a",
+        "bytes": 1338,
+        "classification": "docs-evidence"
+      },
+      {
+        "path": "docs/evidence/visionworkshop-cp312-production-validation.md",
+        "git_blob_sha": "6a5c8608468e033b8ed991ba31e93f34fe44ec32",
+        "bytes": 24237,
+        "classification": "docs-evidence"
+      },
+      {
+        "path": "docs/evidence/visionworkshop-modular-candidate-45603279133.json",
+        "git_blob_sha": "c26a87d279aa70cc9f22f9f66fae28b4a0a33355",
+        "bytes": 5420,
+        "classification": "docs-evidence"
+      },
+      {
+        "path": "docs/evidence/visionworkshop-modular-candidate-45611806903.json",
+        "git_blob_sha": "c4f1e8017fbe3bdaeb911d09970939d0849ab6cb",
+        "bytes": 8047,
+        "classification": "docs-evidence"
+      },
+      {
+        "path": "docs/evidence/visionworkshop-modular-candidate-45616400076.json",
+        "git_blob_sha": "8ab02463dff1fab21ff27d2cc0114ed5bf8bed5f",
+        "bytes": 16233,
+        "classification": "docs-evidence"
+      },
+      {
+        "path": "docs/evidence/visionworkshop-modular-candidate-45633041291.json",
+        "git_blob_sha": "94d55c2a59bdb710e792d823b46807d2ee58941a",
+        "bytes": 1655,
+        "classification": "docs-evidence"
+      },
+      {
+        "path": "docs/evidence/visionworkshop-modular-candidate-45634156750.json",
+        "git_blob_sha": "28ffcc9ef142bdc23bdc2d8b74890df5eea6bc61",
+        "bytes": 20002,
+        "classification": "docs-evidence"
+      },
+      {
+        "path": "docs/evidence/visionworkshop-modular-candidate-45643325579.json",
+        "git_blob_sha": "aa7c731d50f8ef0395bc45c796ba581f01a1badd",
+        "bytes": 86061,
+        "classification": "docs-evidence"
+      },
+      {
+        "path": "docs/evidence/visionworkshop-modular-candidate-45652987042.json",
+        "git_blob_sha": "0cecc19052b45cca084f53f69e67160e39d92c0d",
+        "bytes": 12229,
+        "classification": "docs-evidence"
+      },
+      {
+        "path": "docs/evidence/visionworkshop-modular-candidate-45659615499.json",
+        "git_blob_sha": "8aef31b08364815a66868c844077ce97d4c6a806",
+        "bytes": 97037,
+        "classification": "docs-evidence"
+      },
+      {
+        "path": "docs/evidence/visionworkshop-modular-index-source-tests.json",
+        "git_blob_sha": "11c4d3c57c58ae1dda28516010e1d074631e28da",
+        "bytes": 1774,
+        "classification": "docs-evidence"
+      },
+      {
+        "path": "docs/evidence/visionworkshop-modular-loader-45585355615.json",
+        "git_blob_sha": "519ce821ec0e4cd077820a2d410af1fc8d5ba7dd",
+        "bytes": 39993,
+        "classification": "docs-evidence"
+      },
+      {
+        "path": "docs/evidence/visionworkshop-modular-loader.md",
+        "git_blob_sha": "1035fdbbd4ac366633c7e2654a5bb15b58e8e60d",
+        "bytes": 14710,
+        "classification": "docs-evidence"
+      },
+      {
+        "path": "docs/evidence/visionworkshop-modular-other-product-baseline-d3ace70.json",
+        "git_blob_sha": "b11ed0fdf4cf1e9ffcb928dab32f670e5053bd38",
+        "bytes": 16765,
+        "classification": "docs-evidence"
+      },
+      {
+        "path": "docs/evidence/visionworkshop-modular-receipt-source-tests.json",
+        "git_blob_sha": "aee5d18d3e44367907dae3496eeecbcef2fba52b",
+        "bytes": 669,
+        "classification": "docs-evidence"
+      },
+      {
+        "path": "docs/evidence/visionworkshop-modular-size-audit-45616400076.json",
+        "git_blob_sha": "c8cd249901358a96bd627e1b1b30159810fa542a",
+        "bytes": 1616677,
+        "classification": "docs-evidence"
+      },
+      {
+        "path": "docs/evidence/visionworkshop-modular-size-audit-45616400076.md",
+        "git_blob_sha": "bf0d81edc36f24c9bf4bb2760d192be2738c9105",
+        "bytes": 17248,
+        "classification": "docs-evidence"
+      },
+      {
+        "path": "docs/evidence/visionworkshop-package-size-audit-20261125.json",
+        "git_blob_sha": "e780e775a48e4c57dc4659bcf751659c4f920c13",
+        "bytes": 41735,
+        "classification": "docs-evidence"
+      },
+      {
+        "path": "docs/evidence/visionworkshop-package-size-audit-20261125.md",
+        "git_blob_sha": "069774b46069595b5b27b5500b1edf7e15c95bda",
+        "bytes": 11917,
+        "classification": "docs-evidence"
+      },
+      {
+        "path": "docs/evidence/visionworkshop-torchvision-python-owner-20261125.json",
+        "git_blob_sha": "c50b966b2009f77943a6d37578c165cc1b44eeb5",
+        "bytes": 6442,
+        "classification": "docs-evidence"
+      },
+      {
+        "path": "docs/plans/2026-03-16-repo-initialization-design.md",
+        "git_blob_sha": "2b8f42c0d76d5d83286927d8a5ab60711efa4de5",
+        "bytes": 2338,
+        "classification": "docs-evidence"
+      },
+      {
+        "path": "docs/plans/2026-03-16-repo-initialization.md",
+        "git_blob_sha": "d3ebed9afb44f2310d02b2a9fd6becd6f24446d1",
+        "bytes": 2059,
+        "classification": "docs-evidence"
+      },
+      {
+        "path": "docs/plans/2026-09-08-packaging-branding-improvement-plan.md",
+        "git_blob_sha": "48ce51e9791ae2be20a94ccd828e7e67f4cce50d",
+        "bytes": 29923,
+        "classification": "docs-evidence"
+      },
+      {
+        "path": "docs/plans/2026-09-08-visionworkshop-implementation-status.md",
+        "git_blob_sha": "a81d7cf1c750eb2a7b66f1039fb5ce920788b9b2",
+        "bytes": 1664,
+        "classification": "docs-evidence"
+      },
+      {
+        "path": "docs/release-runbook.md",
+        "git_blob_sha": "d15dcf43651e034f46c5466792a7668eec6563db",
+        "bytes": 10002,
+        "classification": "docs-evidence"
+      },
+      {
+        "path": "docs/visionworkshop-branding.md",
+        "git_blob_sha": "0fc56d96da3625dca7865bfdba51c6651f2b9f44",
+        "bytes": 14284,
+        "classification": "docs-evidence"
+      },
+      {
+        "path": "docs/visionworkshop-modular-candidate.md",
+        "git_blob_sha": "48299adaf1a663936b0a80525688f354ccb1f99d",
+        "bytes": 45113,
+        "classification": "docs-evidence"
+      },
+      {
+        "path": "hooks/vision-train/hook-torch.py",
+        "git_blob_sha": "d908b52fd3e8a537655e05041fdcac25fcfe3146",
+        "bytes": 1089,
+        "classification": "code"
+      },
+      {
+        "path": "master_release.py",
+        "git_blob_sha": "a2a2faffce32b73d047ec81f7a648698c2b62e2b",
+        "bytes": 13119,
+        "classification": "code"
+      },
+      {
+        "path": "path_boundary.py",
+        "git_blob_sha": "d8ab3d39d4cb0189b5040b71ad09c9966f016b0c",
+        "bytes": 538,
+        "classification": "code"
+      },
+      {
+        "path": "portable_release.py",
+        "git_blob_sha": "da89db3cdeaa884bdb7f5c373e0a73d56365daf5",
+        "bytes": 40017,
+        "classification": "code"
+      },
+      {
+        "path": "profiles/visionworkshop.json",
+        "git_blob_sha": "7e5344f789369394de2c28b86883a161ca67f0a9",
+        "bytes": 349,
+        "classification": "config-lock"
+      },
+      {
+        "path": "pyi_rth_onnxruntime.py",
+        "git_blob_sha": "5976519c223e9e9661aa3d3ad0210a0805992218",
+        "bytes": 141,
+        "classification": "code"
+      },
+      {
+        "path": "pyi_rth_torch_dll.py",
+        "git_blob_sha": "64a34f8f1f9d9fef022cd6c0f166616f92aab9dd",
+        "bytes": 2540,
+        "classification": "code"
+      },
+      {
+        "path": "pyinstaller_config_cpu_torch.json",
+        "git_blob_sha": "41a51ae8b8ba8797b3f1c7e4a98fadfc98e8dfa3",
+        "bytes": 1444,
+        "classification": "config-lock"
+      },
+      {
+        "path": "release_content.py",
+        "git_blob_sha": "d5f48982257ebb7819f441241cdbcc846d05fc41",
+        "bytes": 13427,
+        "classification": "code"
+      },
+      {
+        "path": "release_progress.py",
+        "git_blob_sha": "1f7d5ff509e4c8c0c828837a202d4edf267b2ef6",
+        "bytes": 2058,
+        "classification": "code"
+      },
+      {
+        "path": "scripts/build-windows-installer.ps1",
+        "git_blob_sha": "402214f4d03ecc59ccbe016d74899a598a893c31",
+        "bytes": 11820,
+        "classification": "code"
+      },
+      {
+        "path": "scripts/build_vision_train_modular.py",
+        "git_blob_sha": "a188e283f6a6a700a13fb5f46bea832313fee10e",
+        "bytes": 273,
+        "classification": "code"
+      },
+      {
+        "path": "scripts/compress-portable-archive.ps1",
+        "git_blob_sha": "adce854f93529e37ed3b0145a61590be48976c5f",
+        "bytes": 313,
+        "classification": "code"
+      },
+      {
+        "path": "scripts/diagnose_baseline_startup_windows.py",
+        "git_blob_sha": "8b46e82ba477f4af25a7136a351860fe1cf118c2",
+        "bytes": 9990,
+        "classification": "code"
+      },
+      {
+        "path": "scripts/diagnose_vision_train_core.py",
+        "git_blob_sha": "9dd3a7a0153d36e83818796ba3ff5de1b9459ba9",
+        "bytes": 26929,
+        "classification": "code"
+      },
+      {
+        "path": "scripts/modular_probe_core.py",
+        "git_blob_sha": "0a9b2c15426ca5aaa6ff35a755bd9140b3ea96fe",
+        "bytes": 32385,
+        "classification": "code"
+      },
+      {
+        "path": "scripts/modular_product_launcher.py",
+        "git_blob_sha": "83350207c11772dbac550966d1c22e64c245b9b7",
+        "bytes": 8120,
+        "classification": "code"
+      },
+      {
+        "path": "scripts/prepare_vision_train_module_reuse.py",
+        "git_blob_sha": "e8ecad83a4909a60581cd13378033af1126bf25c",
+        "bytes": 976,
+        "classification": "code"
+      },
+      {
+        "path": "scripts/publish-local-release-legacy.ps1",
+        "git_blob_sha": "0c3b43f6f8cfac576434fb4eee0a42b3c62d7f82",
+        "bytes": 34737,
+        "classification": "code"
+      },
+      {
+        "path": "scripts/publish-local-release.ps1",
+        "git_blob_sha": "f07a1fe06c468670a4eade0b7741b8205dbec28c",
+        "bytes": 3479,
+        "classification": "code"
+      },
+      {
+        "path": "scripts/publish_visionworkshop.py",
+        "git_blob_sha": "3f725925a71dee28dbcb00d88c929ad796d75d07",
+        "bytes": 253,
+        "classification": "code"
+      },
+      {
+        "path": "scripts/published-retest/.gitattributes",
+        "git_blob_sha": "fcadb2cf97913f58a2523f535336e725c6b59d1f",
+        "bytes": 14,
+        "classification": "repository-metadata"
+      },
+      {
+        "path": "scripts/published-retest/README.md",
+        "git_blob_sha": "0bcf090e646ad0869984385324ab4ac4c3ad7ac3",
+        "bytes": 4684,
+        "classification": "repository-metadata"
+      },
+      {
+        "path": "scripts/published-retest/frozen_release_helpers.py",
+        "git_blob_sha": "88b34f9032143a80e610bbe7aa8a7f2ab7ac6ee4",
+        "bytes": 21951,
+        "classification": "code"
+      },
+      {
+        "path": "scripts/published-retest/published-assets.lock.json",
+        "git_blob_sha": "d2523f03db20d7deb997cafe7a86e5e2dea87f2d",
+        "bytes": 2950,
+        "classification": "config-lock"
+      },
+      {
+        "path": "scripts/published-retest/published-update-retest.yml",
+        "git_blob_sha": "4b467858ad07d82d0581ef713bc01ca69cbb6e81",
+        "bytes": 2717,
+        "classification": "workflow"
+      },
+      {
+        "path": "scripts/published-retest/retest_published_windows.py",
+        "git_blob_sha": "1881c38471dce666dc3b6f633c7d14c78bdda21f",
+        "bytes": 23606,
+        "classification": "code"
+      },
+      {
+        "path": "scripts/published-retest/test_retest_helpers.py",
+        "git_blob_sha": "15ae02485123050c9caeaaf24b421dbd4b1d6e22",
+        "bytes": 9001,
+        "classification": "tests"
+      },
+      {
+        "path": "scripts/release_wizard_common.py",
+        "git_blob_sha": "8550bea84d67edfed67934f0face659dfe2ffaf4",
+        "bytes": 23632,
+        "classification": "code"
+      },
+      {
+        "path": "scripts/release_wizard_emo_master.py",
+        "git_blob_sha": "9e1a15d16cbefcf4ca0979eacd15f9f310658f98",
+        "bytes": 202,
+        "classification": "code"
+      },
+      {
+        "path": "scripts/release_wizard_emo_vision_train.py",
+        "git_blob_sha": "c7acd74526af7142cec28c9d9cf7cb46b24c48f7",
+        "bytes": 95,
+        "classification": "code"
+      },
+      {
+        "path": "scripts/resolve_build_config.py",
+        "git_blob_sha": "a4666658a70f7b5eeaf108b32a2efecf23bf4145",
+        "bytes": 1998,
+        "classification": "code"
+      },
+      {
+        "path": "scripts/validate_actions_baseline.py",
+        "git_blob_sha": "49ec92f2758f40e14748f1ccf533b328862dc3b6",
+        "bytes": 2254,
+        "classification": "code"
+      },
+      {
+        "path": "scripts/verify_release_transition_windows.py",
+        "git_blob_sha": "88b34f9032143a80e610bbe7aa8a7f2ab7ac6ee4",
+        "bytes": 21951,
+        "classification": "code"
+      },
+      {
+        "path": "scripts/verify_vision_train_frozen.py",
+        "git_blob_sha": "faed30dfc9bbcefd9a4ed0902fa03bbe4de6ca4d",
+        "bytes": 17265,
+        "classification": "code"
+      },
+      {
+        "path": "scripts/verify_vision_train_modular_product.py",
+        "git_blob_sha": "8ce479ead98f147d7b3fe4962c4692fede78c21d",
+        "bytes": 33457,
+        "classification": "code"
+      },
+      {
+        "path": "scripts/verify_vision_train_modules.py",
+        "git_blob_sha": "b97f4a894230d31afb0864f1ac57a06501bb0bb6",
+        "bytes": 45297,
+        "classification": "code"
+      },
+      {
+        "path": "scripts/verify_vision_train_patchcore_frozen.py",
+        "git_blob_sha": "b2941bf07147613a13f1d3cbe8bb226f51a6bf3f",
+        "bytes": 20332,
+        "classification": "code"
+      },
+      {
+        "path": "scripts/verify_windows_portable.py",
+        "git_blob_sha": "0a836c14a7a41ba98293a34bc27598bf20884ac1",
+        "bytes": 8387,
+        "classification": "code"
+      },
+      {
+        "path": "scripts/verify_windows_qt_fonts.py",
+        "git_blob_sha": "cad8663ac26a84dc7e7eca5b5c2691940ef94556",
+        "bytes": 15085,
+        "classification": "code"
+      },
+      {
+        "path": "scripts/verify_windows_update_migration.py",
+        "git_blob_sha": "eb4e7eebce780255d3b1e22744637107a7e92344",
+        "bytes": 10013,
+        "classification": "code"
+      },
+      {
+        "path": "scripts/visionworkshop_wizard.py",
+        "git_blob_sha": "298d2cc8fd37bc570b0bcffadc8deb961c6560ba",
+        "bytes": 21933,
+        "classification": "code"
+      },
+      {
+        "path": "tests/branding_fixtures.py",
+        "git_blob_sha": "079b97df3829ff2e018b730cd56b57df3a26f02a",
+        "bytes": 2210,
+        "classification": "tests"
+      },
+      {
+        "path": "tests/powershell/test_master_release_provenance.ps1",
+        "git_blob_sha": "4f7390b056243eca2a119d05f082ecc432d091d5",
+        "bytes": 4154,
+        "classification": "tests"
+      },
+      {
+        "path": "tests/test_actions_release.py",
+        "git_blob_sha": "8c15dd0a7f887634fd32a4a458cc58c2d918db6e",
+        "bytes": 27043,
+        "classification": "tests"
+      },
+      {
+        "path": "tests/test_archive_paths.py",
+        "git_blob_sha": "508ad5875345df899d402287ede2cad50305f683",
+        "bytes": 2598,
+        "classification": "tests"
+      },
+      {
+        "path": "tests/test_branding_build.py",
+        "git_blob_sha": "dd1148d86f6466613fa5959fefbfff2f7e448a67",
+        "bytes": 17950,
+        "classification": "tests"
+      },
+      {
+        "path": "tests/test_build_baseline.py",
+        "git_blob_sha": "326b1814ecb738213bc5e96308d7554e5c7f7b38",
+        "bytes": 5641,
+        "classification": "tests"
+      },
+      {
+        "path": "tests/test_build_collect_paths.py",
+        "git_blob_sha": "e2ff1b4309a739141aa96169d92644d14a69f10e",
+        "bytes": 3270,
+        "classification": "tests"
+      },
+      {
+        "path": "tests/test_build_config.py",
+        "git_blob_sha": "e287043df466a5e72f0e085c7f4f06024bc05b48",
+        "bytes": 16192,
+        "classification": "tests"
+      },
+      {
+        "path": "tests/test_build_input_diagnostics.py",
+        "git_blob_sha": "eec65bf27333f141c756ac12a27e6009c65a0da6",
+        "bytes": 6747,
+        "classification": "tests"
+      },
+      {
+        "path": "tests/test_console_output.py",
+        "git_blob_sha": "bab2cd5b4d6f077afcf6c3f26da702128ab473ed",
+        "bytes": 1945,
+        "classification": "tests"
+      },
+      {
+        "path": "tests/test_delta_release.py",
+        "git_blob_sha": "9afc03a8ff99351bd2d3e72106c40dae9bc5e4bf",
+        "bytes": 8463,
+        "classification": "tests"
+      },
+      {
+        "path": "tests/test_diagnostic_profile_layout.py",
+        "git_blob_sha": "3fd0e8fc8dd8e55d0541050e313894f4777fe6ca",
+        "bytes": 1927,
+        "classification": "tests"
+      },
+      {
+        "path": "tests/test_kaggle_source_resources.py",
+        "git_blob_sha": "75fe8eeb6f27ccab76f2db7165d41f78d97a71c6",
+        "bytes": 1765,
+        "classification": "tests"
+      },
+      {
+        "path": "tests/test_master_release.py",
+        "git_blob_sha": "5ff820715b79226c5d8d498c57d88a156062f7e0",
+        "bytes": 10431,
+        "classification": "tests"
+      },
+      {
+        "path": "tests/test_master_release_provenance.py",
+        "git_blob_sha": "92046d7c623b6e4c0ffed4a642faa2bccd260f9b",
+        "bytes": 2278,
+        "classification": "tests"
+      },
+      {
+        "path": "tests/test_master_source_version.py",
+        "git_blob_sha": "e96b1452a80b37e8ffa9bc426e956e3998c84488",
+        "bytes": 3918,
+        "classification": "tests"
+      },
+      {
+        "path": "tests/test_portable_release.py",
+        "git_blob_sha": "9aafe727558436c6e85842a6016ad3e8a887a4ca",
+        "bytes": 42994,
+        "classification": "tests"
+      },
+      {
+        "path": "tests/test_portable_windows_acceptance.py",
+        "git_blob_sha": "2fe9feb01efaa5a2da696af1889889df2985a3cd",
+        "bytes": 11239,
+        "classification": "tests"
+      },
+      {
+        "path": "tests/test_record_review.py",
+        "git_blob_sha": "7558cf13c1f13a2fb65d879ff13fde4a639d7ab9",
+        "bytes": 5478,
+        "classification": "tests"
+      },
+      {
+        "path": "tests/test_release_content.py",
+        "git_blob_sha": "0d23aeb29dffabd5351d48d40c30704ff74917df",
+        "bytes": 16507,
+        "classification": "tests"
+      },
+      {
+        "path": "tests/test_release_progress.py",
+        "git_blob_sha": "ab4726e1b43cdbe3d28ba3cb6410ac7c3a9654d9",
+        "bytes": 2866,
+        "classification": "tests"
+      },
+      {
+        "path": "tests/test_runtime_branding.py",
+        "git_blob_sha": "7de98ead82a1b3dc57236c8dc20d7c74ac14bd13",
+        "bytes": 5452,
+        "classification": "tests"
+      },
+      {
+        "path": "tests/test_runtime_target.py",
+        "git_blob_sha": "38bcc80cd8192141083b542cb8735deb87c9c21e",
+        "bytes": 5420,
+        "classification": "tests"
+      },
+      {
+        "path": "tests/test_source_assets.py",
+        "git_blob_sha": "c2e2f0844f60c5e21abd5d56ef87c2b0aa2c5c38",
+        "bytes": 4242,
+        "classification": "tests"
+      },
+      {
+        "path": "tests/test_torch_runtime_hook.py",
+        "git_blob_sha": "250be1c715699428f730ba9572e20ae94fba2c07",
+        "bytes": 7535,
+        "classification": "tests"
+      },
+      {
+        "path": "tests/test_update_acceptance.py",
+        "git_blob_sha": "634d211a300424e78640e9911de842d0c0d60cf0",
+        "bytes": 3723,
+        "classification": "tests"
+      },
+      {
+        "path": "tests/test_update_layout.py",
+        "git_blob_sha": "ca6980d1f8e433ac1ce999ab288cb67b946f8717",
+        "bytes": 3062,
+        "classification": "tests"
+      },
+      {
+        "path": "tests/test_update_protocol_build.py",
+        "git_blob_sha": "b144869e2d562c5b5cf838bad615316fb95de986",
+        "bytes": 3270,
+        "classification": "tests"
+      },
+      {
+        "path": "tests/test_update_protocol_publish.py",
+        "git_blob_sha": "43af10a8b048237396adf765bf9079376d536e20",
+        "bytes": 2815,
+        "classification": "tests"
+      },
+      {
+        "path": "tests/test_vision_train_core_diagnostic.py",
+        "git_blob_sha": "b164c77bf1ef89189b70efda3cc9523e53c7df35",
+        "bytes": 16673,
+        "classification": "tests"
+      },
+      {
+        "path": "tests/test_vision_train_frozen.py",
+        "git_blob_sha": "9ec2d12e0b0efcfa980a3d5e8639921f232d8d28",
+        "bytes": 3247,
+        "classification": "tests"
+      },
+      {
+        "path": "tests/test_vision_train_modular_build.py",
+        "git_blob_sha": "dc7da8ecbd575a81ed9d0fffee0bfd8a9e7d699c",
+        "bytes": 36063,
+        "classification": "tests"
+      },
+      {
+        "path": "tests/test_vision_train_modular_index.py",
+        "git_blob_sha": "187d2eefaf88d979a2fa07938a663d9ff8c59bd6",
+        "bytes": 13454,
+        "classification": "tests"
+      },
+      {
+        "path": "tests/test_vision_train_modular_receipts.py",
+        "git_blob_sha": "4b03404eaf040f58873ced8f11e21775b9c53527",
+        "bytes": 15937,
+        "classification": "tests"
+      },
+      {
+        "path": "tests/test_vision_train_modular_reuse.py",
+        "git_blob_sha": "0791ec071aff5b311107fb1bdeb6d9a4ec45554d",
+        "bytes": 17776,
+        "classification": "tests"
+      },
+      {
+        "path": "tests/test_vision_train_modules.py",
+        "git_blob_sha": "bc162de61ed88c37f6ca803f7f8eb39562816d1c",
+        "bytes": 19322,
+        "classification": "tests"
+      },
+      {
+        "path": "tests/test_vision_train_patchcore_frozen.py",
+        "git_blob_sha": "2998db2b47f511257556541ed1ba5663e26fff76",
+        "bytes": 5758,
+        "classification": "tests"
+      },
+      {
+        "path": "tests/test_vision_train_runtime.py",
+        "git_blob_sha": "1057835b53f349d5187f51a2b590d6fe980c3c62",
+        "bytes": 20120,
+        "classification": "tests"
+      },
+      {
+        "path": "tests/test_vision_train_slimming.py",
+        "git_blob_sha": "596e0060d6592b593473796f4987c946934ce33d",
+        "bytes": 5729,
+        "classification": "tests"
+      },
+      {
+        "path": "tests/test_windows_qt_fonts.py",
+        "git_blob_sha": "068a73e53b94bcc389d0212ad6f3f318025b6f38",
+        "bytes": 8267,
+        "classification": "tests"
+      },
+      {
+        "path": "tests/test_workflow_safety.py",
+        "git_blob_sha": "799a0468c433e0d467c61a269f86df6bde28c593",
+        "bytes": 9561,
+        "classification": "tests"
+      },
+      {
+        "path": "tests/test_workflows_and_wizard.py",
+        "git_blob_sha": "b558a6793360e8b0926a80fc8c07dae278981e5e",
+        "bytes": 24499,
+        "classification": "tests"
+      },
+      {
+        "path": "ui_main.spec",
+        "git_blob_sha": "063ed3dfa303bd6898634a706300c88d68ee5558",
+        "bytes": 3511,
+        "classification": "historical-manual-probe"
+      },
+      {
+        "path": "update_acceptance.py",
+        "git_blob_sha": "9bf8c100fbe9a636242f57e956924cd5cd934f06",
+        "bytes": 2977,
+        "classification": "code"
+      },
+      {
+        "path": "update_protocol_build.py",
+        "git_blob_sha": "330768a5f215abb1542ad39c7e7b769425ab3af9",
+        "bytes": 3530,
+        "classification": "code"
+      },
+      {
+        "path": "update_protocol_publish.py",
+        "git_blob_sha": "9f0aaf312b710c1d40a1194b77d5d0ef59b5fc42",
+        "bytes": 3141,
+        "classification": "code"
+      },
+      {
+        "path": "vision_train_modular_archive.py",
+        "git_blob_sha": "4f1afb5f592190a71f03ee755f372cc08e7b4b82",
+        "bytes": 4426,
+        "classification": "code"
+      },
+      {
+        "path": "vision_train_modular_build.py",
+        "git_blob_sha": "a5e2f1213a8e7caf4162aeaee3287d94e79a4b71",
+        "bytes": 48691,
+        "classification": "code"
+      },
+      {
+        "path": "vision_train_modular_crt.py",
+        "git_blob_sha": "419e2c15d0bfc83dd126dc3aa17d2307d8289014",
+        "bytes": 11217,
+        "classification": "code"
+      },
+      {
+        "path": "vision_train_modular_index.py",
+        "git_blob_sha": "079b54e7628ad8a3c97119d7e9b13cd91f38e349",
+        "bytes": 11056,
+        "classification": "code"
+      },
+      {
+        "path": "vision_train_modular_receipts.py",
+        "git_blob_sha": "5d15c4dea20e4bae70d4a8708e454d85be737590",
+        "bytes": 13067,
+        "classification": "code"
+      },
+      {
+        "path": "vision_train_modular_reuse.py",
+        "git_blob_sha": "f8508c9a3bd6cbbba1d99d638c850d3e06ef058d",
+        "bytes": 20365,
+        "classification": "code"
+      },
+      {
+        "path": "vision_train_module_inventory.py",
+        "git_blob_sha": "a69b9ab98b57e17b89f390c57355f3a7a1e97d70",
+        "bytes": 16134,
+        "classification": "code"
+      },
+      {
+        "path": "vision_train_runtime.py",
+        "git_blob_sha": "d3ca7611c7212e713a7a9aa564d51be148bdc45d",
+        "bytes": 16641,
+        "classification": "code"
+      }
+    ],
+    "excluded_binary": [
+      {
+        "path": "assets/icons/visionworkshop.ico",
+        "git_blob_sha": "fa9ec9fc9d0e9c49e33177e8fa6ddfbf20d10938",
+        "bytes": 128988,
+        "reason": "icon or historical test ZIP; no Python runtime payload"
+      },
+      {
+        "path": "docs/evidence/kaggle-source-resources-20260926/unit-tests.zip",
+        "git_blob_sha": "2d8ecb5fa4767647842b578aa48484df055bc8b6",
+        "bytes": 9512,
+        "reason": "icon or historical test ZIP; no Python runtime payload"
+      }
+    ]
+  },
+  "queries": {
+    "versions-and-native": {
+      "pattern": "python|cp3[0-9]{2}|\\babi\\b|cuda|cudnn|torch|onnx|\\bort\\b|opencv|\\bcv2\\b|pyqt|qt5|nvidia|cublas|cufft",
+      "matched_lines": 10248,
+      "files": 114
+    },
+    "dino-and-legacy": {
+      "pattern": "dino|embeddable|embed-amd64|python3[0-9]+\\._pth",
+      "matched_lines": 355,
+      "files": 36
+    },
+    "environment-and-entrypoints": {
+      "pattern": "sys\\.executable|sys\\.version_info|python_version|version_info|setup-python|pip.?check|PYTHONHOME|PYTHONPATH|CONDA|runtime_spec|runtimeSpec|runpy|subprocess",
+      "matched_lines": 362,
+      "files": 80
+    },
+    "crt-and-architecture": {
+      "pattern": "msvc|msvcp|vcruntime|\\bcrt\\b|\\.dll|win_amd64|AMD64|0x8664|0x20b|64bit",
+      "matched_lines": 717,
+      "files": 44
+    }
+  },
+  "entries": [
+    {
+      "id": "P3-01",
+      "track": "P3 ordinary release",
+      "subject": "Python/CUDA/Torch 的声明和实际版本门",
+      "finding": "产品配置和专用profile均为CPython3.12.10。checkPlatform要求Windows、64 bit、精确patch；Torch2.10.0+cu128、TV0.25.0+cu128、TorchAudio2.10.0+cu128、CUDA12.8。validateTorch核真实torch.__version__/torch.version.cuda。",
+      "callers": [
+        "visionworkshop-portable workflow→vision_train_runtime install",
+        "actions_release.executeRequest→portable_release.runRelease(--verify-vision-train-runtime)→validateEnvironment/validatePackage"
+      ],
+      "sources": [
+        {
+          "path": "configs/emo-vision-train.json",
+          "lines": [
+            1,
+            12
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/configs/emo-vision-train.json#L1-L12"
+        },
+        {
+          "path": "ci/vision-train-runtime.json",
+          "lines": [
+            1,
+            22
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/ci/vision-train-runtime.json#L1-L22"
+        },
+        {
+          "path": "vision_train_runtime.py",
+          "lines": [
+            95,
+            129
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/vision_train_runtime.py#L95-L129"
+        },
+        {
+          "path": "actions_release.py",
+          "lines": [
+            337,
+            354
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/actions_release.py#L337-L354"
+        }
+      ],
+      "evidence_limit": "源码规则和调用关系；本审计未执行入口。"
+    },
+    {
+      "id": "P3-02",
+      "track": "P3 ordinary release",
+      "subject": "requirements合并与ORT/OpenCV提供方",
+      "finding": "makeRequirements把source requirements与overrides/torch/packages/binary_owners/exclusions/extras合并；先装cu128 Torch，再统一依赖，最后force-reinstall --no-deps ORTGPU1.23.2和contrib-headless OpenCV4.11.0.86，再pip check。alias metadata留存不能解释成两个实际namespace的产品承诺。",
+      "callers": [
+        "vision_train_runtime.main(install)→installRuntime→makeRequirements",
+        "visionworkshop-portable workflow安装步骤"
+      ],
+      "sources": [
+        {
+          "path": "vision_train_runtime.py",
+          "lines": [
+            62,
+            84
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/vision_train_runtime.py#L62-L84"
+        },
+        {
+          "path": "vision_train_runtime.py",
+          "lines": [
+            101,
+            122
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/vision_train_runtime.py#L101-L122"
+        },
+        {
+          "path": "ci/vision-train-runtime.json",
+          "lines": [
+            10,
+            37
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/ci/vision-train-runtime.json#L10-L37"
+        },
+        {
+          "path": ".github/workflows/visionworkshop-portable.yml",
+          "lines": [
+            196,
+            240
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/.github/workflows/visionworkshop-portable.yml#L196-L240"
+        }
+      ],
+      "evidence_limit": "已盘点机制；B0.3仍须核应用完整锁，不因profile覆盖成立就称全部源声明兼容。"
+    },
+    {
+      "id": "P3-03",
+      "track": "P3 ordinary release",
+      "subject": "ORT/OpenCV/Qt环境与冻结结构检查",
+      "finding": "validateEnvironment执行pip check、distribution版本/import；cv2.ximgproc必须存在，ORT列出CUDAExecutionProvider；Qt/QtWebEngine可导入。P3专用profile没有独立Qt精确版本常量。validatePackage核Torch版本、CUDA/cuDNN指定DLL、ORT PE依赖、PYZ/metadata/模型/Polars；nvcuda作为系统驱动另列。",
+      "callers": [
+        "portable_release.runRelease→executeBuild(environmentCheck=validateEnvironment)→validatePackage",
+        "vision_train_runtime.main(verify/package)",
+        "verify_vision_train_frozen.main→validatePackage"
+      ],
+      "sources": [
+        {
+          "path": "vision_train_runtime.py",
+          "lines": [
+            139,
+            173
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/vision_train_runtime.py#L139-L173"
+        },
+        {
+          "path": "vision_train_runtime.py",
+          "lines": [
+            187,
+            266
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/vision_train_runtime.py#L187-L266"
+        },
+        {
+          "path": "vision_train_runtime.py",
+          "lines": [
+            304,
+            325
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/vision_train_runtime.py#L304-L325"
+        },
+        {
+          "path": "ci/vision-train-runtime.json",
+          "lines": [
+            75,
+            102
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/ci/vision-train-runtime.json#L75-L102"
+        },
+        {
+          "path": "portable_release.py",
+          "lines": [
+            525,
+            541
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/portable_release.py#L525-L541"
+        }
+      ],
+      "evidence_limit": "静态结构/import/provider列表不等于CUDA计算、GUI文字/退出、既有业务模型或唯一已加载Python通过。"
+    },
+    {
+      "id": "P3-04",
+      "track": "P3 local entrypoint gap",
+      "subject": "专用门并非所有P3入口默认强制",
+      "finding": "Actions executeRequest总是追加--verify-vision-train-runtime。portable_release参数默认false；本地wizard collectArguments不加此flag，直接build.py→runBrandedBuild→executeBuild不传environmentCheck，PowerShell portable wrapper也未补此flag。JSON python_version不切换当前本地解释器。",
+      "callers": [
+        "scripts/visionworkshop_wizard.main→portable_release.main",
+        "build.py.main→branding_build.runBrandedBuild",
+        "scripts/publish-local-release.ps1→scripts/publish_visionworkshop.py"
+      ],
+      "sources": [
+        {
+          "path": "scripts/visionworkshop_wizard.py",
+          "lines": [
+            444,
+            513
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/scripts/visionworkshop_wizard.py#L444-L513"
+        },
+        {
+          "path": "branding_build.py",
+          "lines": [
+            169,
+            180
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/branding_build.py#L169-L180"
+        },
+        {
+          "path": "branding_build.py",
+          "lines": [
+            225,
+            251
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/branding_build.py#L225-L251"
+        },
+        {
+          "path": "build.py",
+          "lines": [
+            587,
+            624
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/build.py#L587-L624"
+        },
+        {
+          "path": "portable_release.py",
+          "lines": [
+            725,
+            731
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/portable_release.py#L725-L731"
+        },
+        {
+          "path": "scripts/publish-local-release.ps1",
+          "lines": [
+            23,
+            82
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/scripts/publish-local-release.ps1#L23-L82"
+        }
+      ],
+      "evidence_limit": "确定的源码接线差异；本轮不改默认行为，不因此反推任意旧包实际不兼容。"
+    },
+    {
+      "id": "P3-05",
+      "track": "P3 generic/legacy entrypoint",
+      "subject": "通用旧入口与专用Actions不同",
+      "finding": "release-windows根据目标config选择setup-python，装source requirements+extras，其路径未调用专用installRuntime。legacy PowerShell直接python build.py；不能与专用Actions全部runtime门等同。",
+      "callers": [
+        "release-windows workflow→publish-local-release.ps1",
+        "publish-local-release-legacy.ps1→build.py"
+      ],
+      "sources": [
+        {
+          "path": ".github/workflows/release-windows.yml",
+          "lines": [
+            317,
+            333
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/.github/workflows/release-windows.yml#L317-L333"
+        },
+        {
+          "path": ".github/workflows/release-windows.yml",
+          "lines": [
+            378,
+            405
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/.github/workflows/release-windows.yml#L378-L405"
+        },
+        {
+          "path": "scripts/publish-local-release-legacy.ps1",
+          "lines": [
+            795,
+            812
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/scripts/publish-local-release-legacy.ps1#L795-L812"
+        }
+      ],
+      "evidence_limit": "源码规则和调用关系；本审计未执行入口。"
+    },
+    {
+      "id": "P3-06",
+      "track": "shared builder used by P3",
+      "subject": "Torch hook/DLL搜索边界",
+      "finding": "build.py使用sys.executable -m PyInstaller，按hidden roots/enable开关加Torch/TV二进制和runtime hook。Conda DLL搜集读取sys.prefix/CONDA_PREFIX/sys.base_prefix。专用hook要求上游module_collection_mode；runtime hook为DINO跳过Torch CPU preload，其他预加载错误只打印。P4 spec不加载该hook。",
+      "callers": [
+        "branding_build.buildCommands→build.build_job_commands",
+        "build.append_torch_runtime_options→pyi_rth_torch_dll.py",
+        "P3 config的--additional-hooks-dir"
+      ],
+      "sources": [
+        {
+          "path": "build.py",
+          "lines": [
+            19,
+            22
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/build.py#L19-L22"
+        },
+        {
+          "path": "build.py",
+          "lines": [
+            288,
+            358
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/build.py#L288-L358"
+        },
+        {
+          "path": "build.py",
+          "lines": [
+            420,
+            436
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/build.py#L420-L436"
+        },
+        {
+          "path": "hooks/vision-train/hook-torch.py",
+          "lines": [
+            8,
+            22
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/hooks/vision-train/hook-torch.py#L8-L22"
+        },
+        {
+          "path": "pyi_rth_torch_dll.py",
+          "lines": [
+            1,
+            68
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/pyi_rth_torch_dll.py#L1-L68"
+        },
+        {
+          "path": "vision_train_modular_build.py",
+          "lines": [
+            551,
+            563
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/vision_train_modular_build.py#L551-L563"
+        }
+      ],
+      "evidence_limit": "B0.2盘点来源门；完整hook/worker行为仍归B0.4，日志preload不等于P4严格来源资格。"
+    },
+    {
+      "id": "DINO-01",
+      "track": "P3 current DINO",
+      "subject": "当前MainRuntime调用",
+      "finding": "validateEnvironment用同一sys.executable -I -B dino_onnx_entry.py --dino-onnx-worker inspect CPUExecutionProvider。validateDinoMainRuntime要求主PYZ worker/ONNX/NumPy/Pillow/psutil、python312.dll、ORT native和metadata，并明确拒绝_internal/dino_runtime。",
+      "callers": [
+        "专用P3环境检查→validateEnvironment",
+        "validatePackage→validateDinoMainRuntime"
+      ],
+      "sources": [
+        {
+          "path": "vision_train_runtime.py",
+          "lines": [
+            28,
+            37
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/vision_train_runtime.py#L28-L37"
+        },
+        {
+          "path": "vision_train_runtime.py",
+          "lines": [
+            166,
+            173
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/vision_train_runtime.py#L166-L173"
+        },
+        {
+          "path": "vision_train_runtime.py",
+          "lines": [
+            239,
+            251
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/vision_train_runtime.py#L239-L251"
+        },
+        {
+          "path": "vision_train_runtime.py",
+          "lines": [
+            304,
+            325
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/vision_train_runtime.py#L304-L325"
+        }
+      ],
+      "evidence_limit": "源码规则和调用关系；本审计未执行入口。"
+    },
+    {
+      "id": "DINO-02",
+      "track": "legacy compatibility fixture",
+      "subject": "旧Embeddable校验器及有限caller集合",
+      "finding": "DINO_RUNTIME_FILES和validateDinoRuntime仍核旧python.exe/python312.dll/python312.zip/python312._pth、runtime.json v1/v2、全库存/finalized、CP312 ORT/provider/CUDA文件。固定全仓非定义调用仅tests/test_vision_train_runtime.py的226/229/234/241/248/255/268/283/291行。当前validatePackage走MainRuntime。",
+      "callers": [
+        "tests/test_vision_train_runtime.py",
+        "170固定文本（含隐藏workflow/config/PS）+95 Python AST中无其他caller"
+      ],
+      "sources": [
+        {
+          "path": "vision_train_runtime.py",
+          "lines": [
+            23,
+            27
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/vision_train_runtime.py#L23-L27"
+        },
+        {
+          "path": "vision_train_runtime.py",
+          "lines": [
+            269,
+            301
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/vision_train_runtime.py#L269-L301"
+        },
+        {
+          "path": "tests/test_vision_train_runtime.py",
+          "lines": [
+            208,
+            295
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/tests/test_vision_train_runtime.py#L208-L295"
+        },
+        {
+          "path": "vision_train_runtime.py",
+          "lines": [
+            311,
+            318
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/vision_train_runtime.py#L311-L318"
+        }
+      ],
+      "evidence_limit": "固定仓库内无生产caller；不推断仓库外工具，不建议仅凭关键词删除兼容API。"
+    },
+    {
+      "id": "DINO-03",
+      "track": "P3/P4 asset preparation",
+      "subject": "资源准备不再构建Embeddable",
+      "finding": "P3 prepare_source_assets指向应用scripts/prepare_desktop_weights.py；branding_build仅执行配置脚本。P4 prepareAssets在独立资源目录调用CNN/图片精简/DINO权重准备器，未调用prepare_dino_runtime/finalize_dino。test_branding_build的generated_data_paths=dino_runtime是合成fixture。",
+      "callers": [
+        "branding_build.executeBuild→prepareSourceAssets",
+        "build_vision_train_modular assets→prepareAssets",
+        "tests/test_branding_build合成配置"
+      ],
+      "sources": [
+        {
+          "path": "configs/emo-vision-train.json",
+          "lines": [
+            10,
+            35
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/configs/emo-vision-train.json#L10-L35"
+        },
+        {
+          "path": "branding_build.py",
+          "lines": [
+            37,
+            57
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/branding_build.py#L37-L57"
+        },
+        {
+          "path": "vision_train_modular_build.py",
+          "lines": [
+            165,
+            203
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/vision_train_modular_build.py#L165-L203"
+        },
+        {
+          "path": "tests/test_branding_build.py",
+          "lines": [
+            76,
+            139
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/tests/test_branding_build.py#L76-L139"
+        },
+        {
+          "path": "tests/test_source_assets.py",
+          "lines": [
+            16,
+            39
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/tests/test_source_assets.py#L16-L39"
+        }
+      ],
+      "evidence_limit": "应用准备器内部与桌面入口由已归档A0.3应用审计覆盖；此处限定builder调用点。"
+    },
+    {
+      "id": "DINO-04",
+      "track": "P3 explicit frozen diagnostic",
+      "subject": "DINO inspect不是成功模型P5",
+      "finding": "verify_vision_train_frozen绑定source commit/包/模型SHA，调用VisionWorkshopApp.exe --dino-onnx-worker inspect CPUExecutionProvider；checkDinoReport复用valid_environment、训练库必须未导入、摘要完整，model_inference=NOT_RUN。",
+      "callers": [
+        "verify_vision_train_frozen.main→inspectDino→runFrozen",
+        "固定普通release workflow未自动调用；单测与PatchCore diagnostic引用其helper"
+      ],
+      "sources": [
+        {
+          "path": "scripts/verify_vision_train_frozen.py",
+          "lines": [
+            209,
+            218
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/scripts/verify_vision_train_frozen.py#L209-L218"
+        },
+        {
+          "path": "scripts/verify_vision_train_frozen.py",
+          "lines": [
+            264,
+            319
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/scripts/verify_vision_train_frozen.py#L264-L319"
+        },
+        {
+          "path": "scripts/verify_vision_train_frozen.py",
+          "lines": [
+            343,
+            350
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/scripts/verify_vision_train_frozen.py#L343-L350"
+        }
+      ],
+      "evidence_limit": "环境inspect/exit0不能代替生产部署模型、reference/数值验收。"
+    },
+    {
+      "id": "B2-01",
+      "track": "B2 experiment",
+      "subject": "B2版本/ABI/独立准备环境",
+      "finding": "B2 workflow CPython3.12.10，两隔离venv；PyInstaller6.18/hooks2026.0，Torch/TV cu128、NumPy2.0.2、ORTGPU1.23.2、contrib-headless OpenCV4.11.0.86、Qt5.15.9/WebEngine5.15.7。inspectPython强制Windows/exact patch/venv；B2 validateVersions拒CPU ORT metadata共存。",
+      "callers": [
+        "modular-loader-probe workflow→verify_vision_train_modules.main→inspectPython/validateVersions"
+      ],
+      "sources": [
+        {
+          "path": ".github/workflows/visionworkshop-modular-loader-probe.yml",
+          "lines": [
+            45,
+            48
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/.github/workflows/visionworkshop-modular-loader-probe.yml#L45-L48"
+        },
+        {
+          "path": ".github/workflows/visionworkshop-modular-loader-probe.yml",
+          "lines": [
+            70,
+            117
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/.github/workflows/visionworkshop-modular-loader-probe.yml#L70-L117"
+        },
+        {
+          "path": "scripts/verify_vision_train_modules.py",
+          "lines": [
+            24,
+            31
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/scripts/verify_vision_train_modules.py#L24-L31"
+        },
+        {
+          "path": "scripts/verify_vision_train_modules.py",
+          "lines": [
+            133,
+            163
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/scripts/verify_vision_train_modules.py#L133-L163"
+        }
+      ],
+      "evidence_limit": "B2的ORT单distribution门不能套到P4准备环境；后者是显式alias/provider规则。"
+    },
+    {
+      "id": "B2-02",
+      "track": "B2 experiment",
+      "subject": "旧CRT/CPU/GPU诊断边界",
+      "finding": "B2固定pandas2.3.3轮MSVCP，从指定CPython取python3/VCRT。probe核唯一Python和外置来源，做Torch/TV和ORT CPU；实际设备可用才尝试CUDA并核ORT profiling kernel，没有设备则NOT_RUN/整体LIMITED。不是正式P4 CRT。",
+      "callers": [
+        "B2 main→buildCore/copyRuntime/runProbe→modular_probe_core.main"
+      ],
+      "sources": [
+        {
+          "path": "scripts/verify_vision_train_modules.py",
+          "lines": [
+            32,
+            49
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/scripts/verify_vision_train_modules.py#L32-L49"
+        },
+        {
+          "path": "scripts/verify_vision_train_modules.py",
+          "lines": [
+            676,
+            745
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/scripts/verify_vision_train_modules.py#L676-L745"
+        },
+        {
+          "path": "scripts/verify_vision_train_modules.py",
+          "lines": [
+            818,
+            865
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/scripts/verify_vision_train_modules.py#L818-L865"
+        },
+        {
+          "path": "scripts/modular_probe_core.py",
+          "lines": [
+            365,
+            405
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/scripts/modular_probe_core.py#L365-L405"
+        },
+        {
+          "path": "scripts/modular_probe_core.py",
+          "lines": [
+            438,
+            494
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/scripts/modular_probe_core.py#L438-L494"
+        },
+        {
+          "path": ".github/workflows/visionworkshop-modular-loader-probe.yml",
+          "lines": [
+            119,
+            132
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/.github/workflows/visionworkshop-modular-loader-probe.yml#L119-L132"
+        }
+      ],
+      "evidence_limit": "B2旧源只复现实验；DLL presence不证明GPU实算，不据源码声明已跑。"
+    },
+    {
+      "id": "DINO-05",
+      "track": "B2 experiment",
+      "subject": "B2 DINO非产品worker",
+      "finding": "checkDino导入固定first-party environment/valid_environment，做外置ORT CPU fixture，禁止训练库导入；明确model_inference和production_worker_protocol=NOT_RUN。",
+      "callers": [
+        "B2 mode=dino→modular_probe_core.checkDino"
+      ],
+      "sources": [
+        {
+          "path": "scripts/modular_probe_core.py",
+          "lines": [
+            497,
+            516
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/scripts/modular_probe_core.py#L497-L516"
+        },
+        {
+          "path": "scripts/modular_probe_core.py",
+          "lines": [
+            590,
+            604
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/scripts/modular_probe_core.py#L590-L604"
+        }
+      ],
+      "evidence_limit": "B2.7仍未由此完成；PT worker也不能替代DINO成功模型/协议。"
+    },
+    {
+      "id": "P4-01",
+      "track": "P4 candidate construction",
+      "subject": "精确Python与compiler/runtime隔离",
+      "finding": "candidate setup-python=3.12.10，两个临时venv；compiler工具固定6.18/hooks2026.0；runtime只装选定精确闭包。buildCandidate用inspectPython核两环境，拒同prefix，校验工具和固定源码/vendor。准备venv不交付。",
+      "callers": [
+        "candidate workflow→build_vision_train_modular→buildCandidate"
+      ],
+      "sources": [
+        {
+          "path": ".github/workflows/visionworkshop-modular-candidate.yml",
+          "lines": [
+            96,
+            142
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/.github/workflows/visionworkshop-modular-candidate.yml#L96-L142"
+        },
+        {
+          "path": ".github/workflows/visionworkshop-modular-candidate.yml",
+          "lines": [
+            177,
+            198
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/.github/workflows/visionworkshop-modular-candidate.yml#L177-L198"
+        },
+        {
+          "path": "vision_train_modular_build.py",
+          "lines": [
+            629,
+            675
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/vision_train_modular_build.py#L629-L675"
+        },
+        {
+          "path": "scripts/verify_vision_train_modules.py",
+          "lines": [
+            133,
+            149
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/scripts/verify_vision_train_modules.py#L133-L149"
+        }
+      ],
+      "evidence_limit": "源码规则和调用关系；本审计未执行入口。"
+    },
+    {
+      "id": "P4-02",
+      "track": "P4 candidate construction",
+      "subject": "计算库pins/provider/Qt闭包",
+      "finding": "constraints只接受单个精确==且拒URL/marker/extras/重复，seed必须有pin；Windows cp312 AMD64固定marker环境。Torch/TV/Audio归runtime.torch，ORTGPU归runtime.ort；Core含Qt/NumPy/contrib OpenCV；timm/transformers/hub/tokenizers/safetensors归runtime.vision。alias与provider必须同版本，真实import root唯一owner。",
+      "callers": [
+        "prepareInputs→selectedSeeds/readConstraints",
+        "buildCandidate→resolveOwnership/distributionFiles/lockDocument"
+      ],
+      "sources": [
+        {
+          "path": "vision_train_modular_build.py",
+          "lines": [
+            99,
+            162
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/vision_train_modular_build.py#L99-L162"
+        },
+        {
+          "path": "vision_train_module_inventory.py",
+          "lines": [
+            17,
+            45
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/vision_train_module_inventory.py#L17-L45"
+        },
+        {
+          "path": "vision_train_module_inventory.py",
+          "lines": [
+            135,
+            253
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/vision_train_module_inventory.py#L135-L253"
+        },
+        {
+          "path": "ci/visionworkshop-modular.json",
+          "lines": [
+            21,
+            76
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/ci/visionworkshop-modular.json#L21-L76"
+        },
+        {
+          "path": "ci/vision-train-modular-probe-constraints.txt",
+          "lines": [
+            117,
+            125
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/ci/vision-train-modular-probe-constraints.txt#L117-L125"
+        },
+        {
+          "path": "ci/vision-train-modular-probe-constraints.txt",
+          "lines": [
+            152,
+            156
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/ci/vision-train-modular-probe-constraints.txt#L152-L156"
+        },
+        {
+          "path": "ci/vision-train-modular-probe-constraints.txt",
+          "lines": [
+            199,
+            207
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/ci/vision-train-modular-probe-constraints.txt#L199-L207"
+        }
+      ],
+      "evidence_limit": "221行历史constraints并非Core全装；GPU轮子上的CPU计算不是CPU-only分发。"
+    },
+    {
+      "id": "P4-03",
+      "track": "P4 qualification conflict",
+      "subject": "固定vendor Torch cap仍未资格",
+      "finding": "readVendors保留Ultralytics74b2b91原pyproject。source_only vendor不满足的torch<2.10记录observed/unqualified，普通distribution冲突仍拒绝。构建摘要release_gate=NOT_QUALIFIED。",
+      "callers": [
+        "buildCandidate→readVendors→resolveOwnership→lockDocument"
+      ],
+      "sources": [
+        {
+          "path": "vision_train_modular_build.py",
+          "lines": [
+            130,
+            143
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/vision_train_modular_build.py#L130-L143"
+        },
+        {
+          "path": "vision_train_module_inventory.py",
+          "lines": [
+            156,
+            177
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/vision_train_module_inventory.py#L156-L177"
+        },
+        {
+          "path": "vision_train_modular_build.py",
+          "lines": [
+            817,
+            830
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/vision_train_modular_build.py#L817-L830"
+        },
+        {
+          "path": "ci/visionworkshop-modular.json",
+          "lines": [
+            66,
+            76
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/ci/visionworkshop-modular.json#L66-L76"
+        }
+      ],
+      "evidence_limit": "未改vendor cap；窄CPU fixture不清除原metadata冲突。"
+    },
+    {
+      "id": "P4-04",
+      "track": "P4 candidate construction",
+      "subject": "唯一Python和TorchVision窄例外",
+      "finding": "只对固定TorchVision0.25.0+cu128 wheel内已知3.12.12 python312.dll逐URL/SHA/RECORD/PE核验，且image.pyd Python进口符号被Core3.12.10覆盖后省略；其他第二Python拒绝。最终Core仅_internal/python312.dll+python3.dll，前者SHA等指定Python。",
+      "callers": [
+        "buildCandidate→qualifyVendoredPython→distributionFiles",
+        "buildCandidate冻结后扫描"
+      ],
+      "sources": [
+        {
+          "path": "scripts/verify_vision_train_modules.py",
+          "lines": [
+            41,
+            49
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/scripts/verify_vision_train_modules.py#L41-L49"
+        },
+        {
+          "path": "scripts/verify_vision_train_modules.py",
+          "lines": [
+            250,
+            309
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/scripts/verify_vision_train_modules.py#L250-L309"
+        },
+        {
+          "path": "vision_train_module_inventory.py",
+          "lines": [
+            269,
+            319
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/vision_train_module_inventory.py#L269-L319"
+        },
+        {
+          "path": "vision_train_modular_build.py",
+          "lines": [
+            793,
+            806
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/vision_train_modular_build.py#L793-L806"
+        }
+      ],
+      "evidence_limit": "静态覆盖不替代实际TV image/Python已加载来源的EXE case。"
+    },
+    {
+      "id": "P4-05",
+      "track": "P4 candidate construction",
+      "subject": "官方CRT14.52固定来源及PE门",
+      "finding": "固定官方14.52.37029.0 URL/归档SHA/双CAB成员/许可，纯解包不执行redist；逐12DLL核AMD64/PE32+/版本/哈希，Core选择9基础族不含vcomp。核内部导入覆盖；Qt/sklearn原件保留并精确资格，sklearn全部native导入/工具链检查。VCRT140/_1冻结前使用官方源。",
+      "callers": [
+        "build_vision_train_modular crt→prepareCrt→prepareRuntime",
+        "buildCandidate→verifyPreparedRuntime/qualifyVendorCrt→buildFrozenCore"
+      ],
+      "sources": [
+        {
+          "path": "ci/visionworkshop-msvc-runtime.json",
+          "lines": [
+            1,
+            43
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/ci/visionworkshop-msvc-runtime.json#L1-L43"
+        },
+        {
+          "path": "vision_train_modular_crt.py",
+          "lines": [
+            21,
+            39
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/vision_train_modular_crt.py#L21-L39"
+        },
+        {
+          "path": "vision_train_modular_crt.py",
+          "lines": [
+            82,
+            162
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/vision_train_modular_crt.py#L82-L162"
+        },
+        {
+          "path": "vision_train_modular_crt.py",
+          "lines": [
+            165,
+            205
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/vision_train_modular_crt.py#L165-L205"
+        },
+        {
+          "path": "vision_train_modular_build.py",
+          "lines": [
+            535,
+            563
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/vision_train_modular_build.py#L535-L563"
+        }
+      ],
+      "evidence_limit": "静态PE不等于全部实际ABI；qualifyVendorCrt明确Windows execution NOT_RUN。"
+    },
+    {
+      "id": "P4-06",
+      "track": "P4 candidate construction/startup",
+      "subject": "Core ABI/native/Qt前置门",
+      "finding": "stdlib-only PYZ拒compiler第三方native泄漏和optional纯代码。launcher必须frozen Windows3.12.10，embedded core cp312/win_amd64；先全source/runtime/native/lock哈希再挂载。add_dll_directory/preload保留句柄，Core Qt插件/WebEngine存在。",
+      "callers": [
+        "buildCandidate→buildFrozenCore",
+        "VisionWorkshop.exe→modular_product_launcher.main→verifyCore/configureCore→module_runtime.launch"
+      ],
+      "sources": [
+        {
+          "path": "vision_train_modular_build.py",
+          "lines": [
+            535,
+            626
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/vision_train_modular_build.py#L535-L626"
+        },
+        {
+          "path": "scripts/modular_product_launcher.py",
+          "lines": [
+            47,
+            127
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/scripts/modular_product_launcher.py#L47-L127"
+        }
+      ],
+      "evidence_limit": "源码门不等于GUI绘制/关闭、worker或GPU通过。"
+    },
+    {
+      "id": "P4-07",
+      "track": "P4 artifact identity",
+      "subject": "manifest/index/reuse ABI/lock绑定",
+      "finding": "用应用contract验Core/manifest/module set及依赖/owner；ZIP完成后外置index绑定ABI/lock/Core范围/各原module build。reuse严格同ABI/lock/catalog，原manifest/ZIP不改，RECORD资格限已排除console.exe收据差。",
+      "callers": [
+        "buildCandidate→validate_module_set→writeModuleIndex",
+        "selectSourceStaging→reuseArchive",
+        "product driver→verifyModuleIndex"
+      ],
+      "sources": [
+        {
+          "path": "vision_train_modular_build.py",
+          "lines": [
+            775,
+            830
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/vision_train_modular_build.py#L775-L830"
+        },
+        {
+          "path": "vision_train_modular_index.py",
+          "lines": [
+            94,
+            150
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/vision_train_modular_index.py#L94-L150"
+        },
+        {
+          "path": "vision_train_modular_reuse.py",
+          "lines": [
+            280,
+            323
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/vision_train_modular_reuse.py#L280-L323"
+        },
+        {
+          "path": "vision_train_modular_receipts.py",
+          "lines": [
+            78,
+            115
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/vision_train_modular_receipts.py#L78-L115"
+        },
+        {
+          "path": "scripts/verify_vision_train_modular_product.py",
+          "lines": [
+            448,
+            467
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/scripts/verify_vision_train_modular_product.py#L448-L467"
+        }
+      ],
+      "evidence_limit": "BUILT/identity验证不等于产品PASS；不证明Core独立换版安装。"
+    },
+    {
+      "id": "P4-08",
+      "track": "prepared interpreter diagnostic",
+      "subject": "Qt主机文字预检",
+      "finding": "子进程要求3.12.10/windows QPA，parent绑定nonce与指定venv redirector→basePython单层native PID/exe/argv及pyvenv.cfg；真实像素/glyph，ASCII必须PASS，中文缺glyph=UNSUPPORTED/LIMITED。",
+      "callers": [
+        "candidate Observe native Windows Qt font rendering→verify_windows_qt_fonts"
+      ],
+      "sources": [
+        {
+          "path": ".github/workflows/visionworkshop-modular-candidate.yml",
+          "lines": [
+            200,
+            207
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/.github/workflows/visionworkshop-modular-candidate.yml#L200-L207"
+        },
+        {
+          "path": "scripts/verify_windows_qt_fonts.py",
+          "lines": [
+            65,
+            138
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/scripts/verify_windows_qt_fonts.py#L65-L138"
+        },
+        {
+          "path": "scripts/verify_windows_qt_fonts.py",
+          "lines": [
+            145,
+            240
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/scripts/verify_windows_qt_fonts.py#L145-L240"
+        }
+      ],
+      "evidence_limit": "准备解释器probe，产品截图/关闭另验；源码test offscreen和原B2不混改。"
+    },
+    {
+      "id": "P4-09",
+      "track": "product diagnostic",
+      "subject": "真实EXE与构建分别判定",
+      "finding": "driver接受BUILT并复核ZIP/index，实际EXE必须预期exit和真实报告均满足；先空Core/annotation，再ORT-only/DINO/EdgeSAM和全模块计算，Core前后库存不变。gpu_hardware默认NOT_RUN。",
+      "callers": [
+        "candidate独立Exercise actual product EXE step→verify_vision_train_modular_product.main"
+      ],
+      "sources": [
+        {
+          "path": ".github/workflows/visionworkshop-modular-candidate.yml",
+          "lines": [
+            270,
+            279
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/.github/workflows/visionworkshop-modular-candidate.yml#L270-L279"
+        },
+        {
+          "path": "scripts/verify_vision_train_modular_product.py",
+          "lines": [
+            45,
+            74
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/scripts/verify_vision_train_modular_product.py#L45-L74"
+        },
+        {
+          "path": "scripts/verify_vision_train_modular_product.py",
+          "lines": [
+            430,
+            529
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/scripts/verify_vision_train_modular_product.py#L430-L529"
+        }
+      ],
+      "evidence_limit": "Core内部JSON PASS但进程0xC0000005仍整case FAIL；后续未运行不PASS。此稿不重新运行/改变实际候选结论。"
+    },
+    {
+      "id": "DINO-06",
+      "track": "P4 product diagnostic",
+      "subject": "环境/worker/资源分开",
+      "finding": "产品driver在ORT-only阶段分别派发dino环境、dino-worker生命周期；全模块DINO预训练资源另case。三者均不代替成功生产部署模型/P5 reference数值。",
+      "callers": [
+        "product.main→checkCase(dino/dino-worker)→实际EXE诊断入口"
+      ],
+      "sources": [
+        {
+          "path": "scripts/verify_vision_train_modular_product.py",
+          "lines": [
+            498,
+            506
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/scripts/verify_vision_train_modular_product.py#L498-L506"
+        },
+        {
+          "path": "scripts/verify_vision_train_modular_product.py",
+          "lines": [
+            529,
+            560
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/scripts/verify_vision_train_modular_product.py#L529-L560"
+        }
+      ],
+      "evidence_limit": "仅builder派发源码；不据case存在宣告实际执行。"
+    },
+    {
+      "id": "DIAG-01",
+      "track": "P3 explicit synthetic diagnostic",
+      "subject": "CNN PT/ONNX固定合同",
+      "finding": "PatchCore frozen diagnostic的fixture Python只要求3.12 minor，核Torch2.10/Anomalib2.5.1/NumPy2/timm1.0.27和预训练hash；实际EXE恢复/导出ONNX1.16、ORT1.23.2 CPU/BASIC及1e-5/1e-4合同不放宽。",
+      "callers": [
+        "verify_vision_train_patchcore_frozen显式CLI→prepareFixture→runWorker/checkExport/checkNumerical",
+        "固定普通发布workflow无自动caller"
+      ],
+      "sources": [
+        {
+          "path": "scripts/verify_vision_train_patchcore_frozen.py",
+          "lines": [
+            27,
+            95
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/scripts/verify_vision_train_patchcore_frozen.py#L27-L95"
+        },
+        {
+          "path": "scripts/verify_vision_train_patchcore_frozen.py",
+          "lines": [
+            159,
+            204
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/scripts/verify_vision_train_patchcore_frozen.py#L159-L204"
+        },
+        {
+          "path": "scripts/verify_vision_train_patchcore_frozen.py",
+          "lines": [
+            263,
+            320
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/scripts/verify_vision_train_patchcore_frozen.py#L263-L320"
+        }
+      ],
+      "evidence_limit": "合成memorybank和图片fixture，不是既有业务模型/GPU/P4自动PASS。"
+    },
+    {
+      "id": "DIAG-02",
+      "track": "test/controller environments",
+      "subject": "3.11和浮动3.12的用途",
+      "finding": "portable tests Linux/Windows使用3.12 minor与PyInstaller6.22.2做轻fixture；baseline/published-retest使用3.11控制固定旧EXE；updater fixture根据config patch；Core-exit controller3.12.10只重用原Core。",
+      "callers": [
+        "各显式test/diagnostic workflows→verify/diagnose scripts"
+      ],
+      "sources": [
+        {
+          "path": ".github/workflows/visionworkshop-tests.yml",
+          "lines": [
+            22,
+            60
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/.github/workflows/visionworkshop-tests.yml#L22-L60"
+        },
+        {
+          "path": ".github/workflows/diagnose-baseline-startup.yml",
+          "lines": [
+            25,
+            38
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/.github/workflows/diagnose-baseline-startup.yml#L25-L38"
+        },
+        {
+          "path": ".github/workflows/published-update-retest.yml",
+          "lines": [
+            42,
+            58
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/.github/workflows/published-update-retest.yml#L42-L58"
+        },
+        {
+          "path": ".github/workflows/diagnose-updater-fixtures.yml",
+          "lines": [
+            53,
+            76
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/.github/workflows/diagnose-updater-fixtures.yml#L53-L76"
+        },
+        {
+          "path": ".github/workflows/visionworkshop-core-diagnostic.yml",
+          "lines": [
+            33,
+            48
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/.github/workflows/visionworkshop-core-diagnostic.yml#L33-L48"
+        }
+      ],
+      "evidence_limit": "控制器和夹具不是产品第二Python；完整P3 published retest必须查独立实际报告。"
+    },
+    {
+      "id": "LEGACY-01",
+      "track": "historical manual artifacts",
+      "subject": "旧本机probe/spec/config",
+      "finding": "四下划线probe及ui_main.spec引用旧本机dist/Conda路径；pyinstaller_config_cpu_torch.json为显式可选旧配置，其名称不选CPU wheel。固定全仓无自动caller，ui_main.spec仅历史设计文档引用；build.py默认实际为configs/emo-vision-train.json。",
+      "callers": [
+        "无固定普通发布caller；可由用户显式运行或--config指定"
+      ],
+      "sources": [
+        {
+          "path": "_dll_probe.py",
+          "lines": [
+            1,
+            17
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/_dll_probe.py#L1-L17"
+        },
+        {
+          "path": "_import_dist_torch.py",
+          "lines": [
+            1,
+            17
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/_import_dist_torch.py#L1-L17"
+        },
+        {
+          "path": "_omp_probe.py",
+          "lines": [
+            1,
+            17
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/_omp_probe.py#L1-L17"
+        },
+        {
+          "path": "_torch_full_probe.py",
+          "lines": [
+            1,
+            14
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/_torch_full_probe.py#L1-L14"
+        },
+        {
+          "path": "ui_main.spec",
+          "lines": [
+            1,
+            14
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/ui_main.spec#L1-L14"
+        },
+        {
+          "path": "pyinstaller_config_cpu_torch.json",
+          "lines": [
+            1,
+            10
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/pyinstaller_config_cpu_torch.json#L1-L10"
+        },
+        {
+          "path": "build.py",
+          "lines": [
+            587,
+            592
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/build.py#L587-L592"
+        }
+      ],
+      "evidence_limit": "不按关键词删除；不当CPU-only交付完成证明。"
+    },
+    {
+      "id": "SCOPE-01",
+      "track": "other product/shared boundary",
+      "subject": "Emo Master边界",
+      "finding": "pyi_rth_onnxruntime.py由两个Emo Master config引用，Emo Master自己的3.11/双EXE布局不同。共享build/record/update/ZIP改动引用已归档其他产品baseline，不把它们默认改成P4。",
+      "callers": [
+        "configs/emo-master.json及emo-master-runtime.json→pyi_rth_onnxruntime.py",
+        "Emo Master workflow/wizard入口"
+      ],
+      "sources": [
+        {
+          "path": "configs/emo-master.json",
+          "lines": [
+            40,
+            48
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/configs/emo-master.json#L40-L48"
+        },
+        {
+          "path": "configs/emo-master-runtime.json",
+          "lines": [
+            26,
+            32
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/configs/emo-master-runtime.json#L26-L32"
+        },
+        {
+          "path": "docs/evidence/visionworkshop-modular-other-product-baseline-d3ace70.json",
+          "lines": [
+            1,
+            30
+          ],
+          "url": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/docs/evidence/visionworkshop-modular-other-product-baseline-d3ace70.json#L1-L30"
+        }
+      ],
+      "evidence_limit": "不扩展为其他产品全量实际构建完成门。"
+    }
+  ],
+  "findings": [
+    {
+      "id": "F1",
+      "status": "OPEN",
+      "finding": "P3本地/通用入口未强制专用实际runtime门，config不能代替执行断言。",
+      "entries": [
+        "P3-04",
+        "P3-05"
+      ]
+    },
+    {
+      "id": "F2",
+      "status": "OBSERVED_UNQUALIFIED",
+      "finding": "Ultralytics source torch<2.10和选定Torch2.10冲突保留。",
+      "entries": [
+        "P4-03"
+      ]
+    },
+    {
+      "id": "F3",
+      "status": "DISTINCT_TRACKS",
+      "finding": "B2旧pandas CRT、P3 hook、P4官方14.52不能混用验收。",
+      "entries": [
+        "B2-02",
+        "P3-06",
+        "P4-05"
+      ]
+    },
+    {
+      "id": "F4",
+      "status": "DISTINCT_EVIDENCE",
+      "finding": "DINO环境/worker生命周期/成功模型数值分开，B2.7仍缺成功生产合同。",
+      "entries": [
+        "DINO-04",
+        "DINO-05",
+        "DINO-06"
+      ]
+    }
+  ],
+  "checklist": [
+    {
+      "id": "B0.2",
+      "recommend_checked": true,
+      "meaning": "完成固定仓库所有指定检查、声明、接线与冲突盘点，不要求盘点项均已修好。"
+    },
+    {
+      "id": "B0.5",
+      "recommend_checked": true,
+      "meaning": "当前main runtime、旧Embeddable兼容fixture、准备/诊断caller边界已核。"
+    }
+  ],
+  "unchanged_gates": [
+    "B0.3完整依赖锁兼容",
+    "B0.4完整hook/worker行为",
+    "B2.5/B2.6实际CUDA",
+    "B2.7生产DINO worker成功模型合同",
+    "A6/B5产品与业务验收",
+    "Core独立升级",
+    "同版本CPU-only发行",
+    "完整旧版P3 published retest"
+  ],
+  "execution": {
+    "product_imports": false,
+    "tests_run": false,
+    "windows_run": false,
+    "repository_files_modified": false,
+    "remote_ref_updated": false
+  },
+  "reproduction": {
+    "checkout": "https://github.com/jsdfhasuh/python_build_scripts/tree/841ba103fe10ad62bdcc5206b784e186fd14552e",
+    "source": "git ls-tree -r --full-tree 841ba103fe10ad62bdcc5206b784e186fd14552e; git show 841ba103fe10ad62bdcc5206b784e186fd14552e:<path>; compare Git blob SHA/size with source_verification.files",
+    "search": "Run each stored rg pattern with --hidden --no-ignore -i on this fixed text set; AST-parse all 95 .py files; follow entries[].sources/callers. No local scratch path or unavailable raw file is required."
+  },
+  "other_product_baseline": "https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/docs/evidence/visionworkshop-modular-other-product-baseline-d3ace70.json"
+}

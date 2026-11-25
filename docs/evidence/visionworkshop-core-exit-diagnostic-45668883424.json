@@ -1,0 +1,160 @@
+{
+  "schema_version": 1,
+  "status": "FAIL",
+  "scope": "Independent immutable original Core diagnostic; no new build or complete candidate qualification",
+  "run_id": 45668883424,
+  "run_attempt": 1,
+  "run_url": "https://github.com/jsdfhasuh/python_build_scripts/actions/runs/45668883424",
+  "diagnostic_builder_sha": "841ba103fe10ad62bdcc5206b784e186fd14552e",
+  "artifact": {
+    "id": 15049276123,
+    "name": "visionworkshop-core-exit-diagnostic-45668883424-1",
+    "bytes": 15951,
+    "sha256": "f08de528c65dea47175af87a0de0b432686d83a9b2d35ed400a7aec023a3935a",
+    "downloaded_and_sha256_verified": true
+  },
+  "source_request": {
+    "schema_version": 1,
+    "diagnostic_attempt": 1,
+    "source_run_id": 45659615499,
+    "source_run_attempt": 1,
+    "source_head_sha": "d3ace70e41a41b4334a9e44d2dbec0d4907f077d",
+    "source_app_sha": "591f8bef7b2292caf50f4848e3047518e490742c",
+    "core_sha256": "9b508d684ec2d594cbd2b162063fd6dc45b9982553f9276ef2bb8010b27064ad",
+    "core_archive": {
+      "name": "VisionWorkshop-Core-0.0.0.zip",
+      "bytes": 180443076,
+      "sha256": "14e62ed16acb684c1ed09573c24ec7b52482dd0d867dbf52df254275d9c7c0d9"
+    },
+    "artifacts": {
+      "evidence": {
+        "id": 15046836955,
+        "name": "visionworkshop-modular-evidence-45659615499-1",
+        "bytes": 73474221,
+        "sha256": "eed972a2d2a487445335d09722fb62bdaa926efd75ba1db5ad911864829ebf81"
+      },
+      "core": {
+        "id": 15045973042,
+        "name": "visionworkshop-core-candidate-45659615499-1",
+        "bytes": 180443248,
+        "sha256": "fefae3ffd2e7b4b6e096079521c4f98e73a4a1aaadc9a7d69c21ce4f034420aa"
+      }
+    },
+    "normal_gui_comparison": true
+  },
+  "source_build": {
+    "app_sha": "591f8bef7b2292caf50f4848e3047518e490742c",
+    "packager_sha": "d3ace70e41a41b4334a9e44d2dbec0d4907f077d",
+    "build_id": "candidate-45659615499-1"
+  },
+  "source_product_status": "FAIL",
+  "source_zip_status": "BUILT",
+  "windows_controller_guards": {
+    "tests": 16,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "elapsed_seconds": 0.341,
+    "scope": "Source/controller and small ZIP guards, not product qualification"
+  },
+  "cases": [
+    {
+      "name": "core-without-modules",
+      "status": "FAIL",
+      "pid": 1556,
+      "exit_code": 1,
+      "elapsed_seconds": 5.735,
+      "start_utc": "2026-11-25T17:51:12.888982+00:00",
+      "end_utc": "2026-11-25T17:51:18.630858+00:00",
+      "internal_status": "FAIL",
+      "phase": "NumPy import before GUI",
+      "error": "WinError 206 from numpy._delvewheel_patch_1_8_0 -> os.add_dll_directory",
+      "dll_directory_unicode_characters": 136,
+      "dll_directory_utf16_bytes": 272,
+      "root_unicode_characters": 111,
+      "interpretation": "The API error is observed. A MAX_PATH cause or duplicate-registration cause has not been proven."
+    },
+    {
+      "name": "gui-close",
+      "status": "FAIL",
+      "pid": 8824,
+      "exit_code": 3221225477,
+      "exit_hex": "0xC0000005",
+      "start_utc": "2026-11-25T17:52:17.272054+00:00",
+      "end_utc": "2026-11-25T17:52:28.008405+00:00",
+      "visible_enabled_stable_seconds": 1,
+      "stable_observations": 6,
+      "hwnd": 327802,
+      "window_title": "VisionWorkshop",
+      "window_class": "Qt5152QWindowIcon",
+      "close_message": "WM_CLOSE",
+      "forced_cleanup": false,
+      "interpretation": "The native failure is also observed after normal no-argument GUI close. It is not limited to the fixed diagnostic GUI route."
+    }
+  ],
+  "events": {
+    "status": "NO_MATCH",
+    "query_exit_codes": [
+      0,
+      0
+    ],
+    "queried_events": [
+      0,
+      0
+    ],
+    "raw_xml_bytes_each": 44,
+    "raw_xml_sha256_each": "005a6c631aa20dac57084ac4a6071af694a6add01c615a2f6ef429bb41168027",
+    "faulting_module": "NOT_COLLECTED",
+    "faulting_offset": "NOT_COLLECTED",
+    "native_stack": "NOT_COLLECTED",
+    "scope": "Exact PID/full EXE/time correlation. Empty event queries do not establish absence of a crash."
+  },
+  "original_core_immutability": {
+    "status": "PASS",
+    "installations": 2,
+    "file_count": 11322,
+    "bytes": 627769495,
+    "inventory_sha256": "b981b8111d462a496fb55d3adbe237c43d5364fc2f3f1e2e448c23b1f1572c9f",
+    "executable_sha256": "4d22e43eb180a943113ac690c95c7beb839d9450044c04a9325526127d55dbc6",
+    "missing": [],
+    "extra": [],
+    "changed": []
+  },
+  "source_report_paths": [
+    "diagnostic-source/source-receipt.json",
+    "core-exit-diagnostic/diagnostic-summary.json",
+    "core-exit-diagnostic/core-without-modules/reports/core-without-modules.json",
+    "core-exit-diagnostic/core-without-modules/reports/core-without-modules.process.json",
+    "core-exit-diagnostic/core-without-modules/reports/core-without-modules-events.json",
+    "core-exit-diagnostic/gui-close/reports/gui-close.process.json",
+    "core-exit-diagnostic/gui-close/reports/gui-close-events.json"
+  ],
+  "portable_regression": {
+    "run_id": 45668897042,
+    "status": "SUCCESS",
+    "windows": {
+      "tests": 564,
+      "skipped": 39,
+      "failures": 0,
+      "errors": 0,
+      "elapsed_seconds": 252.551,
+      "actual_fixture_step": "SUCCESS"
+    },
+    "linux": {
+      "tests": 564,
+      "skipped": 40,
+      "failures": 0,
+      "errors": 0,
+      "elapsed_seconds": 29.678
+    }
+  },
+  "not_run": [
+    "full_candidate_matrix",
+    "annotation",
+    "module_install_update_repair_rollback",
+    "optional_runtime_resource_worker_cases",
+    "controlled_dataloader_spawn",
+    "business_gpu_qualification"
+  ],
+  "provenance_note": "Compact transcription of the downloaded, SHA-verified artifact and completed job logs. Original raw reports remain in the identified artifact; this summary is not a replacement report or new Core identity."
+}
