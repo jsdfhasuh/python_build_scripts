@@ -148,6 +148,21 @@ P4 DINO 核心的 Transformers、Hub、tokenizers 版本由 CI runtime profile �
 其模型模块和版本元数据显式进入冻结包。编译前会构造不下载权重的 encoder，验证 CPU
 特征形状；这不改变应用已有的 P4 开发入口边界，也不代表完成真实模型或 GPU 验收。
 
+非发布构建的 ZIP 超过现有单资产上限时，构建仍失败，不生成可交付的
+`build-summary.json`，也不导出或暂存发布资产。只有 ZIP 完整内容、构建记录和归档
+SHA-256 复查均通过时，才在输出目录的 `diagnostics/` 中保留超限 ZIP、
+`oversize-archive.json` 和 `archive-members.json`。这些文件用于诊断和独立冻结验收；
+`publishable: false` 与 `status: blocked-size` 不得改写为发布通过。
+
+实际冻结包可分别运行 `scripts/verify_vision_train_frozen.py` 和
+`scripts/verify_vision_train_patchcore_frozen.py`，两者均要求 `--zip`、`--source-root`
+及全新的 `--output` 目录，并将 ZIP 内源码身份与 checkout 核对。前者观察启动器、DINO
+worker 和 ONNX CPU schema；后者通过独立进程生成明确标注的人工 CKPT，使用真实冻结
+EXE 导出完整 ONNX、比较分数/异常图/阈值判断，并在新冻结进程中重载最终图文件。
+后者的 `--fixture-python` 可指定隔离的 CP312 夹具解释器；实际导出与 ORT 推理均由
+冻结 EXE 执行。人工 memory bank 和图片验证软件通路，不代表训练、业务模型或 GPU
+验收。诊断报告不改写原构建摘要，也不免除原有发布大小限制。
+
 外部仓库：`python -m unittest discover -s tests -v`。
 应用仓库：`python scripts/verify_update_windows.py` 干净编译测试应用与真实更新器，执行连续更新及
 主程序入口缺失时的独立恢复。`--reuse-build` 必须指向完全匹配当前运行时代码的明确构建。

@@ -145,6 +145,23 @@ def verifyArchive(path: Path, programName: str, expectedFiles: dict) -> Verified
   return VerifiedArchive(programName, objectHash(expectedFiles), after[0], after[1])
 
 
+def collectArchiveSizes(path: Path) -> dict:
+  with zipfile.ZipFile(ioPath(path)) as archive:
+    members = [
+      {'path': member.filename, 'size': member.file_size,
+       'compressed_size': member.compress_size, 'is_directory': member.is_dir()}
+      for member in archive.infolist()
+    ]
+  return {
+    'member_count': len(members),
+    'file_count': sum(not member['is_directory'] for member in members),
+    'directory_count': sum(member['is_directory'] for member in members),
+    'total_size': sum(member['size'] for member in members),
+    'total_compressed_size': sum(member['compressed_size'] for member in members),
+    'members': members,
+  }
+
+
 def verifyArchiveContents(
   path: Path, programName: str, expectedFiles: dict, progress: ReleaseProgress,
 ) -> None:
@@ -533,19 +550,47 @@ def runRelease(args: argparse.Namespace) -> dict:
         options['dictionaryMiB'] = dictionaryMiB
       compression = compressArchive(appDir, temporary, **options)
     archiveBytes = ioPath(temporary).stat().st_size if ioPath(temporary).is_file() else 0
-    if not 0 < archiveBytes <= MAX_ASSET_BYTES:
-      raise BuildConfigError('ZIP is missing, empty or exceeds the existing release size limit: '
-                             f'{archiveBytes} bytes; maximum {MAX_ASSET_BYTES} bytes')
+    oversized = archiveBytes > MAX_ASSET_BYTES
+    sizeError = ('ZIP is missing, empty or exceeds the existing release size limit: '
+                 f'{archiveBytes} bytes; maximum {MAX_ASSET_BYTES} bytes')
+    if archiveBytes <= 0 or (oversized and args.publish):
+      raise BuildConfigError(sizeError)
     verifiedArchive = verifyArchive(temporary, resolved.programName, record['files'])
     # Publishing performs this full input/artifact recheck once, immediately before upload.
     if not args.publish:
       with ReleaseProgress('复查源码、工具和构建目录'):
         verifyRecord(context.workRoot / 'build-record.json', resolved, sourceRoot,
                      requireReusable=bool(args.skip_build))
+      memberSizes = collectArchiveSizes(temporary) if oversized else None
       if hashArchive(temporary, '保存前复查 ZIP 指纹') != (
         verifiedArchive.sha256, verifiedArchive.size,
       ):
         raise BuildConfigError('ZIP changed before finalization')
+      if oversized:
+        diagnostics = output / 'diagnostics'
+        ioPath(diagnostics).mkdir()
+        diagnostic = {
+          'schema_version': 1, 'status': 'blocked-size',
+          'published': False, 'publishable': False,
+          'target': resolved.target, 'program_name': resolved.programName,
+          'release_tag': args.release_tag, 'build_id': context.buildId,
+          'asset_name': assetName, 'asset_sha256': verifiedArchive.sha256,
+          'asset_size': verifiedArchive.size, 'maximum_asset_size': MAX_ASSET_BYTES,
+          'source_commit': source.get('commit'),
+          'packager_commit': record['inputs']['packager'].get('commit'),
+          'files_sha256': record['files_sha256'], 'archive_compression': compression,
+          'archive_lzma_dictionary_mib': dictionaryMiB if compression == 'zip/lzma' else None,
+          'runtime_validation': runtimeCheck, 'update_protocol': record.get('update_protocol'),
+        }
+        ioPath(temporary).rename(ioPath(diagnostics / assetName))
+        writeJsonNew(diagnostics / 'archive-members.json', {
+          'schema_version': 1, 'asset_name': assetName,
+          'asset_sha256': verifiedArchive.sha256, 'asset_size': verifiedArchive.size,
+          **memberSizes,
+        })
+        writeJsonNew(diagnostics / 'oversize-archive.json', diagnostic)
+        print(f'Verified oversized ZIP retained for diagnostics only: {diagnostics / assetName}')
+        raise BuildConfigError(sizeError)
     ioPath(temporary).rename(ioPath(assetPath))
   finally:
     ioPath(temporary).unlink(missing_ok=True)
