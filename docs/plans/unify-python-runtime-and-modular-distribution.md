@@ -7,7 +7,7 @@
 
 ## 2026-11-25 实施状态补充（按实际证据更新）
 
-计划制定时状态为“计划草案，未实施”；上方两个提交基线以及第 2 节为历史快照，予以保留。原文档分支为 `docs/unify-python-runtime-modular-release@50ebccf9a0f0d1b9afa4e530f6ea3bdc9d6e78ee`。原任务句子、编号和跨仓库 Gate 不变；勾选有逐项真实证据的 B2 子项，以及 GPU 未执行状态标记和新协议 schema 的对应实现项；另按首次真实完整候选的构建报告勾选 B3.3、B5.1 和 B5.7；仅代表 manifest 自动生成、Windows 隔离构建及资产大小/哈希报告完成，不关闭产品验收或其他阶段门禁。
+计划制定时状态为“计划草案，未实施”；上方两个提交基线以及第 2 节为历史快照，予以保留。原文档分支为 `docs/unify-python-runtime-modular-release@50ebccf9a0f0d1b9afa4e530f6ea3bdc9d6e78ee`。原任务句子、编号和跨仓库 Gate 不变；勾选有逐项真实证据的 B2 子项，以及 GPU 未执行状态标记和新协议 schema 的对应实现项；另按首次真实完整候选的构建报告勾选 B3.3、B3.5、B5.1 和 B5.7；仅代表 manifest 自动生成、完整体积与重复内容账本、Windows 隔离构建及资产大小/哈希报告完成，不关闭产品验收或其他阶段门禁。
 
 | 证据层 | 身份与范围 |
 | --- | --- |
@@ -32,6 +32,8 @@
 | Core-only、真实标注、租约、原生/工作进程、冷 repair/移除/回滚 | NOT_RUN：完整产品在首条 CLI 编码错误处停止，尚无对应 EXE 通过证据。待核对对应真实 EXE 报告与 Core/无关模块前后摘要。 |
 | 四类资源及 YOLO 四份原预训练权重 | NOT_RUN：完整产品在首条 CLI 编码错误处停止，尚无对应 EXE 通过证据。待核对每项注册资源来源、实际 CPU 执行和形状/finite 验证；不代表既有业务模型精度。 |
 | EdgeSAM 不同 manifest 生命周期 | NOT_RUN：完整产品在首条 CLI 编码错误处停止，尚无对应 EXE 通过证据。待核对新旧版本/manifest 必须实际不同，单模块激活/回滚及无关文件摘要以报告逐项填写；未运行前不得记 PASS；夹具只增加诊断 marker，原模型字节不变，新模型计算 NOT_RUN；无关模块为当时已安装的 ORT。 |
+
+[B3.5 完整体积账本](https://github.com/jsdfhasuh/python_build_scripts/blob/309f15d43f010ac7e4cab726d182bf0549d7c36d/docs/evidence/visionworkshop-modular-size-audit-45616400076.md)及同目录机器可读 JSON 绑定原 7 份输入摘要，覆盖 12 个 ZIP 的 44,018 文件、6,791,307,968 解压内容字节、2,791,206,650 ZIP 字节。新全套比旧包增加 75,690,202 字节；新增 DINO 资源为 80,604,327 字节，其余 11 ZIP 比旧包少 4,914,125 字节，仅是不同交付集合对账。全文件同 SHA 的 7,895,387 字节为解压内容的理论超额，不是压缩节省量或可删除清单。新包逐成员 compressed_size 未提供，故压缩后去重收益未计算；实际每包总量与结构开销完整。JSON SHA256 `3620b924217700132e91472f3ac77292a7f714e891a518a23c1004f5b970fc57`；产品 FAIL 不变。
 
 完整候选 lock 由 builder 根据固定 recipe/constraints 与实际 wheel 来源库存生成，再绑定 Core 和各模块；尚未完成 B1.1/.3 所述应用预先批准完整 lock 后由 builder 消费安装的流程。
 
@@ -100,13 +102,13 @@ Core 独立升级、第一方算法代码独立模块、CPU-only wheel 分发、
 
 ### B3 — 模块构建与清单
 
-> 实施注：所选 Core/运行库/第三方 feature/资源 targets、单一所有权、完整 lock/manifest、独立 ZIP 及校验已有源码和首次真实构建；MSVCP 固定 Core canonical 与 Qt/scikit-learn 原始副本为显式来源集合，不等于所有 CRT 文件物理单份；实际 ZIP、单资产大小与总量见上方首次构建记录；它们是内部候选，不是正式发布资产。当前有构建摘要和模块 manifest 报告，尚无独立正式模块总索引。B3.3 以首次候选 11 份实际 manifest 的完整字段和绑定身份为据；B3.4 的独立总索引尚未完成，B3.5 的新候选重复文件与完整前后对账尚缺，均不勾选。B3.1 需注明当前模块边界，第一方算法代码仍在 Core；B3.6 不因所有受控 CPU fixture 通过而视为全业务目标验收。
+> 实施注：所选 Core/运行库/第三方 feature/资源 targets、单一所有权、完整 lock/manifest、独立 ZIP 及校验已有源码和首次真实构建；MSVCP 固定 Core canonical 与 Qt/scikit-learn 原始副本为显式来源集合，不等于所有 CRT 文件物理单份；实际 ZIP、单资产大小与总量见上方首次构建记录；它们是内部候选，不是正式发布资产。当前有构建摘要和模块 manifest 报告，尚无独立正式模块总索引。B3.3 以首次候选 11 份实际 manifest 的完整字段和绑定身份为据；B3.4 的独立总索引尚未完成，继续不勾选。B3.5 已用完整 Core 库存、11 份 payload 清单及摘要匹配的原 module.json 重建覆盖全部 44,018 文件；每包解压字节、压缩成员、ZIP 开销、新旧交付差额与非空/空文件重复内容均已对账。B3.1 需注明当前模块边界，第一方算法代码仍在 Core；B3.6 不因所有受控 CPU fixture 通过而视为全业务目标验收。
 
 - [ ] B3.1 定义 Core、shared runtime、YOLO、PatchCore、ONNX、DINOv2 和模型资源的 build target。
 - [ ] B3.2 复用统一依赖锁和明确的文件所有权，模块不得重复打包 Python、Qt、Torch 或其他公共依赖。
 - [x] B3.3 从构建输入自动生成模块 ID、版本、Core 范围、Python ABI、依赖锁 SHA、依赖模块、文件清单、大小和 SHA256。
 - [ ] B3.4 生成模块 ZIP 和总索引；每个资产都独立校验。
-- [ ] B3.5 对比 Core/模块压缩前后体积和重复文件，记录相对现有完整 ZIP 的真实节省。
+- [x] B3.5 对比 Core/模块压缩前后体积和重复文件，记录相对现有完整 ZIP 的真实节省。
 - [ ] B3.6 所有目标在真实冻结程序中验证，不仅依赖构建配置单测。
 
 ### B4 — 新发布协议与兼容
