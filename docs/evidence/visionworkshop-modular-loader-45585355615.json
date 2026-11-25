@@ -1,0 +1,932 @@
+{
+  "scope": "B2 actual frozen Windows CPU external-loader acceptance; product and GPU remain unqualified",
+  "workflow_run": 45585355615,
+  "job": 139105426776,
+  "artifact": {
+    "id": 15009320244,
+    "name": "visionworkshop-modular-loader-45585355615-1",
+    "bytes": 12880239,
+    "sha256": "c6ee177a39f12f1de567fc9c2645647d4aeac6dd8d96e2dac6340f19bda6ec79"
+  },
+  "summary_sha256": "831b5d249bd52e425ab22cc328d5956e4070c74872424af1f91d92b48b6a2393",
+  "summary": {
+    "schema_version": 1,
+    "status": "LIMITED",
+    "scope": "B2 frozen external runtime experiment",
+    "product_acceptance": "NOT_RUN",
+    "module_installation": "NOT_IMPLEMENTED",
+    "published": false,
+    "cases": [
+      {
+        "name": "core-without-runtime",
+        "mode": "core",
+        "report": "core-without-runtime.json",
+        "process": "core-without-runtime.process.json",
+        "status": "PASS",
+        "run_id": "8ce7e02b3f40499487da1262c3d9a07d",
+        "gpu": {
+          "status": "NOT_RUN",
+          "reason": "Mode does not request GPU execution"
+        }
+      },
+      {
+        "name": "pure-external",
+        "mode": "pure",
+        "report": "pure-external.json",
+        "process": "pure-external.process.json",
+        "status": "PASS",
+        "run_id": "f3c75f4566d34840bb934c849587caec",
+        "gpu": {
+          "status": "NOT_RUN",
+          "reason": "Mode does not request GPU execution"
+        }
+      },
+      {
+        "name": "native-external",
+        "mode": "native",
+        "report": "native-external.json",
+        "process": "native-external.process.json",
+        "status": "PASS",
+        "run_id": "e2fa7c3fea6f454eb2a3fcaf903b7a25",
+        "gpu": {
+          "status": "NOT_RUN",
+          "reason": "Mode does not request GPU execution"
+        }
+      },
+      {
+        "name": "torch-external",
+        "mode": "torch",
+        "report": "torch-external.json",
+        "process": "torch-external.process.json",
+        "status": "PASS",
+        "run_id": "68f31a444bab40e8984020481719a404",
+        "gpu": {
+          "status": "NOT_RUN",
+          "reason": "torch.cuda.is_available() is false",
+          "device_count": 0,
+          "driver_probe": {
+            "available": false,
+            "reason": "NVIDIA driver DLL unavailable",
+            "error": "Failed to load dynlib/dll 'nvcuda.dll'. Most likely this dynlib/dll was not found when the application was frozen."
+          }
+        }
+      },
+      {
+        "name": "ort-external",
+        "mode": "ort",
+        "report": "ort-external.json",
+        "process": "ort-external.process.json",
+        "status": "PASS",
+        "run_id": "e75c262b19074b81a33ca671ba2ce0a4",
+        "gpu": {
+          "available": false,
+          "reason": "NVIDIA driver DLL unavailable",
+          "error": "Failed to load dynlib/dll 'nvcuda.dll'. Most likely this dynlib/dll was not found when the application was frozen.",
+          "status": "NOT_RUN"
+        }
+      },
+      {
+        "name": "dino-external",
+        "mode": "dino",
+        "report": "dino-external.json",
+        "process": "dino-external.process.json",
+        "status": "PASS",
+        "run_id": "297f227497f44bd588417345008c274d",
+        "gpu": {
+          "status": "NOT_RUN",
+          "reason": "This mode only requests CPU execution"
+        }
+      },
+      {
+        "name": "loaded-pyd-lock",
+        "status": "PASS",
+        "run_id": "814beb1637f845e6bd5ab239d68ff3f4",
+        "pid": 6868,
+        "exit_code": 0,
+        "target": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\runtime\\site-packages\\psutil\\_psutil_windows.pyd",
+        "sha256": "68aee24e1413405bf2f4f8303fa35c1caa59ccbfa4c1967bd6f2fad6331ff1f3",
+        "write_access_while_loaded": false,
+        "windows_error": 32,
+        "write_access_after_exit": true,
+        "after_exit_error": 0,
+        "bytes_written": 0,
+        "elapsed_seconds": 0.547
+      },
+      {
+        "name": "pure-fresh-reload",
+        "mode": "pure",
+        "report": "pure-fresh-reload.json",
+        "process": "pure-fresh-reload.process.json",
+        "status": "PASS",
+        "run_id": "91ba746c83e344029071a79a8c2eb158",
+        "gpu": {
+          "status": "NOT_RUN",
+          "reason": "Mode does not request GPU execution"
+        }
+      },
+      {
+        "name": "ort-fresh-reload",
+        "mode": "ort",
+        "report": "ort-fresh-reload.json",
+        "process": "ort-fresh-reload.process.json",
+        "status": "PASS",
+        "run_id": "df26ca65cb8e4a41a5faab190bae8ede",
+        "gpu": {
+          "available": false,
+          "reason": "NVIDIA driver DLL unavailable",
+          "error": "Failed to load dynlib/dll 'nvcuda.dll'. Most likely this dynlib/dll was not found when the application was frozen.",
+          "status": "NOT_RUN"
+        }
+      },
+      {
+        "name": "core-after-runtime-removal",
+        "mode": "core",
+        "report": "core-after-runtime-removal.json",
+        "process": "core-after-runtime-removal.process.json",
+        "status": "PASS",
+        "run_id": "4bd2bc454d834163a1d468ffe9a216e4",
+        "gpu": {
+          "status": "NOT_RUN",
+          "reason": "Mode does not request GPU execution"
+        }
+      }
+    ],
+    "gpu_hardware": "NOT_RUN",
+    "constraints": {
+      "path": "D:\\a\\python_build_scripts\\python_build_scripts\\packager\\ci\\vision-train-modular-probe-constraints.txt",
+      "sha256": "ffae15c49d5c779cf085a4872352b5b61f0f75af912fea47a78ed236aaa25103"
+    },
+    "app_sha": "bb3772003f0b8cbd872d9342a48aa4a82d5bb861",
+    "packager_sha": "b8cd91e9c72a682cd5efce91ac713100601da488",
+    "python": "3.12.10",
+    "build_tools": {
+      "pyinstaller": "6.18.0",
+      "pyinstaller-hooks-contrib": "2026.0"
+    },
+    "runtime_distribution_inventory_sha256": "14b7eb39b88ef951584169c0bb6e2be392958ea7d151a6c61289dc832201a570",
+    "core": {
+      "file_count": 33,
+      "bytes": 23370009,
+      "files_sha256": "617c3732f29bf3778f7fb91c77afeb1e54eb207b5c3b6fdaf10d42526e87b0f1"
+    },
+    "runtime": {
+      "file_count": 25471,
+      "bytes": 5508485870,
+      "files_sha256": "73065dbd90f83ae1dd6d7de9fb900ac32e0d87442fe55393553cbb0dc29f3905",
+      "crt": {
+        "wheel": "pandas-2.3.3-cp312-cp312-win_amd64.whl",
+        "wheel_sha256": "a16dcec078a01eeef8ee61bf64074b4e524a2a3f4b3be9326420cabe59c4778b",
+        "member": "pandas.libs/msvcp140-a4c2229bdc2a2a630acdc095b4d86008.dll",
+        "destination": "msvcp140.dll",
+        "bytes": 575056,
+        "sha256": "a4c2229bdc2a2a630acdc095b4d86008e5c3e3bc7773174354f3da4f5beb9cde",
+        "licenses": [
+          {
+            "path": "vw_probe_native_licenses/pandas/LICENSE",
+            "sha256": "533eb6d0b98e5be3ddd12dce97be35dd11282f5c47cdf8d08c81756fd5d70a26"
+          }
+        ],
+        "reason": "Known product CRT loaded before Qt; no host/system fallback"
+      },
+      "excluded_vendored_python": [
+        {
+          "path": "torchvision/python312.dll",
+          "excluded_file": {
+            "path": "D:\\a\\_temp\\vw-module-runtime\\Lib\\site-packages\\torchvision\\python312.dll",
+            "bytes": 7470920,
+            "sha256": "3436d46bb65a87ba3d215df065f010d9fdab18c994caa275b546b8877b5205b2",
+            "machine": 34404,
+            "file_version": "3.12.12150.1013",
+            "product_version": "3.12.12"
+          },
+          "owner": {
+            "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\Core\\_internal\\python312.dll",
+            "bytes": 6945272,
+            "sha256": "9a0e3435aaa680d868150f87ab3e388ad2eebc22f87e036155c7b4eda8cd2120",
+            "machine": 34404,
+            "file_version": "3.12.10150.1013",
+            "product_version": "3.12.10"
+          },
+          "distribution": "torchvision",
+          "distribution_version": "0.25.0+cu128",
+          "wheel_url": "https://download-r2.pytorch.org/whl/cu128/torchvision-0.25.0%2Bcu128-cp312-cp312-win_amd64.whl",
+          "wheel_sha256": "068e519838b4a8b32a09521244b170edd8c2ac9eeb6538b7bf492cd70e57ebf5",
+          "wheel_record": [
+            "torchvision\\python312.dll",
+            "sha256=NDbUa7Zah7o9IV3wZfAQ2f2rGMmUyqJ1tUa4h3tSBbI",
+            "7470920"
+          ],
+          "installed_record_aliases": [
+            [
+              "torchvision/python312.dll",
+              "",
+              ""
+            ]
+          ],
+          "consumer": {
+            "path": "D:\\a\\_temp\\vw-module-runtime\\Lib\\site-packages\\torchvision\\image.pyd",
+            "sha256": "d09b9cf5b89c7f6362027a8f4660e4251d797129296d942c90408c3f2a96b42e",
+            "python_import_count": 97,
+            "missing_python_exports": [],
+            "owner_sha256": "9a0e3435aaa680d868150f87ab3e388ad2eebc22f87e036155c7b4eda8cd2120"
+          },
+          "reason": "Reviewed CP312 wheel duplicate omitted; the frozen Core is the only Python owner",
+          "runtime_acceptance": "Requires actual image encode/decode and Core-only Python DLL loading"
+        }
+      ]
+    },
+    "core_and_shared_runtime_unchanged": true,
+    "archive": {
+      "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\archives\\VisionWorkshopProbeCore.zip",
+      "bytes": 11428113,
+      "sha256": "28241d005f2f4ad76db130a6cb793c8c9d49cfd4f10613df61dd108fe0ce10f7",
+      "scope": "B2 diagnostic Core only; not the product application or module installer"
+    },
+    "cpu_external_loader": "PASS",
+    "limitations": [
+      "Diagnostic frozen Core, not complete product Core",
+      "No formal module installation/update/rollback implementation",
+      "No business model, training or full GUI acceptance",
+      "Physical CUDA operation not qualified"
+    ],
+    "elapsed_seconds": 198.422
+  },
+  "cases": [
+    {
+      "name": "core-without-runtime",
+      "report": "core-without-runtime.json",
+      "sha256": "8b1d3ce4596254be5e7d0a731c70e0febca4025610fadafe01778a64222fbaa6",
+      "observed": {
+        "status": "PASS",
+        "run_id": "8ce7e02b3f40499487da1262c3d9a07d",
+        "pid": 4272,
+        "sys_executable": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\Core\\VisionWorkshopProbeCore.exe",
+        "python": "3.12.10",
+        "frozen": true,
+        "checks": {
+          "core_startup": "PASS",
+          "optional_runtime_available": false,
+          "optional_modules_imported": []
+        },
+        "python_files": [
+          {
+            "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\Core\\_internal\\python3.dll",
+            "sha256": "fb975a606e7fbf74f64260e3f60c3490b4f74a183c0926fd6ed1ac4c52ac7b1c",
+            "bytes": 70376
+          },
+          {
+            "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\Core\\_internal\\python312.dll",
+            "sha256": "9a0e3435aaa680d868150f87ab3e388ad2eebc22f87e036155c7b4eda8cd2120",
+            "bytes": 6945272
+          }
+        ],
+        "vcruntime_files": [
+          {
+            "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\Core\\_internal\\vcruntime140.dll",
+            "sha256": "052ad6a20d375957e82aa6a3c441ea548d89be0981516ca7eb306e063d5027f4",
+            "bytes": 120400
+          },
+          {
+            "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\Core\\_internal\\vcruntime140_1.dll",
+            "sha256": "6a99bc0128e0c7d6cbbf615fcc26909565e17d4ca3451b97f8987f9c6acbc6c8",
+            "bytes": 49776
+          }
+        ],
+        "generated_module_origins": {},
+        "unexpected_module_origins": {},
+        "unexpected_native_libraries": [],
+        "network_attempts": [],
+        "gpu": {
+          "status": "NOT_RUN",
+          "reason": "Mode does not request GPU execution"
+        }
+      }
+    },
+    {
+      "name": "pure-external",
+      "report": "pure-external.json",
+      "sha256": "8770ce7581c8633b1890b6a34b0b84ae26786c9bf450e85048f87f08a7aaf316",
+      "observed": {
+        "status": "PASS",
+        "run_id": "f3c75f4566d34840bb934c849587caec",
+        "pid": 9292,
+        "sys_executable": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\Core\\VisionWorkshopProbeCore.exe",
+        "python": "3.12.10",
+        "frozen": true,
+        "checks": {
+          "marker": "v1",
+          "fixture_version": "1.0.0",
+          "pure_python": "PASS",
+          "external_metadata": "PASS"
+        },
+        "python_files": [
+          {
+            "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\Core\\_internal\\python3.dll",
+            "sha256": "fb975a606e7fbf74f64260e3f60c3490b4f74a183c0926fd6ed1ac4c52ac7b1c",
+            "bytes": 70376
+          },
+          {
+            "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\Core\\_internal\\python312.dll",
+            "sha256": "9a0e3435aaa680d868150f87ab3e388ad2eebc22f87e036155c7b4eda8cd2120",
+            "bytes": 6945272
+          }
+        ],
+        "crt_preload": {
+          "status": "PASS",
+          "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\runtime\\site-packages\\msvcp140.dll",
+          "sha256": "a4c2229bdc2a2a630acdc095b4d86008e5c3e3bc7773174354f3da4f5beb9cde",
+          "loaded_path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\runtime\\site-packages\\msvcp140.dll"
+        },
+        "vcruntime_files": [
+          {
+            "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\Core\\_internal\\vcruntime140.dll",
+            "sha256": "052ad6a20d375957e82aa6a3c441ea548d89be0981516ca7eb306e063d5027f4",
+            "bytes": 120400
+          },
+          {
+            "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\Core\\_internal\\vcruntime140_1.dll",
+            "sha256": "6a99bc0128e0c7d6cbbf615fcc26909565e17d4ca3451b97f8987f9c6acbc6c8",
+            "bytes": 49776
+          }
+        ],
+        "generated_module_origins": {},
+        "unexpected_module_origins": {},
+        "unexpected_native_libraries": [],
+        "network_attempts": [],
+        "gpu": {
+          "status": "NOT_RUN",
+          "reason": "Mode does not request GPU execution"
+        }
+      }
+    },
+    {
+      "name": "native-external",
+      "report": "native-external.json",
+      "sha256": "6567ed57b5eb8dd1e3bbffef305b37a410377fa837e0eadee8b263008583c5b3",
+      "observed": {
+        "status": "PASS",
+        "run_id": "e2fa7c3fea6f454eb2a3fcaf903b7a25",
+        "pid": 7288,
+        "sys_executable": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\Core\\VisionWorkshopProbeCore.exe",
+        "python": "3.12.10",
+        "frozen": true,
+        "checks": {
+          "numpy_matmul": [
+            [
+              7.0,
+              10.0
+            ],
+            [
+              15.0,
+              22.0
+            ]
+          ],
+          "psutil_pid": 7288,
+          "qt_runtime_version": "5.15.2",
+          "qt_bindings_version": "5.15.9",
+          "native_extensions": "PASS",
+          "qt_core": "PASS",
+          "interactive_gui": "NOT_RUN"
+        },
+        "python_files": [
+          {
+            "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\Core\\_internal\\python3.dll",
+            "sha256": "fb975a606e7fbf74f64260e3f60c3490b4f74a183c0926fd6ed1ac4c52ac7b1c",
+            "bytes": 70376
+          },
+          {
+            "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\Core\\_internal\\python312.dll",
+            "sha256": "9a0e3435aaa680d868150f87ab3e388ad2eebc22f87e036155c7b4eda8cd2120",
+            "bytes": 6945272
+          }
+        ],
+        "crt_preload": {
+          "status": "PASS",
+          "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\runtime\\site-packages\\msvcp140.dll",
+          "sha256": "a4c2229bdc2a2a630acdc095b4d86008e5c3e3bc7773174354f3da4f5beb9cde",
+          "loaded_path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\runtime\\site-packages\\msvcp140.dll"
+        },
+        "vcruntime_files": [
+          {
+            "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\Core\\_internal\\vcruntime140.dll",
+            "sha256": "052ad6a20d375957e82aa6a3c441ea548d89be0981516ca7eb306e063d5027f4",
+            "bytes": 120400
+          },
+          {
+            "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\Core\\_internal\\vcruntime140_1.dll",
+            "sha256": "6a99bc0128e0c7d6cbbf615fcc26909565e17d4ca3451b97f8987f9c6acbc6c8",
+            "bytes": 49776
+          }
+        ],
+        "generated_module_origins": {},
+        "unexpected_module_origins": {},
+        "unexpected_native_libraries": [],
+        "network_attempts": [],
+        "gpu": {
+          "status": "NOT_RUN",
+          "reason": "Mode does not request GPU execution"
+        }
+      }
+    },
+    {
+      "name": "torch-external",
+      "report": "torch-external.json",
+      "sha256": "d094f37c76a11a43657efe880bcb0f09257461ebe24ede34b7cc40dd9c9d922f",
+      "observed": {
+        "status": "PASS",
+        "run_id": "68f31a444bab40e8984020481719a404",
+        "pid": 5052,
+        "sys_executable": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\Core\\VisionWorkshopProbeCore.exe",
+        "python": "3.12.10",
+        "frozen": true,
+        "checks": {
+          "qt_before_compute": "PASS",
+          "qt_runtime_version": "5.15.2",
+          "torch_cpu": "PASS",
+          "torchvision_cpu_nms": "PASS",
+          "torchvision_image_roundtrip": "PASS",
+          "torch_version": "2.10.0+cu128",
+          "torchvision_version": "0.25.0+cu128",
+          "cuda_build": "12.8",
+          "torch_cuda_available": false,
+          "cuda_driver_probe": {
+            "available": false,
+            "reason": "NVIDIA driver DLL unavailable",
+            "error": "Failed to load dynlib/dll 'nvcuda.dll'. Most likely this dynlib/dll was not found when the application was frozen."
+          }
+        },
+        "python_files": [
+          {
+            "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\Core\\_internal\\python3.dll",
+            "sha256": "fb975a606e7fbf74f64260e3f60c3490b4f74a183c0926fd6ed1ac4c52ac7b1c",
+            "bytes": 70376
+          },
+          {
+            "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\Core\\_internal\\python312.dll",
+            "sha256": "9a0e3435aaa680d868150f87ab3e388ad2eebc22f87e036155c7b4eda8cd2120",
+            "bytes": 6945272
+          }
+        ],
+        "crt_preload": {
+          "status": "PASS",
+          "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\runtime\\site-packages\\msvcp140.dll",
+          "sha256": "a4c2229bdc2a2a630acdc095b4d86008e5c3e3bc7773174354f3da4f5beb9cde",
+          "loaded_path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\runtime\\site-packages\\msvcp140.dll"
+        },
+        "vcruntime_files": [
+          {
+            "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\Core\\_internal\\vcruntime140.dll",
+            "sha256": "052ad6a20d375957e82aa6a3c441ea548d89be0981516ca7eb306e063d5027f4",
+            "bytes": 120400
+          },
+          {
+            "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\Core\\_internal\\vcruntime140_1.dll",
+            "sha256": "6a99bc0128e0c7d6cbbf615fcc26909565e17d4ca3451b97f8987f9c6acbc6c8",
+            "bytes": 49776
+          }
+        ],
+        "generated_module_origins": {
+          "torch.ops": {
+            "kind": "generated_module",
+            "module_file": "_ops.py",
+            "implementation_module": "torch._ops",
+            "implementation_class": "_Ops",
+            "implementation_file": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\runtime\\site-packages\\torch\\_ops.py"
+          },
+          "torch.classes": {
+            "kind": "generated_module",
+            "module_file": "_classes.py",
+            "implementation_module": "torch._classes",
+            "implementation_class": "_Classes",
+            "implementation_file": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\runtime\\site-packages\\torch\\_classes.py"
+          }
+        },
+        "unexpected_module_origins": {},
+        "unexpected_native_libraries": [],
+        "network_attempts": [],
+        "gpu": {
+          "status": "NOT_RUN",
+          "reason": "torch.cuda.is_available() is false",
+          "device_count": 0,
+          "driver_probe": {
+            "available": false,
+            "reason": "NVIDIA driver DLL unavailable",
+            "error": "Failed to load dynlib/dll 'nvcuda.dll'. Most likely this dynlib/dll was not found when the application was frozen."
+          }
+        }
+      }
+    },
+    {
+      "name": "ort-external",
+      "report": "ort-external.json",
+      "sha256": "3c040a7226f51e209d3f5b25a1de2a2244c3c15c31befa34b7b3a0cee290f306",
+      "observed": {
+        "status": "PASS",
+        "run_id": "e75c262b19074b81a33ca671ba2ce0a4",
+        "pid": 3912,
+        "sys_executable": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\Core\\VisionWorkshopProbeCore.exe",
+        "python": "3.12.10",
+        "frozen": true,
+        "checks": {
+          "qt_before_compute": "PASS",
+          "qt_runtime_version": "5.15.2",
+          "ort_cpu": "PASS",
+          "ort_output": [
+            [
+              4.5,
+              3.5
+            ],
+            [
+              10.5,
+              7.5
+            ]
+          ],
+          "ort_model_sha256": "e8ac17fb2f793ecbaab391fd650522b9e2e47154a462c4b230090fb9dcf0148e",
+          "ort_available_providers": [
+            "TensorrtExecutionProvider",
+            "CUDAExecutionProvider",
+            "CPUExecutionProvider"
+          ],
+          "ort_session_providers": [
+            "CPUExecutionProvider"
+          ]
+        },
+        "python_files": [
+          {
+            "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\Core\\_internal\\python3.dll",
+            "sha256": "fb975a606e7fbf74f64260e3f60c3490b4f74a183c0926fd6ed1ac4c52ac7b1c",
+            "bytes": 70376
+          },
+          {
+            "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\Core\\_internal\\python312.dll",
+            "sha256": "9a0e3435aaa680d868150f87ab3e388ad2eebc22f87e036155c7b4eda8cd2120",
+            "bytes": 6945272
+          }
+        ],
+        "crt_preload": {
+          "status": "PASS",
+          "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\runtime\\site-packages\\msvcp140.dll",
+          "sha256": "a4c2229bdc2a2a630acdc095b4d86008e5c3e3bc7773174354f3da4f5beb9cde",
+          "loaded_path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\runtime\\site-packages\\msvcp140.dll"
+        },
+        "vcruntime_files": [
+          {
+            "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\Core\\_internal\\vcruntime140.dll",
+            "sha256": "052ad6a20d375957e82aa6a3c441ea548d89be0981516ca7eb306e063d5027f4",
+            "bytes": 120400
+          },
+          {
+            "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\Core\\_internal\\vcruntime140_1.dll",
+            "sha256": "6a99bc0128e0c7d6cbbf615fcc26909565e17d4ca3451b97f8987f9c6acbc6c8",
+            "bytes": 49776
+          }
+        ],
+        "generated_module_origins": {},
+        "unexpected_module_origins": {},
+        "unexpected_native_libraries": [],
+        "network_attempts": [],
+        "gpu": {
+          "available": false,
+          "reason": "NVIDIA driver DLL unavailable",
+          "error": "Failed to load dynlib/dll 'nvcuda.dll'. Most likely this dynlib/dll was not found when the application was frozen.",
+          "status": "NOT_RUN"
+        }
+      }
+    },
+    {
+      "name": "dino-external",
+      "report": "dino-external.json",
+      "sha256": "0922549a86542bf54a6fa0f5586cf3f0f2e3b43edb84f94bc0693ee66959b3aa",
+      "observed": {
+        "status": "PASS",
+        "run_id": "297f227497f44bd588417345008c274d",
+        "pid": 5384,
+        "sys_executable": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\Core\\VisionWorkshopProbeCore.exe",
+        "python": "3.12.10",
+        "frozen": true,
+        "checks": {
+          "qt_before_compute": "PASS",
+          "qt_runtime_version": "5.15.2",
+          "ort_cpu": "PASS",
+          "ort_output": [
+            [
+              4.5,
+              3.5
+            ],
+            [
+              10.5,
+              7.5
+            ]
+          ],
+          "ort_model_sha256": "e8ac17fb2f793ecbaab391fd650522b9e2e47154a462c4b230090fb9dcf0148e",
+          "ort_available_providers": [
+            "TensorrtExecutionProvider",
+            "CUDAExecutionProvider",
+            "CPUExecutionProvider"
+          ],
+          "ort_session_providers": [
+            "CPUExecutionProvider"
+          ],
+          "dino_environment": "PASS",
+          "environment": {
+            "python": "3.12.10",
+            "packages": {
+              "onnx": "1.16.0",
+              "numpy": "2.0.2",
+              "Pillow": "12.0.0",
+              "psutil": "7.2.1",
+              "onnxruntime-gpu": "1.23.2",
+              "opencv-contrib-python-headless": "4.11.0.86"
+            },
+            "runtime_profile": "dino_main_runtime_v1",
+            "provider": "CPUExecutionProvider",
+            "threads": 2,
+            "inter_threads": 1,
+            "scope": "windows",
+            "platform": "win32",
+            "training_modules_imported": []
+          },
+          "training_modules_imported": [],
+          "model_inference": "NOT_RUN",
+          "production_worker_protocol": "NOT_RUN"
+        },
+        "python_files": [
+          {
+            "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\Core\\_internal\\python3.dll",
+            "sha256": "fb975a606e7fbf74f64260e3f60c3490b4f74a183c0926fd6ed1ac4c52ac7b1c",
+            "bytes": 70376
+          },
+          {
+            "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\Core\\_internal\\python312.dll",
+            "sha256": "9a0e3435aaa680d868150f87ab3e388ad2eebc22f87e036155c7b4eda8cd2120",
+            "bytes": 6945272
+          }
+        ],
+        "crt_preload": {
+          "status": "PASS",
+          "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\runtime\\site-packages\\msvcp140.dll",
+          "sha256": "a4c2229bdc2a2a630acdc095b4d86008e5c3e3bc7773174354f3da4f5beb9cde",
+          "loaded_path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\runtime\\site-packages\\msvcp140.dll"
+        },
+        "vcruntime_files": [
+          {
+            "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\Core\\_internal\\vcruntime140.dll",
+            "sha256": "052ad6a20d375957e82aa6a3c441ea548d89be0981516ca7eb306e063d5027f4",
+            "bytes": 120400
+          },
+          {
+            "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\Core\\_internal\\vcruntime140_1.dll",
+            "sha256": "6a99bc0128e0c7d6cbbf615fcc26909565e17d4ca3451b97f8987f9c6acbc6c8",
+            "bytes": 49776
+          }
+        ],
+        "generated_module_origins": {},
+        "unexpected_module_origins": {},
+        "unexpected_native_libraries": [],
+        "network_attempts": [],
+        "gpu": {
+          "status": "NOT_RUN",
+          "reason": "This mode only requests CPU execution"
+        }
+      }
+    },
+    {
+      "name": "loaded-pyd-lock",
+      "report": "loaded-pyd-lock.json",
+      "sha256": "04413ca1382ad7dfa92d44c47867ad2fafe46a22d6703b066767435a9dacbe1b",
+      "observed": {
+        "status": "PASS",
+        "run_id": "814beb1637f845e6bd5ab239d68ff3f4",
+        "pid": 6868,
+        "sys_executable": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\Core\\VisionWorkshopProbeCore.exe",
+        "python": "3.12.10",
+        "frozen": true,
+        "checks": {
+          "loaded_extension_hold": "PASS"
+        },
+        "python_files": [
+          {
+            "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\Core\\_internal\\python3.dll",
+            "sha256": "fb975a606e7fbf74f64260e3f60c3490b4f74a183c0926fd6ed1ac4c52ac7b1c",
+            "bytes": 70376
+          },
+          {
+            "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\Core\\_internal\\python312.dll",
+            "sha256": "9a0e3435aaa680d868150f87ab3e388ad2eebc22f87e036155c7b4eda8cd2120",
+            "bytes": 6945272
+          }
+        ],
+        "crt_preload": {
+          "status": "PASS",
+          "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\runtime\\site-packages\\msvcp140.dll",
+          "sha256": "a4c2229bdc2a2a630acdc095b4d86008e5c3e3bc7773174354f3da4f5beb9cde",
+          "loaded_path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\runtime\\site-packages\\msvcp140.dll"
+        },
+        "vcruntime_files": [
+          {
+            "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\Core\\_internal\\vcruntime140.dll",
+            "sha256": "052ad6a20d375957e82aa6a3c441ea548d89be0981516ca7eb306e063d5027f4",
+            "bytes": 120400
+          },
+          {
+            "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\Core\\_internal\\vcruntime140_1.dll",
+            "sha256": "6a99bc0128e0c7d6cbbf615fcc26909565e17d4ca3451b97f8987f9c6acbc6c8",
+            "bytes": 49776
+          }
+        ],
+        "generated_module_origins": {},
+        "unexpected_module_origins": {},
+        "unexpected_native_libraries": [],
+        "network_attempts": [],
+        "gpu": {
+          "status": "NOT_RUN",
+          "reason": "Mode does not request GPU execution"
+        }
+      }
+    },
+    {
+      "name": "pure-fresh-reload",
+      "report": "pure-fresh-reload.json",
+      "sha256": "ccb953eb9003b72a2a405c68683b924754aadcc0cca11dedbe0b6bc6a3cabf4e",
+      "observed": {
+        "status": "PASS",
+        "run_id": "91ba746c83e344029071a79a8c2eb158",
+        "pid": 6324,
+        "sys_executable": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\Core\\VisionWorkshopProbeCore.exe",
+        "python": "3.12.10",
+        "frozen": true,
+        "checks": {
+          "marker": "v2",
+          "fixture_version": "2.0.0",
+          "pure_python": "PASS",
+          "external_metadata": "PASS"
+        },
+        "python_files": [
+          {
+            "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\Core\\_internal\\python3.dll",
+            "sha256": "fb975a606e7fbf74f64260e3f60c3490b4f74a183c0926fd6ed1ac4c52ac7b1c",
+            "bytes": 70376
+          },
+          {
+            "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\Core\\_internal\\python312.dll",
+            "sha256": "9a0e3435aaa680d868150f87ab3e388ad2eebc22f87e036155c7b4eda8cd2120",
+            "bytes": 6945272
+          }
+        ],
+        "crt_preload": {
+          "status": "PASS",
+          "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\runtime\\site-packages\\msvcp140.dll",
+          "sha256": "a4c2229bdc2a2a630acdc095b4d86008e5c3e3bc7773174354f3da4f5beb9cde",
+          "loaded_path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\runtime\\site-packages\\msvcp140.dll"
+        },
+        "vcruntime_files": [
+          {
+            "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\Core\\_internal\\vcruntime140.dll",
+            "sha256": "052ad6a20d375957e82aa6a3c441ea548d89be0981516ca7eb306e063d5027f4",
+            "bytes": 120400
+          },
+          {
+            "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\Core\\_internal\\vcruntime140_1.dll",
+            "sha256": "6a99bc0128e0c7d6cbbf615fcc26909565e17d4ca3451b97f8987f9c6acbc6c8",
+            "bytes": 49776
+          }
+        ],
+        "generated_module_origins": {},
+        "unexpected_module_origins": {},
+        "unexpected_native_libraries": [],
+        "network_attempts": [],
+        "gpu": {
+          "status": "NOT_RUN",
+          "reason": "Mode does not request GPU execution"
+        }
+      }
+    },
+    {
+      "name": "ort-fresh-reload",
+      "report": "ort-fresh-reload.json",
+      "sha256": "9d138fddad281a2518562eb961d810eee1bd5de5d20c24a442af338963f3cb55",
+      "observed": {
+        "status": "PASS",
+        "run_id": "df26ca65cb8e4a41a5faab190bae8ede",
+        "pid": 9628,
+        "sys_executable": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\Core\\VisionWorkshopProbeCore.exe",
+        "python": "3.12.10",
+        "frozen": true,
+        "checks": {
+          "qt_before_compute": "PASS",
+          "qt_runtime_version": "5.15.2",
+          "ort_cpu": "PASS",
+          "ort_output": [
+            [
+              4.5,
+              3.5
+            ],
+            [
+              10.5,
+              7.5
+            ]
+          ],
+          "ort_model_sha256": "e8ac17fb2f793ecbaab391fd650522b9e2e47154a462c4b230090fb9dcf0148e",
+          "ort_available_providers": [
+            "TensorrtExecutionProvider",
+            "CUDAExecutionProvider",
+            "CPUExecutionProvider"
+          ],
+          "ort_session_providers": [
+            "CPUExecutionProvider"
+          ]
+        },
+        "python_files": [
+          {
+            "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\Core\\_internal\\python3.dll",
+            "sha256": "fb975a606e7fbf74f64260e3f60c3490b4f74a183c0926fd6ed1ac4c52ac7b1c",
+            "bytes": 70376
+          },
+          {
+            "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\Core\\_internal\\python312.dll",
+            "sha256": "9a0e3435aaa680d868150f87ab3e388ad2eebc22f87e036155c7b4eda8cd2120",
+            "bytes": 6945272
+          }
+        ],
+        "crt_preload": {
+          "status": "PASS",
+          "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\runtime\\site-packages\\msvcp140.dll",
+          "sha256": "a4c2229bdc2a2a630acdc095b4d86008e5c3e3bc7773174354f3da4f5beb9cde",
+          "loaded_path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\runtime\\site-packages\\msvcp140.dll"
+        },
+        "vcruntime_files": [
+          {
+            "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\Core\\_internal\\vcruntime140.dll",
+            "sha256": "052ad6a20d375957e82aa6a3c441ea548d89be0981516ca7eb306e063d5027f4",
+            "bytes": 120400
+          },
+          {
+            "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\Core\\_internal\\vcruntime140_1.dll",
+            "sha256": "6a99bc0128e0c7d6cbbf615fcc26909565e17d4ca3451b97f8987f9c6acbc6c8",
+            "bytes": 49776
+          }
+        ],
+        "generated_module_origins": {},
+        "unexpected_module_origins": {},
+        "unexpected_native_libraries": [],
+        "network_attempts": [],
+        "gpu": {
+          "available": false,
+          "reason": "NVIDIA driver DLL unavailable",
+          "error": "Failed to load dynlib/dll 'nvcuda.dll'. Most likely this dynlib/dll was not found when the application was frozen.",
+          "status": "NOT_RUN"
+        }
+      }
+    },
+    {
+      "name": "core-after-runtime-removal",
+      "report": "core-after-runtime-removal.json",
+      "sha256": "5085152769eb5203180e8f3bd816f76f3da37ab2affc0bfbdad51e288a403931",
+      "observed": {
+        "status": "PASS",
+        "run_id": "4bd2bc454d834163a1d468ffe9a216e4",
+        "pid": 8052,
+        "sys_executable": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\Core\\VisionWorkshopProbeCore.exe",
+        "python": "3.12.10",
+        "frozen": true,
+        "checks": {
+          "core_startup": "PASS",
+          "optional_runtime_available": false,
+          "optional_modules_imported": []
+        },
+        "python_files": [
+          {
+            "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\Core\\_internal\\python3.dll",
+            "sha256": "fb975a606e7fbf74f64260e3f60c3490b4f74a183c0926fd6ed1ac4c52ac7b1c",
+            "bytes": 70376
+          },
+          {
+            "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\Core\\_internal\\python312.dll",
+            "sha256": "9a0e3435aaa680d868150f87ab3e388ad2eebc22f87e036155c7b4eda8cd2120",
+            "bytes": 6945272
+          }
+        ],
+        "vcruntime_files": [
+          {
+            "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\Core\\_internal\\vcruntime140.dll",
+            "sha256": "052ad6a20d375957e82aa6a3c441ea548d89be0981516ca7eb306e063d5027f4",
+            "bytes": 120400
+          },
+          {
+            "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-output\\probe-install\\外置 模块\\Core\\_internal\\vcruntime140_1.dll",
+            "sha256": "6a99bc0128e0c7d6cbbf615fcc26909565e17d4ca3451b97f8987f9c6acbc6c8",
+            "bytes": 49776
+          }
+        ],
+        "generated_module_origins": {},
+        "unexpected_module_origins": {},
+        "unexpected_native_libraries": [],
+        "network_attempts": [],
+        "gpu": {
+          "status": "NOT_RUN",
+          "reason": "Mode does not request GPU execution"
+        }
+      }
+    }
+  ]
+}

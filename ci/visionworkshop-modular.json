@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "branding_profile": "profiles/visionworkshop.json",
+  "constraints": "ci/vision-train-modular-probe-constraints.txt",
+  "constraint_origin": "Production runtime 45544329988; selected dependency closures only",
+  "extra_pins": {
+    "ultralytics-thop": "2.0.18"
+  },
+  "extra_archives": {
+    "ultralytics-thop": "2bb44851ad224b116c3995b02dd5e474a5ccf00acf237fe0edb9e1506ede04ec"
+  },
+  "seeds": {
+    "core": [
+      "PyQt5", "PyQtWebEngine", "numpy", "opencv-contrib-python-headless", "Pillow",
+      "PyYAML", "requests", "httpx", "psutil", "openai", "json_repair", "jsonlines",
+      "Markdown", "natsort", "qimage2ndarray", "importlib-metadata", "termcolor",
+      "packaging", "tqdm", "kaggle", "kagglesdk", "setuptools"
+    ],
+    "runtime.torch": ["torch", "torchvision", "torchaudio"],
+    "runtime.ort": ["onnx", "onnxruntime-gpu", "onnxslim"],
+    "runtime.science": ["matplotlib", "scipy"],
+    "runtime.vision": ["timm", "transformers", "huggingface-hub", "tokenizers", "safetensors"],
+    "feature.yolo": ["polars", "lapx", "ultralytics-thop"],
+    "feature.patchcore": ["anomalib", "lightning", "pytorch-lightning", "torchmetrics", "kornia", "av"]
+  },
+  "labels": {
+    "runtime.torch": "共享 Torch 2.10 / CUDA 12.8 运行库",
+    "runtime.ort": "共享 ONNX Runtime",
+    "runtime.science": "共享科学计算库",
+    "runtime.vision": "共享视觉模型运行库",
+    "feature.yolo": "YOLO 算法",
+    "feature.patchcore": "PatchCore 算法"
+  },
+  "distribution_providers": {
+    "opencv-python": "opencv-contrib-python-headless",
+    "opencv-python-headless": "opencv-contrib-python-headless",
+    "onnxruntime": "onnxruntime-gpu"
+  },
+  "namespace_providers": {
+    "cv2": "opencv-contrib-python-headless",
+    "onnxruntime": "onnxruntime-gpu"
+  },
+  "core_source_directories": [
+    "ai_synthetic", "anomaly_func", "backend", "kaggle_func", "my_ai_labeling_func",
+    "my_ultralytics_func", "patchcore_dino_runtime", "project__func", "scripts", "ui"
+  ],
+  "core_resource_directories": ["static", "branding"],
+  "core_resource_files": ["training_platform.ui"],
+  "vendor": {
+    "ultralytics": {
+      "path": "ultralytics",
+      "commit": "74b2b91e5c4420af47875801b8e13333ab7026ac",
+      "owner": "feature.yolo"
+    },
+    "anylabeling": {
+      "path": "X-AnyLabeling",
+      "commit": "be6774f324a6d4047cbe97ecdfaa9a71b8917704",
+      "owner": "core"
+    }
+  },
+  "resources": {
+    "resource.yolo": {
+      "label": "YOLO 预置模型",
+      "paths": ["static/models/yolo11n.pt", "static/models/yolo11s.pt", "static/models/yolo11n-pose.pt", "static/models/yolo26n.pt"]
+    },
+    "resource.patchcore-cnn": {
+      "label": "PatchCore CNN 预训练资源",
+      "paths": ["static/models/patchcore_wide_resnet50_2.racm_in1k.safetensors", "static/models/patchcore_pretrained.json", "static/models/patchcore_pretrained-LICENSE.txt", "static/models/patchcore_pretrained-MODEL_CARD.md"]
+    },
+    "resource.image-simplification": {
+      "label": "图片精简 DINOv2 资源",
+      "paths": ["static/models/image_simplification"]
+    },
+    "resource.edgesam": {
+      "label": "EdgeSAM 标注模型",
+      "paths": ["static/models/edge_sam_encoder.onnx", "static/models/edge_sam_decoder.onnx"]
+    },
+    "resource.patchcore-dino": {
+      "label": "PatchCore DINO Small 资源",
+      "paths": ["static/models/dinov2-small"]
+    }
+  }
+}

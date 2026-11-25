@@ -4,6 +4,32 @@
 当前为诊断 Core 与验证脚本；Windows 结果以对应运行 artifact 为准，不代表完整产品 Core、
 模块安装器或正式发布已经完成。
 
+## 最新实际结果：CPU 外置加载矩阵通过，GPU 未执行
+
+[运行 45585355615](https://github.com/jsdfhasuh/python_build_scripts/actions/runs/45585355615)
+绑定打包提交 `b8cd91e9c72a682cd5efce91ac713100601da488`，工作流成功；报告为
+**`cpu_external_loader: PASS`、`status: LIMITED`、`gpu_hardware: NOT_RUN`**。
+已下载 artifact `15009320244` 并核对 ZIP SHA256：
+`c6ee177a39f12f1de567fc9c2645647d4aeac6dd8d96e2dac6340f19bda6ec79`。
+仓库保留[摘要、逐进程检查与原始报告摘要](visionworkshop-modular-loader-45585355615.json)。
+
+十个真实 EXE 进程场景全部通过：无外部运行库启动、纯 Python 与 metadata、NumPy/psutil/Qt、
+Torch CPU 矩阵与 TorchVision NMS/PNG 往返、ORT 固定图、原应用 DINO 环境与 ORT 小图、
+已加载 `.pyd` 的写锁与退出释放、测试包/metadata 更新后的新进程重载、ORT 新进程重载、
+外部运行库移除后的 Core 启动。目录包含中文和空格。每个进程的唯一 `python312.dll` 均来自
+Core，精确版本 3.12.10、SHA256 `9a0e3435aaa680d868150f87ab3e388ad2eebc22f87e036155c7b4eda8cd2120`。
+未观察到越界普通模块、计算/Qt DLL 或 Python 网络调用；Core 与共享运行库载荷在矩阵前后
+保持字节一致。Windows `.pyd` 写锁返回错误 32，进程退出后恢复写权限，测试未写入文件。
+
+runner 无 NVIDIA 驱动和可用设备，未做实际 CUDA 运算。DINO 仍仅验证原应用环境检查和
+独立 ORT 小图；完整业务模型、worker 协议、产品 GUI、模块安装/更新/恢复均未在这次
+诊断实验中验收。11,428,113 字节的 `VisionWorkshopProbeCore.zip` 是诊断入口，
+**不是新的产品小包**。本结果允许继续实现正式 Core/模块布局与离线管理，不能勾选整个 B2
+或宣称模块化产品已完成。同一提交的 portable 测试运行 45585365072 亦成功。
+
+后续正式 Core、独立模块 ZIP 与产品 EXE 验收使用
+[单独的候选构建路径](../visionworkshop-modular-candidate.md)，其结果不与本诊断实验混用。
+
 ## 实验边界
 
 - 构建唯一 CPython 3.12.10 的最小 PyInstaller 6.18.0 onedir EXE。
