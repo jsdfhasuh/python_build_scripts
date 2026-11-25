@@ -99,13 +99,15 @@ Core 独立升级、第一方算法独立模块更新、CPU-only wheel 分发、
 
 ### B0 — 只读构建审计
 
+> B0.2/B0.5 已完成固定 `841ba103fe10ad62bdcc5206b784e186fd14552e` 的源码盘点：完整 172 个 blob、170 个文本文件与 95 个 Python AST 均已核对，未发现缺失或身份不符。见[运行时检查与 DINO 当前/历史路径审计](https://github.com/jsdfhasuh/python_build_scripts/blob/e5bbe0857beec3d4f49860eb50fc05b9727cfd0e/docs/evidence/visionworkshop-runtime-checks-841ba103.md)及[逐文件、检查与调用者记录](https://github.com/jsdfhasuh/python_build_scripts/blob/e5bbe0857beec3d4f49860eb50fc05b9727cfd0e/docs/evidence/visionworkshop-runtime-checks-841ba103.json)。这两项只完成盘点：P3 专用 Actions 默认开启运行时检查，本地 wizard/direct build/通用旧入口未默认开启相同门禁；固定 Ultralytics 的 Torch 版本上界冲突仍未解决。当前 P3/P4 发布路径与历史 Embeddable 兼容测试已区分，不代表 B1、B2、完整产品或旧版发布验收完成。
+
 > 其他产品基线已按原计划父提交与本轮 d3ace70 做[逐文件/PR 范围对照](https://github.com/jsdfhasuh/python_build_scripts/blob/841ba103fe10ad62bdcc5206b784e186fd14552e/docs/evidence/visionworkshop-modular-other-product-baseline-d3ace70.json)。EmoMaster 配置/运行时/发布工作流及通用 build.py 字节不变；PR #4 仍有共享 oversized-ZIP 诊断保留行为、DINO worker 专用 CRT 预加载及通用测试 Python 版本变化，未做新的 EmoMaster 产品验收，B0.8/B1.9 不据此关闭。
 
 - [ ] B0.1 追踪 VisionWorkshop 从 Release Wizard/CLI 到 build.py、PyInstaller、ZIP 和 Release 的完整调用链。
-- [ ] B0.2 核对所有 VisionWorkshop 专用 Python 版本、ABI、CUDA、Torch、ORT、OpenCV 和 Qt 检查。
+- [x] B0.2 核对所有 VisionWorkshop 专用 Python 版本、ABI、CUDA、Torch、ORT、OpenCV 和 Qt 检查。
 - [ ] B0.3 核对 `vision_train_runtime.py` 的 requirements 合并规则，确认不会覆盖应用完整锁中的其他依赖。
 - [ ] B0.4 核对 Torch Hook、runtime hook、DLL 搜索目录及冻结 worker 启动方式。
-- [ ] B0.5 核对 DINO main runtime 和历史 Embeddable 资源检查，区分当前发布路径与兼容测试夹具。
+- [x] B0.5 核对 DINO main runtime 和历史 Embeddable 资源检查，区分当前发布路径与兼容测试夹具。
 - [ ] B0.6 核对 add_data、hidden_imports、collect_binaries、collect-all、metadata 和静态资源的实际用途。
 - [ ] B0.7 获取当前正式完整 ZIP，生成目录/文件/压缩前后体积账本。
 - [ ] B0.8 记录其他产品配置和工作流基线，确保本次改动不会影响它们。
