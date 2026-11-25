@@ -80,7 +80,35 @@ def dllProjection(value):
   return result
 
 
+
+def caseProjection(value):
+  return selected(value, (
+    'name', 'mode', 'sequence', 'status', 'executable', 'executable_sha256',
+    'core_inventory_sha256', 'installation_root', 'start_utc', 'end_utc', 'elapsed_seconds',
+    'root_unicode_characters', 'root_utf16_bytes', 'source_root_unicode_characters',
+    'debugger_observed', 'reports', 'cwd', 'environment', 'heap_behavior', 'error', 'traceback',
+    'process', 'process_exited', 'core_before', 'core_unchanged', 'observation_errors',
+    'internal_report_sha256', 'internal_report_summary',
+  ))
+
+
+def comparisonReportPaths(diagnostic):
+  paths = []
+  for name, folder in (('core-without-modules', 'c'), ('gui-close', 'g')):
+    for mode in ('plain-before', 'debug-default', 'debug-noheap', 'plain-after'):
+      label = folder + '-' + mode
+      base = folder + '/' + mode + '/reports/'
+      paths.append((label + '-case', diagnostic, base + 'diagnostic-case.json', 'comparison-case'))
+      if mode.startswith('debug-'):
+        paths.append((label + '-native', diagnostic, base + 'native-debug.json', 'native'))
+      if name == 'core-without-modules':
+        paths.append((label + '-internal', diagnostic, base + name + '.json', 'core'))
+  return paths
+
+
 def project(value, kind):
+  if kind == 'comparison-case':
+    return caseProjection(value)
   if kind == 'native':
     return nativeProjection(value)
   if kind == 'dll':
@@ -95,11 +123,8 @@ def project(value, kind):
     return result
   if kind == 'diagnostic':
     result = selected(value, ('status', 'published', 'source_request', 'source_build',
-      'source_product_status', 'diagnostic_builder_sha', 'debugger_observed', 'error', 'traceback', 'scope'))
-    result['cases'] = [selected(item, ('name', 'status', 'executable_sha256', 'core_inventory_sha256',
-      'start_utc', 'end_utc', 'root_unicode_characters', 'root_utf16_bytes',
-      'source_root_unicode_characters', 'debugger_observed', 'error', 'traceback', 'process', 'core_unchanged'))
-      for item in value.get('cases', [])]
+      'source_product_status', 'diagnostic_builder_sha', 'debugger_observed', 'comparison', 'error', 'traceback', 'scope'))
+    result['cases'] = [caseProjection(item) for item in value.get('cases', [])]
     if 'dll_search_probe' in value:
       result['dll_search_probe'] = dllProjection(value['dll_search_probe'])
     return result
@@ -128,15 +153,16 @@ def emitPayload(label, text, writer=print):
 
 
 def collectReports(diagnostic, fixtures, source):
+  noheap = fixtures.parent / 'native-noheap-fixtures'
   paths = [
     ('source', source, 'source-receipt.json', 'source'),
     ('fixtures', fixtures, 'native-fixture-summary.json', 'complete'),
     ('fixture-normal', fixtures, 'normal/reports/native-debug.json', 'native'),
     ('fixture-access-violation', fixtures, 'access-violation/reports/native-debug.json', 'native'),
+    ('fixtures-noheap', noheap, 'native-fixture-summary.json', 'complete'),
+    ('fixture-noheap-normal', noheap, 'normal/reports/native-debug.json', 'native'),
+    ('fixture-noheap-access-violation', noheap, 'access-violation/reports/native-debug.json', 'native'),
     ('diagnostic', diagnostic, 'diagnostic-summary.json', 'diagnostic'),
-    ('core-native', diagnostic, 'c/reports/native-debug.json', 'native'),
-    ('core-internal', diagnostic, 'c/reports/core-without-modules.json', 'core'),
-    ('gui-native', diagnostic, 'g/reports/native-debug.json', 'native'),
     ('dll-search', diagnostic, 'core-without-modules/reports/dll-search-summary.json', 'dll'),
   ]
   emitted = 0
@@ -144,6 +170,15 @@ def collectReports(diagnostic, fixtures, source):
   for label, root, relative, kind in paths:
     try:
       identity, value = readReport(root, relative)
+      if label == 'diagnostic':
+        if value is not None and value.get('source_request', {}).get('schema_version') == 3:
+          paths.extend(comparisonReportPaths(diagnostic))
+        else:
+          paths.extend([
+            ('core-native', diagnostic, 'c/reports/native-debug.json', 'native'),
+            ('core-internal', diagnostic, 'c/reports/core-without-modules.json', 'core'),
+            ('gui-native', diagnostic, 'g/reports/native-debug.json', 'native'),
+          ])
       text = payloadText(label, identity, value, kind)
       require(emitted + len(text) <= MAX_TOTAL_PROJECTION_BYTES, 'Combined diagnostic log budget exceeded')
       emitPayload(label, text)

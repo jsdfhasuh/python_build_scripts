@@ -75,5 +75,57 @@ class DiagnosticReportTests(unittest.TestCase):
         reports.payloadText('large', {'status': 'READ'}, value, 'native')
 
 
+
+  def test_comparison_projection_keeps_real_exit_internal_status_and_environment_scope(self):
+    value = {'name': 'core-without-modules', 'mode': 'plain-before', 'sequence': 1,
+      'status': 'FAIL', 'installation_root': 'C:/same/中 文/VisionWorkshop',
+      'executable': 'C:/same/中 文/VisionWorkshop/VisionWorkshop.exe',
+      'process': {'pid': 42, 'exit_code': 0xc0000005}, 'process_exited': True,
+      'internal_report_sha256': 'a' * 64, 'internal_report_summary': {'status': 'PASS'},
+      'environment': {'sha256': 'b' * 64, 'selected': {'_NO_DEBUG_HEAP': None},
+                      'target_environment_readback': 'NOT_MEASURED', 'heap_behavior': 'NOT_MEASURED'},
+      'heap_behavior': 'NOT_MEASURED', 'core_before': {'status': 'PASS'},
+      'core_unchanged': {'status': 'PASS'}, 'observation_errors': []}
+    self.assertEqual(reports.project(value, 'comparison-case'), value)
+    summary = reports.project({'status': 'FAIL', 'source_product_status': 'FAIL',
+      'comparison': {'mode_order': ['plain-before', 'debug-default', 'debug-noheap', 'plain-after']},
+      'cases': [value]}, 'diagnostic')
+    self.assertEqual(summary['cases'], [value])
+    self.assertEqual(summary['source_product_status'], 'FAIL')
+    self.assertEqual(summary['comparison']['mode_order'][2], 'debug-noheap')
+
+  def test_schema3_collects_each_fixed_run_without_changing_its_core_path(self):
+    with tempfile.TemporaryDirectory() as directory:
+      parent = Path(directory).resolve()
+      diagnostic = parent / 'diagnostic'
+      diagnostic.mkdir()
+      plan = reports.comparisonReportPaths(diagnostic)
+      self.assertEqual(len(plan), 16)
+      self.assertEqual(len({relative for _, _, relative, _ in plan}), 16)
+      self.assertEqual(sum(kind == 'native' for _, _, _, kind in plan), 4)
+      self.assertEqual(sum(kind == 'core' for _, _, _, kind in plan), 4)
+      self.assertEqual(sum(kind == 'comparison-case' for _, _, _, kind in plan), 8)
+      self.assertTrue(all(root == diagnostic and '/reports/' in relative for _, root, relative, _ in plan))
+      (diagnostic / 'diagnostic-summary.json').write_text(json.dumps({
+        'status': 'FAIL', 'source_request': {'schema_version': 3}, 'cases': []}), encoding='utf-8')
+      lines = []
+      with patch('builtins.print', side_effect=lines.append):
+        result = reports.collectReports(diagnostic, parent / 'fixtures', parent / 'source')
+      self.assertEqual(result, 0)  # Missing reports are labelled, never promoted to product PASS.
+      chunks = [json.loads(line[len(reports.PREFIX):]) for line in lines if line.startswith(reports.PREFIX)]
+      labels = {chunk['label'] for chunk in chunks}
+      self.assertTrue({label for label, *_ in plan}.issubset(labels))
+      self.assertIn('fixtures-noheap', labels)
+      self.assertIn('fixture-noheap-normal', labels)
+      self.assertIn('fixture-noheap-access-violation', labels)
+      self.assertNotIn('core-native', labels)
+      self.assertNotIn('gui-native', labels)
+      for label, *_ in plan:
+        pieces = [chunk for chunk in chunks if chunk['label'] == label]
+        payload = json.loads(''.join(chunk['text'] for chunk in pieces))
+        self.assertEqual(payload['source']['status'], 'MISSING')
+        self.assertIsNone(payload['projection'])
+
+
 if __name__ == '__main__':
   unittest.main()

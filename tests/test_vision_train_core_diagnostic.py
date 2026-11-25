@@ -75,7 +75,9 @@ class CoreExitDiagnosticTests(unittest.TestCase):
     self.assertEqual(value['source_head_sha'], 'd3ace70e41a41b4334a9e44d2dbec0d4907f077d')
     self.assertEqual(value['core_archive']['bytes'], 180443076)
     self.assertEqual(set(value['artifacts']), {'core', 'evidence'})
-    self.assertEqual(value['schema_version'], 2)
+    self.assertEqual(value['schema_version'], 3)
+    self.assertIs(value['same_path_comparison'], True)
+    self.assertEqual(value['expected_root_characters'], 88)
     self.assertIs(type(value['diagnostic_attempt']), int)
     self.assertGreater(value['diagnostic_attempt'], 0)
     self.assertIs(value['debugger_observed'], True)
@@ -192,6 +194,193 @@ class CoreExitDiagnosticTests(unittest.TestCase):
     self.assertIsNone(record['exit_code'])
     self.assertEqual(record['cleanup_exit_code'], -1)
     self.assertTrue(record['cleanup_errors'])
+
+
+
+  def test_schema3_comparison_controls_preserve_legacy_and_reject_nonexact_values(self):
+    self.assertEqual(diagnostic.validateRequest(self.request)['schema_version'], 1)
+    schema2 = dict(self.request, schema_version=2, debugger_observed=True, dll_search_probe=True)
+    self.assertEqual(diagnostic.validateRequest(schema2)['schema_version'], 2)
+    schema3 = dict(schema2, schema_version=3, same_path_comparison=True, expected_root_characters=88)
+    self.assertEqual(diagnostic.validateRequest(schema3), schema3)
+    for key, value in [('same_path_comparison', False), ('same_path_comparison', 1),
+                       ('normal_gui_comparison', False), ('expected_root_characters', True),
+                       ('expected_root_characters', 87), ('expected_root_characters', 89),
+                       ('expected_root_characters', '88'), ('expected_root_characters', None)]:
+      with self.subTest(key=key, value=value), self.assertRaises(diagnostic.BuildConfigError):
+        diagnostic.validateRequest(dict(schema3, **{key: value}))
+    with self.assertRaises(diagnostic.BuildConfigError):
+      diagnostic.validateRequest(dict(schema2, same_path_comparison=True))
+
+  def test_case_specific_environment_and_receipt_do_not_expose_secret_values(self):
+    base = {'PATH': 'system-only', '_no_debug_heap': 'inherited', 'ColoredLogs_Auto_Install': 'inherited',
+            'SECRET_FOR_TEST': 'a-value-that-must-not-appear'}
+    for name in ('core-without-modules', 'gui-close'):
+      for mode in diagnostic.COMPARISON_MODES:
+        with self.subTest(name=name, mode=mode), patch.object(
+            diagnostic, 'productEnvironment', return_value=base):
+          environment = diagnostic.comparisonEnvironment(self.root, name, mode)
+        self.assertEqual(environment.get('COLOREDLOGS_AUTO_INSTALL'),
+                         '1' if name == 'core-without-modules' else None)
+        self.assertEqual(environment.get('_NO_DEBUG_HEAP'), '1' if mode == 'debug-noheap' else None)
+        self.assertNotIn('_no_debug_heap', environment)
+        self.assertNotIn('ColoredLogs_Auto_Install', environment)
+        receipt = diagnostic.environmentReceipt(environment)
+        self.assertEqual(receipt['sha256'], diagnostic.objectHash(environment))
+        self.assertEqual(receipt['heap_behavior'], 'NOT_MEASURED')
+        self.assertEqual(receipt['target_environment_readback'], 'NOT_MEASURED')
+        self.assertNotIn(base['SECRET_FOR_TEST'], json.dumps(receipt))
+    self.assertEqual(base['_no_debug_heap'], 'inherited')
+    with self.assertRaises(diagnostic.BuildConfigError):
+      diagnostic.environmentReceipt({'PATH': 'first', 'Path': 'ambiguous'})
+    with self.assertRaises(diagnostic.BuildConfigError):
+      diagnostic.comparisonEnvironment(self.root, 'unknown-case', 'plain-before')
+
+  def test_comparison_extracts_once_per_case_and_reuses_path_in_the_exact_order(self):
+    output = self.root / 'comparison-order'
+    output.mkdir()
+    # Controller-only fixture: the schema guard separately pins actual Windows roots to 88.
+    root = self.payload.resolve()
+    request = dict(self.request, expected_root_characters=len(str(root)))
+    observed = []
+    def observe(actualRoot, core, files, requested, name, mode, destination, sequence):
+      observed.append((actualRoot, name, mode, destination, sequence))
+      return {'name': name, 'mode': mode, 'status': 'PASS', 'process_exited': True,
+              'core_unchanged': {'status': 'PASS'}}
+    result = {'cases': []}
+    with patch.object(diagnostic, 'extractCore', return_value=(root, self.core)) as extract, \
+         patch.object(diagnostic, 'comparisonObservation', side_effect=observe):
+      diagnostic.compareCases(self.root, output, {'files': self.files}, request, result)
+    self.assertEqual(extract.call_count, 2)
+    self.assertEqual([call.args[3] for call in extract.call_args_list],
+                     [output / 'c/中 文', output / 'g/中 文'])
+    expected = [(name, mode) for name in ('core-without-modules', 'gui-close')
+                for mode in diagnostic.COMPARISON_MODES]
+    self.assertEqual([(name, mode) for _, name, mode, _, _ in observed], expected)
+    self.assertEqual([sequence for *_, sequence in observed], list(range(1, 9)))
+    self.assertTrue(all(actualRoot == root for actualRoot, *_ in observed))
+    self.assertEqual(len({destination for _, _, _, destination, _ in observed}), 8)
+    self.assertEqual(result['comparison']['expected_observations'], 8)
+    self.assertTrue(all(item['extraction_count'] == 1 for item in result['comparison']['installations']))
+
+  def test_exited_failure_is_retained_while_later_controls_still_run(self):
+    output = self.root / 'comparison-failure'
+    output.mkdir()
+    root = self.payload.resolve()
+    request = dict(self.request, expected_root_characters=len(str(root)))
+    def observe(actualRoot, core, files, requested, name, mode, destination, sequence):
+      return {'name': name, 'mode': mode, 'status': 'FAIL' if sequence == 1 else 'PASS',
+              'process': {'pid': 100 + sequence, 'exit_code': 0xc0000005 if sequence == 1 else 0},
+              'process_exited': True, 'core_unchanged': {'status': 'PASS'}}
+    result = {'cases': []}
+    with patch.object(diagnostic, 'extractCore', return_value=(root, self.core)), \
+         patch.object(diagnostic, 'comparisonObservation', side_effect=observe):
+      diagnostic.compareCases(self.root, output, {'files': self.files}, request, result)
+    self.assertEqual(len(result['cases']), 8)
+    self.assertEqual(result['cases'][0]['status'], 'FAIL')
+    self.assertEqual(result['cases'][0]['process']['exit_code'], 0xc0000005)
+    self.assertFalse(all(item['status'] == 'PASS' for item in result['cases']))
+
+  def test_unconfirmed_exit_or_changed_core_stops_before_a_later_process(self):
+    root = self.payload.resolve()
+    request = dict(self.request, expected_root_characters=len(str(root)))
+    for index, (exited, unchanged) in enumerate(((False, 'PASS'), (True, 'FAIL'))):
+      output = self.root / ('comparison-unsafe-' + str(index))
+      output.mkdir()
+      result = {'cases': []}
+      record = {'name': 'core-without-modules', 'mode': 'plain-before', 'status': 'FAIL',
+                'process_exited': exited, 'core_unchanged': {'status': unchanged}}
+      with self.subTest(exited=exited, unchanged=unchanged), \
+           patch.object(diagnostic, 'extractCore', return_value=(root, self.core)), \
+           patch.object(diagnostic, 'comparisonObservation', return_value=record) as observe:
+        with self.assertRaises(diagnostic.BuildConfigError):
+          diagnostic.compareCases(self.root, output, {'files': self.files}, request, result)
+        observe.assert_called_once()
+      self.assertEqual(result['cases'], [record])
+
+  def test_changed_installation_length_is_rejected_before_any_process(self):
+    output = self.root / 'comparison-path'
+    output.mkdir()
+    root = self.payload.resolve()
+    request = dict(self.request, expected_root_characters=len(str(root)) + 1)
+    with patch.object(diagnostic, 'extractCore', return_value=(root, self.core)), \
+         patch.object(diagnostic, 'comparisonObservation') as observe:
+      with self.assertRaisesRegex(diagnostic.BuildConfigError, 'path length'):
+        diagnostic.compareCases(self.root, output, {'files': self.files}, request, {'cases': []})
+      observe.assert_not_called()
+
+  def test_plain_core_records_internal_pass_and_real_failure_exit_separately(self):
+    root = self.payload.resolve()
+    def failed(executable, case, reports, name, environment, core, identity, timeout):
+      self.assertEqual(environment['COLOREDLOGS_AUTO_INSTALL'], '1')
+      self.assertNotIn('_NO_DEBUG_HEAP', environment)
+      diagnostic.writeJson(reports / (name + '.json'), {'status': 'PASS', 'case': 'core', 'pid': 42})
+      diagnostic.writeJson(reports / (name + '.process.json'),
+                           {'status': 'FAIL', 'pid': 42, 'exit_code': 0xc0000005})
+      raise RuntimeError('real child exit guard failed')
+    with patch.object(diagnostic, 'productEnvironment', return_value={'PATH': 'system-only'}), \
+         patch.object(diagnostic, 'checkCase', side_effect=failed), \
+         patch.object(diagnostic, 'collectEvents', return_value={'status': 'NO_MATCH'}):
+      result = diagnostic.comparisonObservation(root, self.core, self.files, self.request,
+        'core-without-modules', 'plain-before', self.root / 'observation-native-failure', 1)
+    self.assertEqual(result['status'], 'FAIL')
+    self.assertEqual(result['internal_report_summary']['status'], 'PASS')
+    self.assertEqual(result['process']['exit_code'], 0xc0000005)
+    self.assertTrue(result['process_exited'])
+    self.assertEqual(result['core_before']['status'], 'PASS')
+    self.assertEqual(result['core_unchanged']['status'], 'PASS')
+    self.assertEqual(result['executable'], str(root / 'VisionWorkshop.exe'))
+
+  def test_plain_gui_preserves_unset_opt_in_and_records_its_owned_close(self):
+    root = self.payload.resolve()
+    def closed(executable, environment, reports):
+      self.assertNotIn('COLOREDLOGS_AUTO_INSTALL', environment)
+      self.assertNotIn('_NO_DEBUG_HEAP', environment)
+      record = {'status': 'PASS', 'pid': 43, 'exit_code': 0, 'close_message': 'WM_CLOSE',
+                'close_window': {'pid': 43, 'hwnd': 123}, 'forced_cleanup': False}
+      diagnostic.writeJson(reports / 'gui-close.process.json', record)
+      return record
+    with patch.object(diagnostic, 'productEnvironment', return_value={'PATH': 'system-only'}), \
+         patch.object(diagnostic, 'normalGui', side_effect=closed), \
+         patch.object(diagnostic, 'collectEvents', return_value={'status': 'NO_MATCH'}):
+      result = diagnostic.comparisonObservation(root, self.core, self.files, self.request,
+        'gui-close', 'plain-before', self.root / 'observation-gui', 1)
+    self.assertEqual(result['status'], 'PASS')
+    self.assertEqual(result['process']['close_message'], 'WM_CLOSE')
+    self.assertIsNone(result['environment']['selected']['COLOREDLOGS_AUTO_INSTALL'])
+    self.assertEqual(result['heap_behavior'], 'NOT_MEASURED')
+
+  def test_core_mutation_cannot_be_hidden_by_a_successful_child(self):
+    root = self.payload.resolve()
+    def mutate(executable, case, reports, name, environment, core, identity, timeout):
+      executable.write_bytes(executable.read_bytes() + b'changed')
+      diagnostic.writeJson(reports / (name + '.json'), {'status': 'PASS', 'case': 'core', 'pid': 44})
+      diagnostic.writeJson(reports / (name + '.process.json'), {'status': 'PASS', 'pid': 44, 'exit_code': 0})
+      return {'status': 'PASS'}
+    with patch.object(diagnostic, 'productEnvironment', return_value={'PATH': 'system-only'}), \
+         patch.object(diagnostic, 'checkCase', side_effect=mutate), \
+         patch.object(diagnostic, 'collectEvents', return_value={'status': 'NO_MATCH'}):
+      result = diagnostic.comparisonObservation(root, self.core, self.files, self.request,
+        'core-without-modules', 'plain-after', self.root / 'observation-mutation', 4)
+    self.assertEqual(result['status'], 'FAIL')
+    self.assertEqual(result['process']['exit_code'], 0)
+    self.assertEqual(result['core_unchanged']['status'], 'FAIL')
+
+  def test_missing_or_malformed_process_report_cannot_become_a_pass(self):
+    root = self.payload.resolve()
+    for index, malformed in enumerate((False, True)):
+      def incomplete(executable, case, reports, name, environment, core, identity, timeout):
+        if malformed:
+          (reports / (name + '.process.json')).write_text('bad JSON', encoding='utf-8')
+        return {'status': 'PASS'}
+      with self.subTest(malformed=malformed), \
+           patch.object(diagnostic, 'productEnvironment', return_value={'PATH': 'system-only'}), \
+           patch.object(diagnostic, 'checkCase', side_effect=incomplete):
+        result = diagnostic.comparisonObservation(root, self.core, self.files, self.request,
+          'core-without-modules', 'plain-before', self.root / ('observation-missing-' + str(index)), 1)
+      self.assertEqual(result['status'], 'FAIL')
+      self.assertFalse(result['process_exited'])
+      self.assertTrue(result['observation_errors'])
 
 
 class WindowsEventCorrelationTests(unittest.TestCase):

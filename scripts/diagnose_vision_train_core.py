@@ -41,6 +41,14 @@ PRODUCT = 'modular-acceptance/reports/modular-product-summary.json'
 MAX_CORE_ZIP = 512 * 1024**2
 MAX_CORE_EXPANDED = 2 * 1024**3
 MAX_EVENTS = 64
+COMPARISON_MODES = ('plain-before', 'debug-default', 'debug-noheap', 'plain-after')
+COMPARISON_ROOT_CHARACTERS = 88
+ENVIRONMENT_FIELDS = (
+  'PATH', 'SYSTEMROOT', 'PYTHONNOUSERSITE', 'PYTHONDONTWRITEBYTECODE', 'PYTHONUTF8',
+  'PYTHONIOENCODING', 'QT_QPA_PLATFORM', 'USERPROFILE', 'LOCALAPPDATA', 'APPDATA',
+  'TEMP', 'TMP', 'HF_HUB_OFFLINE', 'HF_DATASETS_OFFLINE', 'YOLO_AUTOINSTALL',
+  'TORCH_HOME', 'HF_HOME', 'XDG_CACHE_HOME', 'COLOREDLOGS_AUTO_INSTALL', '_NO_DEBUG_HEAP',
+)
 EVENT_NS = {'e': 'http://schemas.microsoft.com/win/2004/08/events/event'}
 
 
@@ -68,12 +76,19 @@ def validateRequest(request):
   fields = {'schema_version', 'diagnostic_attempt', 'source_run_id',
             'source_run_attempt', 'source_head_sha', 'source_app_sha', 'core_sha256',
             'core_archive', 'artifacts', 'normal_gui_comparison'}
-  if request.get('schema_version') == 2:
+  if request.get('schema_version') in (2, 3):
     fields.update(('debugger_observed', 'dll_search_probe'))
     require(request.get('debugger_observed') is True and request.get('dll_search_probe') is True,
-            'Schema 2 requires explicit debugger and DLL-search observations')
+            'Schema 2/3 requires explicit debugger and DLL-search observations')
+  if request.get('schema_version') == 3:
+    fields.update(('same_path_comparison', 'expected_root_characters'))
+    require(request.get('same_path_comparison') is True and request.get('normal_gui_comparison') is True,
+            'Schema 3 requires both same-path Core and normal-GUI comparisons')
+    require(type(request.get('expected_root_characters')) is int
+            and request['expected_root_characters'] == COMPARISON_ROOT_CHARACTERS,
+            'Schema 3 must retain the observed 88-character Core installation path')
   require(set(request) == fields, 'Unexpected diagnostic request fields')
-  require(type(request['schema_version']) is int and request['schema_version'] in (1, 2),
+  require(type(request['schema_version']) is int and request['schema_version'] in (1, 2, 3),
           'Unknown diagnostic request schema')
   for key in ('diagnostic_attempt', 'source_run_id', 'source_run_attempt'):
     require(type(request[key]) is int and request[key] > 0, 'Expected a positive exact run/attempt')
@@ -526,6 +541,147 @@ def dllSearchProbe(source, output, evidence, request):
   return result
 
 
+
+def comparisonEnvironment(output, name, mode):
+  require(name in ('core-without-modules', 'gui-close') and mode in COMPARISON_MODES,
+          'Unknown fixed comparison case or mode')
+  environment = dict(productEnvironment(output))
+  for key in list(environment):
+    if key.upper() in ('_NO_DEBUG_HEAP', 'COLOREDLOGS_AUTO_INSTALL'):
+      environment.pop(key)
+  # Match checkCase for Core, and the original unset normalGui opt-in for GUI.
+  if name == 'core-without-modules':
+    environment['COLOREDLOGS_AUTO_INSTALL'] = '1'
+  if mode == 'debug-noheap':
+    environment['_NO_DEBUG_HEAP'] = '1'
+  return environment
+
+
+def environmentReceipt(environment):
+  folded = {key.upper(): value for key, value in environment.items()}
+  require(len(folded) == len(environment), 'Duplicate case-insensitive Windows environment key')
+  return {
+    'sha256': objectHash(environment), 'key_count': len(environment),
+    'keys': sorted(environment),
+    'selected': {key: folded.get(key) for key in ENVIRONMENT_FIELDS},
+    'scope': 'Exact environment supplied to Popen; selected non-secret values only',
+    'target_environment_readback': 'NOT_MEASURED',
+    'heap_behavior': 'NOT_MEASURED',
+  }
+
+
+def comparisonObservation(root, core, files, request, name, mode, destination, sequence):
+  require(not destination.exists(), 'Every comparison observation needs a new output directory')
+  reports = destination / 'reports'
+  reports.mkdir(parents=True)
+  (destination / 'empty-cwd').mkdir()
+  environment = comparisonEnvironment(destination, name, mode)
+  executable = root / 'VisionWorkshop.exe'
+  started = time.monotonic()
+  start = datetime.now(timezone.utc)
+  record = {
+    'name': name, 'mode': mode, 'sequence': sequence, 'status': 'FAIL',
+    'executable': str(executable), 'executable_sha256': fileHash(executable),
+    'core_inventory_sha256': objectHash(files), 'installation_root': str(root),
+    'root_unicode_characters': len(str(root)), 'root_utf16_bytes': len(str(root).encode('utf-16-le')),
+    'start_utc': start.isoformat(), 'debugger_observed': mode.startswith('debug-'),
+    'reports': str(reports), 'cwd': str(destination / 'empty-cwd'),
+    'environment': environmentReceipt(environment), 'process_exited': False,
+    'heap_behavior': 'NOT_MEASURED', 'observation_errors': [],
+  }
+  try:
+    record['core_before'] = verifyCoreUnchanged(root, files, reports, 'before-launch')
+    if record['debugger_observed']:
+      record['result'] = debugCase(executable, environment, reports, name, request['core_sha256'])
+      record['status'] = record['result']['status']
+    elif name == 'core-without-modules':
+      record['result'] = checkCase(executable, 'core', reports, name, environment, core,
+        {'core_sha256': request['core_sha256'], 'generation': 0, 'modules': {}}, timeout=300)
+      record['status'] = 'PASS'
+    else:
+      record['result'] = normalGui(executable, environment, reports)
+      record['status'] = record['result']['status']
+  except Exception as error:
+    record.update(error=str(error), traceback=traceback.format_exc())
+  finally:
+    end = datetime.now(timezone.utc)
+    record.update(end_utc=end.isoformat(), elapsed_seconds=round(time.monotonic() - started, 3))
+    try:
+      processPath = reports / (name + '.process.json')
+      if processPath.is_file():
+        record['process'] = readJsonObject(processPath)
+        process = record['process']
+        record['process_exited'] = (type(process.get('exit_code')) is int
+                                    or type(process.get('cleanup_exit_code')) is int)
+        if type(process.get('pid')) is int and process['pid'] > 0:
+          record['events'] = collectEvents(process['pid'], executable, start, end, reports, name)
+      else:
+        record['observation_errors'].append('No child process report was produced')
+      if name == 'core-without-modules':
+        internal = reports / (name + '.json')
+        if internal.is_file():
+          record['internal_report_sha256'] = fileHash(internal)
+          value = readJsonObject(internal)
+          record['internal_report_summary'] = {key: value[key] for key in (
+            'status', 'case', 'pid', 'executable', 'frozen', 'python', 'platform',
+            'runtime_identity', 'error') if key in value}
+        else:
+          record['internal_report_summary'] = {'status': 'MISSING'}
+    except Exception as error:
+      record['observation_errors'].append(type(error).__name__ + ': ' + str(error))
+    try:
+      record['core_unchanged'] = verifyCoreUnchanged(root, files, reports, 'after-exit')
+    except Exception as error:
+      record['core_unchanged'] = {'status': 'FAIL', 'error': type(error).__name__ + ': ' + str(error)}
+      record['observation_errors'].append(record['core_unchanged']['error'])
+    finally:
+      if record['observation_errors'] or not record['process_exited']:
+        record['status'] = 'FAIL'
+      writeJson(reports / 'diagnostic-case.json', record)
+  return record
+
+
+def compareCases(source, output, evidence, request, result):
+  names = ('core-without-modules', 'gui-close')
+  result['comparison'] = {
+    'mode_order': list(COMPARISON_MODES), 'expected_observations': len(names) * len(COMPARISON_MODES),
+    'expected_root_characters': request['expected_root_characters'], 'installations': [],
+    'heap_behavior': 'NOT_MEASURED',
+    'scope': 'Same EXE path per case; isolated output/user/CWD per observation; order and OS cache effects are not eliminated',
+    'heap_environment_basis': [
+      'https://learn.microsoft.com/en-us/windows/win32/api/heapapi/nf-heapapi-heapsetinformation',
+      'https://learn.microsoft.com/en-us/windows/win32/procthread/process-creation-flags',
+      'https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/general-environment-variables',
+    ],
+    'qualification': 'Original failure remains; neither one clean exit nor debug heap environment settings establish a root cause',
+  }
+  for name, folder in zip(names, ('c', 'g')):
+    caseOutput = output / folder
+    caseOutput.mkdir()
+    root, core = extractCore(source, evidence, request, caseOutput / '中 文')
+    installation = {
+      'name': name, 'root': str(root), 'root_unicode_characters': len(str(root)),
+      'root_utf16_bytes': len(str(root).encode('utf-16-le')),
+      'executable_sha256': fileHash(root / 'VisionWorkshop.exe'),
+      'core_inventory_sha256': objectHash(evidence['files']), 'extraction_count': 1,
+    }
+    result['comparison']['installations'].append(installation)
+    require(len(str(root)) == request['expected_root_characters'],
+            'Comparison Core path length differs from the observed 88-character installation')
+    for mode in COMPARISON_MODES:
+      record = comparisonObservation(root, core, evidence['files'], request, name, mode,
+                                     caseOutput / mode, len(result['cases']) + 1)
+      result['cases'].append(record)
+      # A real nonzero exit is retained and still permits the following control.
+      # An unconfirmed exit or changed immutable Core must stop reuse of this installation.
+      require(record['process_exited'], 'Cannot start another control before the owned process has exited')
+      require(record.get('core_unchanged', {}).get('status') == 'PASS',
+              'Cannot reuse a modified Core for a later comparison')
+  expected = [(name, mode) for name in names for mode in COMPARISON_MODES]
+  require([(item['name'], item['mode']) for item in result['cases']] == expected,
+          'Same-path comparison did not execute every observation in the fixed order')
+
+
 def run(source, output, requestPath):
   require(os.name == 'nt', 'Core exit diagnostics require actual Windows')
   require(not output.exists(), 'Diagnostic run directory must be new')
@@ -554,51 +710,54 @@ def run(source, output, requestPath):
             'source_product_status': evidence['product']['status'],
             'diagnostic_builder_sha': os.environ.get('GITHUB_SHA'), 'cases': [],
             'debugger_observed': request.get('debugger_observed', False),
-            'scope': 'Original immutable Core diagnostic observations; no rebuild/modules/full candidate matrix'}
+            'scope': 'Original immutable Core observations; source failure unchanged; no root-cause or full candidate qualification'}
   try:
     if request.get('dll_search_probe'):
       result['dll_search_probe'] = dllSearchProbe(source, output, evidence, request)
-    for name in (['core-without-modules', 'gui-close'] if request['normal_gui_comparison'] else ['core-without-modules']):
-      observed = request.get('debugger_observed', False)
-      caseOutput = output / (('c' if name == 'core-without-modules' else 'g') if observed else name)
-      reports = caseOutput / 'reports'
-      reports.mkdir(parents=True)
-      (caseOutput / 'empty-cwd').mkdir()
-      root, core = extractCore(source, evidence, request, caseOutput / ('中 文' if observed else '中文 模块验收'))
-      executable = root / 'VisionWorkshop.exe'
-      environment = productEnvironment(caseOutput)
-      start = datetime.now(timezone.utc)
-      record = {'name': name, 'status': 'FAIL', 'executable_sha256': fileHash(executable),
-                'core_inventory_sha256': objectHash(evidence['files']), 'start_utc': start.isoformat(),
-                'root_unicode_characters': len(str(root)), 'root_utf16_bytes': len(str(root).encode('utf-16-le')),
-                'source_root_unicode_characters': len(str(PureWindowsPath(evidence['product']['executable']).parent)),
-                'debugger_observed': observed}
-      try:
-        if observed:
-          require(record['root_unicode_characters'] <= record['source_root_unicode_characters'],
-                  'Debugger installation path exceeds the original candidate root length')
-          record['result'] = debugCase(executable, environment, reports, name, request['core_sha256'])
-          record['status'] = record['result']['status']
-        elif name == 'core-without-modules':
-          record['result'] = checkCase(executable, 'core', reports, name, environment, core,
-            {'core_sha256': request['core_sha256'], 'generation': 0, 'modules': {}}, timeout=300)
-          record['status'] = 'PASS'
-        else:
-          record['result'] = normalGui(executable, environment, reports)
-          record['status'] = record['result']['status']
-      except Exception as error:
-        record.update(error=str(error), traceback=traceback.format_exc())
-      finally:
-        end = datetime.now(timezone.utc)
-        record['end_utc'] = end.isoformat()
-        processPath = reports / (name + '.process.json')
-        if processPath.is_file():
-          record['process'] = readJsonObject(processPath)
-          if type(record['process'].get('pid')) is int and record['process']['pid'] > 0:
-            record['events'] = collectEvents(record['process']['pid'], executable, start, end, reports, name)
-        record['core_unchanged'] = verifyCoreUnchanged(root, evidence['files'], reports, 'after-exit')
-        writeJson(reports / 'diagnostic-case.json', record)
-        result['cases'].append(record)
+    if request.get('same_path_comparison'):
+      compareCases(source, output, evidence, request, result)
+    else:
+      for name in (['core-without-modules', 'gui-close'] if request['normal_gui_comparison'] else ['core-without-modules']):
+        observed = request.get('debugger_observed', False)
+        caseOutput = output / (('c' if name == 'core-without-modules' else 'g') if observed else name)
+        reports = caseOutput / 'reports'
+        reports.mkdir(parents=True)
+        (caseOutput / 'empty-cwd').mkdir()
+        root, core = extractCore(source, evidence, request, caseOutput / ('中 文' if observed else '中文 模块验收'))
+        executable = root / 'VisionWorkshop.exe'
+        environment = productEnvironment(caseOutput)
+        start = datetime.now(timezone.utc)
+        record = {'name': name, 'status': 'FAIL', 'executable_sha256': fileHash(executable),
+                  'core_inventory_sha256': objectHash(evidence['files']), 'start_utc': start.isoformat(),
+                  'root_unicode_characters': len(str(root)), 'root_utf16_bytes': len(str(root).encode('utf-16-le')),
+                  'source_root_unicode_characters': len(str(PureWindowsPath(evidence['product']['executable']).parent)),
+                  'debugger_observed': observed}
+        try:
+          if observed:
+            require(record['root_unicode_characters'] <= record['source_root_unicode_characters'],
+                    'Debugger installation path exceeds the original candidate root length')
+            record['result'] = debugCase(executable, environment, reports, name, request['core_sha256'])
+            record['status'] = record['result']['status']
+          elif name == 'core-without-modules':
+            record['result'] = checkCase(executable, 'core', reports, name, environment, core,
+              {'core_sha256': request['core_sha256'], 'generation': 0, 'modules': {}}, timeout=300)
+            record['status'] = 'PASS'
+          else:
+            record['result'] = normalGui(executable, environment, reports)
+            record['status'] = record['result']['status']
+        except Exception as error:
+          record.update(error=str(error), traceback=traceback.format_exc())
+        finally:
+          end = datetime.now(timezone.utc)
+          record['end_utc'] = end.isoformat()
+          processPath = reports / (name + '.process.json')
+          if processPath.is_file():
+            record['process'] = readJsonObject(processPath)
+            if type(record['process'].get('pid')) is int and record['process']['pid'] > 0:
+              record['events'] = collectEvents(record['process']['pid'], executable, start, end, reports, name)
+          record['core_unchanged'] = verifyCoreUnchanged(root, evidence['files'], reports, 'after-exit')
+          writeJson(reports / 'diagnostic-case.json', record)
+          result['cases'].append(record)
     result['status'] = 'PASS' if (all(x['status'] == 'PASS' for x in result['cases'])
       and result.get('dll_search_probe', {}).get('status', 'OBSERVED') == 'OBSERVED') else 'FAIL'
   except Exception as error:

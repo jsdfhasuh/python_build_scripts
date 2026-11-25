@@ -1,6 +1,6 @@
 {
-  "schema_version": 2,
-  "diagnostic_attempt": 4,
+  "schema_version": 3,
+  "diagnostic_attempt": 5,
   "source_run_id": 45659615499,
   "source_run_attempt": 1,
   "source_head_sha": "d3ace70e41a41b4334a9e44d2dbec0d4907f077d",
@@ -27,5 +27,7 @@
   },
   "normal_gui_comparison": true,
   "debugger_observed": true,
-  "dll_search_probe": true
+  "dll_search_probe": true,
+  "same_path_comparison": true,
+  "expected_root_characters": 88
 }
