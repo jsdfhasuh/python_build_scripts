@@ -41,7 +41,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: jsdfhasuh/python_build_scripts
-          ref: f8ba210d876220f49c4a1d33fb1e85366e36ccad
+          ref: 673273ad204a45cfdc4eac7b89910be1ce42f577
           path: packager-main
           persist-credentials: false
 
@@ -135,6 +135,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Focused first-party regression tests failed' }
 
       - name: Build frozen VisionWorkshop without publishing
+        id: build_package
         shell: pwsh
         working-directory: packager-main
         env:
@@ -146,6 +147,7 @@ jobs:
 
       - name: Verify and stage non-public package assets
         id: stage_package
+        if: ${{ !cancelled() && steps.build_package.outcome == 'success' }}
         shell: pwsh
         working-directory: packager-main
         run: |
@@ -159,18 +161,176 @@ jobs:
             Measure-Object -Property Length -Sum).Sum
           "STAGED_ASSET_BYTES=$bytes" | Out-File $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
 
-      - name: Exercise real frozen package in a disposable installation
-        id: frozen_smoke
+      - name: Select only a verified normal or size-blocked archive
+        id: select_archive
+        if: ${{ !cancelled() && (steps.build_package.outcome == 'success' || steps.build_package.outcome == 'failure') }}
         shell: pwsh
         working-directory: packager-main
+        env:
+          BUILD_OUTCOME: ${{ steps.build_package.outcome }}
+          STAGE_OUTCOME: ${{ steps.stage_package.outcome }}
         run: |
-          $archives = @(Get-ChildItem (Join-Path $env:RUNNER_TEMP 'vision-train-public-cp312') -Filter '*-full.zip' -File)
-          if ($archives.Count -ne 1) { throw 'Expected exactly one staged full package' }
+          @'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          import re
+          import subprocess
+          import zipfile
+          from build_config import validateFileName
+          from build_records import BUILD_ID, fileHash, objectHash, rejectLinks
+          from portable_release import MAX_ASSET_BYTES
+
+          def require(condition, message):
+              if not condition:
+                  raise RuntimeError(message)
+
+          def read(path):
+              rejectLinks(path)
+              return json.loads(path.read_text(encoding='utf-8-sig'))
+
+          def head(path):
+              return subprocess.check_output(['git', '-C', str(path), 'rev-parse', 'HEAD'],
+                                             text=True).strip()
+
+          workspace = Path(os.environ['GITHUB_WORKSPACE'])
+          packager = workspace / 'packager-main'
+          source = workspace / 'source'
+          output = packager / 'release-output/cp312-probe'
+          staged = Path(os.environ['RUNNER_TEMP']) / 'vision-train-public-cp312'
+          request = read(Path(os.environ['RUNNER_TEMP']) / 'vision-train-release-cp312/request.json')
+          expectedSource, expectedPackager = head(source), head(packager)
+          require(request.get('publish') is False, 'Probe request must remain non-publishing')
+          require(request.get('source_commit') == expectedSource and
+                  request.get('packager_commit') == expectedPackager,
+                  'Checkouts differ from the prepared build request')
+          require(Path(request['output']).resolve() == output.resolve(), 'Unexpected build output')
+
+          if os.environ['BUILD_OUTCOME'] == 'success':
+              require(os.environ['STAGE_OUTCOME'] == 'success',
+                      'Successful builds must pass the unchanged production stage gate')
+              metadata = read(staged / 'build-summary.json')
+              releaseStatus, archiveRoot = 'built-unpublished', staged
+          else:
+              require(os.environ['BUILD_OUTCOME'] == 'failure', 'Build did not complete')
+              require(not (output / 'build-summary.json').exists(),
+                      'A failed build with a summary is not an oversize diagnostic build')
+              archiveRoot = output / 'diagnostics'
+              metadata = read(archiveRoot / 'oversize-archive.json')
+              require(metadata.get('status') == 'blocked-size' and
+                      metadata.get('publishable') is False,
+                      'Build failure is not an explicitly size-blocked diagnostic')
+              require(type(metadata.get('maximum_asset_size')) is int and
+                      metadata['maximum_asset_size'] == MAX_ASSET_BYTES,
+                      'Diagnostic size limit differs from the production release gate')
+              releaseStatus = 'blocked-size'
+
+          require(type(metadata.get('schema_version')) is int and metadata['schema_version'] == 1,
+                  'Unsupported archive evidence schema')
+          require(metadata.get('published') is False, 'Expected an unpublished archive')
+          require(metadata.get('source_commit') == expectedSource and
+                  metadata.get('packager_commit') == expectedPackager,
+                  'Archive provenance differs from the exact source/packager checkout')
+          require(metadata.get('target') == 'emo-vision-train' and
+                  metadata.get('program_name') == request['program_name'], 'Wrong build target')
+          require(metadata.get('runtime_validation', {}).get('status') == 'passed',
+                  'Frozen package runtime validation did not pass')
+          protocol = metadata.get('update_protocol', {})
+          require(protocol.get('protocol_version') == 3, 'Protocol-3 evidence is required')
+          buildId = metadata.get('build_id', protocol.get('build_id'))
+          require(isinstance(buildId, str) and BUILD_ID.fullmatch(buildId), 'Invalid build ID')
+          require(protocol.get('build_id') == buildId, 'Protocol build identity mismatch')
+          for key in ('asset_sha256', 'files_sha256'):
+              require(isinstance(metadata.get(key), str) and
+                      re.fullmatch('[a-f0-9]{64}', metadata[key]), 'Invalid ' + key)
+          assetName = validateFileName(metadata.get('asset_name'), 'Diagnostic/staged asset')
+          require(assetName == f'VisionWorkshop-windows-x86_64-{buildId}-full.zip',
+                  'Full archive name differs from its build identity')
+          archive = archiveRoot / assetName
+          rejectLinks(archive)
+          size = archive.stat().st_size
+          require(type(metadata.get('asset_size')) is int and size == metadata['asset_size'] and size > 0,
+                  'Archive size differs from verified build evidence')
+          require((size > MAX_ASSET_BYTES) if releaseStatus == 'blocked-size' else
+                  (size <= MAX_ASSET_BYTES), 'Archive does not match its release size classification')
+          require(fileHash(archive) == metadata['asset_sha256'], 'Archive SHA-256 mismatch')
+
+          record = read(packager / 'build/branding/emo-vision-train' / buildId / 'build-record.json')
+          require(record.get('status') == 'complete' and record.get('build_id') == buildId,
+                  'No complete matching private build record')
+          require(record['inputs']['source'].get('commit') == expectedSource and
+                  record['inputs']['packager'].get('commit') == expectedPackager,
+                  'Private build record provenance mismatch')
+          require(record.get('files_sha256') == metadata['files_sha256'] == objectHash(record['files']),
+                  'Full installation inventory hash mismatch')
+          require(record.get('update_protocol') == protocol, 'Protocol evidence differs from build record')
+          validateFileName(request['program_name'], 'Portable package root')
+          with zipfile.ZipFile(archive) as bundle:
+              for filename, hashKey in (('release_identity.json', 'identity_sha256'),
+                                        ('package_files.json', 'files_sha256')):
+                  member = bundle.getinfo(request['program_name'] + '/app/' + filename)
+                  require(0 < member.file_size <= 16 * 1024 * 1024, 'Invalid embedded metadata size')
+                  raw = bundle.read(member)
+                  require(hashlib.sha256(raw).hexdigest() == protocol.get(hashKey),
+                          'Embedded protocol metadata hash mismatch: ' + filename)
+                  if filename == 'release_identity.json':
+                      identity = json.loads(raw)
+                      require(identity.get('build_id') == buildId and
+                              identity.get('source', {}).get('commit') == expectedSource,
+                              'Embedded executable package identity differs from the diagnostic')
+
+          if releaseStatus == 'blocked-size':
+              members = read(archiveRoot / 'archive-members.json')
+              require(all(members.get(key) == metadata[key] for key in
+                          ('asset_name', 'asset_sha256', 'asset_size')),
+                      'Diagnostic ZIP member inventory belongs to another archive')
+          evidence = {'release_status': releaseStatus, 'published': False,
+                      'build_step_outcome': os.environ['BUILD_OUTCOME'],
+                      'archive_path': str(archive), 'asset_sha256': metadata['asset_sha256'],
+                      'asset_size': size, 'source_commit': expectedSource,
+                      'packager_commit': expectedPackager, 'build_id': buildId,
+                      'files_sha256': metadata['files_sha256']}
+          (workspace / 'reports/archive-selection.json').write_text(
+              json.dumps(evidence, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as result:
+              result.write('archive_path=' + str(archive) + '\nrelease_status=' + releaseStatus + '\n')
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as summary:
+              summary.write('\n## Frozen archive selection\n\n```json\n' +
+                            json.dumps(evidence, ensure_ascii=False, indent=2) + '\n```\n')
+          print(json.dumps(evidence, ensure_ascii=False, indent=2))
+          '@ | & $env:BUILD_PYTHON -X utf8 -
+          if ($LASTEXITCODE -ne 0) { throw 'No strictly verified archive is available for frozen acceptance' }
+
+      - name: Exercise real frozen package in a disposable installation
+        id: frozen_smoke
+        if: ${{ !cancelled() && steps.select_archive.outcome == 'success' }}
+        shell: pwsh
+        working-directory: packager-main
+        env:
+          FROZEN_ARCHIVE: ${{ steps.select_archive.outputs.archive_path }}
+        run: |
           & $env:BUILD_PYTHON -X utf8 scripts/verify_vision_train_frozen.py `
-            --zip $archives[0].FullName `
+            --zip $env:FROZEN_ARCHIVE `
             --source-root (Join-Path $env:GITHUB_WORKSPACE 'source') `
             --output (Join-Path $env:GITHUB_WORKSPACE 'reports/frozen-smoke')
           if ($LASTEXITCODE -ne 0) { throw 'Real frozen package smoke failed; see separate evidence' }
+
+      - name: Verify frozen CKPT export and final ONNX reload numerically on CPU
+        id: frozen_patchcore
+        if: ${{ !cancelled() && steps.select_archive.outcome == 'success' }}
+        shell: pwsh
+        working-directory: packager-main
+        env:
+          FROZEN_ARCHIVE: ${{ steps.select_archive.outputs.archive_path }}
+        run: |
+          & $env:BUILD_PYTHON -X utf8 scripts/verify_vision_train_patchcore_frozen.py `
+            --zip $env:FROZEN_ARCHIVE `
+            --source-root (Join-Path $env:GITHUB_WORKSPACE 'source') `
+            --output (Join-Path $env:GITHUB_WORKSPACE 'reports/frozen-patchcore') `
+            --fixture-python $env:BUILD_PYTHON `
+            --timeout-seconds 1800
+          if ($LASTEXITCODE -ne 0) { throw 'Real frozen synthetic CKPT/ONNX numerical acceptance failed' }
 
       - name: Upload non-publishing CP312 package artifact
         if: ${{ !cancelled() && steps.stage_package.outcome == 'success' }}
@@ -178,6 +338,18 @@ jobs:
         with:
           name: visionworkshop-cp312-portable-probe-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/vision-train-public-cp312/
+          if-no-files-found: error
+          compression-level: 0
+
+      - name: Upload verified oversized archive for nonpublishing diagnostics only
+        if: ${{ !cancelled() && steps.select_archive.outcome == 'success' && steps.select_archive.outputs.release_status == 'blocked-size' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: visionworkshop-cp312-nonpublishing-size-diagnostic-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ steps.select_archive.outputs.archive_path }}
+            packager-main/release-output/cp312-probe/diagnostics/oversize-archive.json
+            packager-main/release-output/cp312-probe/diagnostics/archive-members.json
           if-no-files-found: error
           compression-level: 0
 
@@ -202,6 +374,11 @@ jobs:
           if (Test-Path $summary) { Copy-Item $summary reports/build-summary.json }
           $request = Join-Path $env:RUNNER_TEMP 'vision-train-release-cp312/request.json'
           if (Test-Path $request) { Copy-Item $request reports/build-request.json }
+          $diagnostics = Join-Path $env:GITHUB_WORKSPACE 'packager-main/release-output/cp312-probe/diagnostics'
+          foreach ($name in @('oversize-archive.json', 'archive-members.json')) {
+            $diagnostic = Join-Path $diagnostics $name
+            if (Test-Path $diagnostic) { Copy-Item $diagnostic (Join-Path 'reports' $name) }
+          }
           $records = Join-Path $env:GITHUB_WORKSPACE 'packager-main/build/branding/emo-vision-train'
           if (Test-Path $records) {
             foreach ($build in (Get-ChildItem $records -Directory)) {
@@ -219,5 +396,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: visionworkshop-cp312-compat-${{ github.run_id }}-${{ github.run_attempt }}
-          path: reports/
+          path: |
+            reports/**/*.json
+            reports/**/*.log
+            reports/**/*.txt
+            reports/**/*.xml
+            reports/frozen-patchcore/reference/*.npy
+            reports/frozen-patchcore/reference/*.png
           if-no-files-found: warn
