@@ -110,6 +110,38 @@ Python 语法与工作流 YAML 解析通过。这些均为验证脚本测试，
 归档结构对照固定版本
 [PyInstaller 6.18.0 CArchive reader](https://github.com/pyinstaller/pyinstaller/blob/v6.18.0/PyInstaller/archive/readers.py)。
 
+## 第二轮：Core 已通过，发现 TorchVision wheel 的 Python 副本
+
+[运行 45579575542](https://github.com/jsdfhasuh/python_build_scripts/actions/runs/45579575542)
+绑定 `81e4946144d7a3e6217eeb913dd366016c1f6f96`。真实 `core-without-runtime` 为 **PASS**，
+29 个原生输入均来自已批准来源，Java 污染已消除；随后复制运行库时拒绝
+`torchvision/python312.dll`，本轮仍是 **FAIL**，尚未运行外置计算矩阵。
+
+重新下载 pip 回执指向的官方固定 TorchVision wheel，核对完整 SHA256 后检查其 RECORD、
+DLL PE 结构与消费者。详见[原始静态审计](visionworkshop-torchvision-python-owner-20261125.json)。
+
+| 内容 | 实际结果 |
+| --- | --- |
+| TorchVision wheel | `torchvision-0.25.0+cu128-cp312-cp312-win_amd64.whl`，9,632,349 字节 |
+| wheel SHA256 | `068e519838b4a8b32a09521244b170edd8c2ac9eeb6538b7bf492cd70e57ebf5` |
+| 自带 Python DLL | AMD64 / CP312，产品版本 **3.12.12**，7,470,920 字节 |
+| 自带 DLL SHA256 | `3436d46bb65a87ba3d215df065f010d9fdab18c994caa275b546b8877b5205b2` |
+| Core 唯一 Python DLL | AMD64 / CPython **3.12.10**，6,945,272 字节 |
+| Core DLL SHA256 | `9a0e3435aaa680d868150f87ab3e388ad2eebc22f87e036155c7b4eda8cd2120` |
+
+Core DLL 与官方 3.12.10 embeddable ZIP 中的 DLL 完全一致，也与第二轮 CI 的原生输入摘要
+一致。TorchVision `image.pyd` 导入的 97 个 Python 符号均由该 Core DLL 提供；这只证明静态
+符号闭包，不替代真实图像运算。`_C.pyd` 本身没有直接导入 Python DLL。
+
+修复只允许省略上述**精确路径、发行版本、wheel 来源/摘要、RECORD、DLL 字节/PE/版本**
+均匹配的副本。Core 必须提供已选的 AMD64 3.12.10，并重新核对 `image.pyd` 的 Python 导入
+全部可解析。省略记录保留副本与 Core 两侧的来源、大小、SHA256、版本、理由和消费者。
+其他 Python EXE/DLL、未知副本或异 ABI 仍直接拒绝，没有通用忽略规则。
+
+冻结验收增加 TorchVision PNG 编码/解码往返，并要求实际进程仅加载**一份** Core 内的
+`python312.dll`，同时记录其 SHA256。16 项定向测试与使用真实固定 wheel 的静态资格检查
+通过；尚待下一轮 Windows 真实运算，不记为 B2 整体完成。
+
 ## 后续依赖
 
 实验结果用于确定 A4/B3 的模块布局与公共依赖归属，再实现 A5/B4 的离线安装、更新、

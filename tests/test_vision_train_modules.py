@@ -192,6 +192,72 @@ class ModularProbeTests(unittest.TestCase):
     self.assertFalse(probe.isInterpreterFile(Path('_psutil_windows.pyd')))
     self.assertFalse(probe.isInterpreterFile(Path('torch_python.dll')))
 
+  def makeVendoredPython(self):
+    source = self.root / 'wheel-environment'
+    duplicate = source / 'torchvision/python312.dll'
+    duplicate.parent.mkdir(parents=True)
+    duplicate.write_bytes(b'reviewed native fixture')
+    metadata = source / 'torchvision-0.25.0+cu128.dist-info'
+    metadata.mkdir()
+    (metadata / 'METADATA').write_text(
+      'Metadata-Version: 2.1\nName: torchvision\nVersion: 0.25.0+cu128\n', encoding='utf-8')
+    (metadata / 'RECORD').write_text(
+      'torchvision\\python312.dll,sha256=NDbUa7Zah7o9IV3wZfAQ2f2rGMmUyqJ1tUa4h3tSBbI,7470920\n',
+      encoding='utf-8')
+    report = self.root / 'torch-install.json'
+    report.write_text(json.dumps({'install': [{
+      'metadata': {'name': 'torchvision', 'version': '0.25.0+cu128'},
+      'download_info': {'url': probe.TORCHVISION_WHEEL_URL,
+                         'archive_info': {'hashes': {'sha256': probe.TORCHVISION_WHEEL_SHA256}}},
+    }]}), encoding='utf-8')
+    corePython = self.core.parent / 'python312.dll'
+    corePython.write_bytes(b'Core-owned CPython fixture')
+    duplicateIdentity = dict(probe.TORCHVISION_PYTHON, path=str(duplicate))
+    coreIdentity = dict(path=str(corePython), bytes=corePython.stat().st_size,
+                        sha256=probe.fileHash(corePython), machine=0x8664,
+                        file_version='3.12.10150.1013', product_version='3.12.10')
+    return source, report, corePython, duplicateIdentity, coreIdentity
+
+  def testOnlyReviewedTorchvisionPythonDuplicateIsOmitted(self):
+    source, report, corePython, duplicate, owner = self.makeVendoredPython()
+    def extract(_wheel, destination):
+      (destination / 'msvcp140.dll').write_bytes(b'CRT fixture')
+      return {'licenses': []}
+    with mock.patch.object(probe, 'nativeIdentity', side_effect=[duplicate, owner]), \
+         mock.patch.object(probe, 'verifyPythonConsumer', return_value={
+           'python_import_count': 97, 'missing_python_exports': []}), \
+         mock.patch.object(probe, 'extractCrt', side_effect=extract):
+      files, _crt, omitted = probe.copyRuntime(
+        source, self.root / 'staged-runtime', self.root / 'fixture.whl',
+        corePython=corePython, torchInstallReport=report)
+    self.assertFalse((self.root / 'staged-runtime/torchvision/python312.dll').exists())
+    self.assertTrue(corePython.is_file())
+    self.assertEqual(len(omitted), 1)
+    self.assertEqual(omitted[0]['excluded_file']['sha256'], probe.TORCHVISION_PYTHON['sha256'])
+    self.assertEqual(omitted[0]['owner']['product_version'], '3.12.10')
+    self.assertNotIn('torchvision/python312.dll', {item['path'] for item in files})
+
+  def testReviewedDuplicateRuleRejectsDifferentAbiPayloadOrWheel(self):
+    source, report, corePython, duplicate, owner = self.makeVendoredPython()
+    with self.assertRaisesRegex(ValueError, 'another Python'):
+      probe.qualifyVendoredPython(source, Path('torchvision/python311.dll'), corePython, report)
+    for field, value in [('sha256', '0' * 64), ('machine', 0x14c),
+                         ('product_version', '3.11.12'), ('bytes', 1)]:
+      with self.subTest(field=field):
+        altered = dict(duplicate, **{field: value})
+        with mock.patch.object(probe, 'nativeIdentity', return_value=altered), \
+             self.assertRaisesRegex(ValueError, 'DLL bytes, PE architecture or version changed'):
+          probe.qualifyVendoredPython(source, Path('torchvision/python312.dll'), corePython, report)
+    with mock.patch.object(probe, 'nativeIdentity', side_effect=[
+        duplicate, dict(owner, product_version='3.12.12')]), \
+         self.assertRaisesRegex(ValueError, 'Core must own'):
+      probe.qualifyVendoredPython(source, Path('torchvision/python312.dll'), corePython, report)
+    changed = json.loads(report.read_text())
+    changed['install'][0]['download_info']['archive_info']['hashes']['sha256'] = '0' * 64
+    report.write_text(json.dumps(changed), encoding='utf-8')
+    with self.assertRaisesRegex(ValueError, 'reviewed wheel'):
+      probe.qualifyVendoredPython(source, Path('torchvision/python312.dll'), corePython, report)
+
   def testVersionValidationRejectsDuplicateOwnersAndMixedOrt(self):
     expected = {'numpy': '2.0.2', 'onnxruntime-gpu': '1.23.2'}
     distributions = [{'name': name, 'version': version} for name, version in expected.items()]

@@ -129,6 +129,7 @@ jobs:
             --source-root (Join-Path $env:GITHUB_WORKSPACE 'source') `
             --constraints ci/vision-train-modular-probe-constraints.txt `
             --crt-wheel $env:CRT_WHEEL `
+            --torch-install-report (Join-Path $env:GITHUB_WORKSPACE 'reports/torch-install.json') `
             --output (Join-Path $env:GITHUB_WORKSPACE 'modular-output') `
             2>&1 | Tee-Object ../reports/modular-loader.log
           if ($LASTEXITCODE -ne 0) { throw 'Real frozen external loader probe failed' }

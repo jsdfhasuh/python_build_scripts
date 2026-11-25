@@ -1,8 +1,12 @@
 """Build a disposable frozen Core and observe external runtime loading on Windows."""
 
 import argparse
+import base64
+import csv
 import ctypes
 import hashlib
+import importlib.metadata
+import io
 import json
 import os
 from pathlib import Path
@@ -34,6 +38,15 @@ STDLIB_EXCLUDED = {'site-packages', 'test', 'tests', 'idlelib', 'tkinter', '_tki
                    'ensurepip', 'venv', '__pycache__', '__phello__'}
 BOOTSTRAP_MODULES = {'struct', 'pyimod01_archive', 'pyimod02_importers',
                      'pyimod03_ctypes', 'pyimod04_pywin32'}
+TORCHVISION_PYTHON = {
+  'path': 'torchvision/python312.dll', 'bytes': 7470920,
+  'sha256': '3436d46bb65a87ba3d215df065f010d9fdab18c994caa275b546b8877b5205b2',
+  'machine': 0x8664, 'file_version': '3.12.12150.1013', 'product_version': '3.12.12',
+}
+TORCHVISION_WHEEL_SHA256 = '068e519838b4a8b32a09521244b170edd8c2ac9eeb6538b7bf492cd70e57ebf5'
+TORCHVISION_WHEEL_URL = (
+  'https://download-r2.pytorch.org/whl/cu128/'
+  'torchvision-0.25.0%2Bcu128-cp312-cp312-win_amd64.whl')
 
 
 def writeReport(path: Path, document: dict) -> None:
@@ -215,11 +228,90 @@ def extractCrt(wheel: Path, destination: Path) -> dict:
           'reason': 'Known product CRT loaded before Qt; no host/system fallback'}
 
 
-def copyRuntime(source: Path, destination: Path, crtWheel: Path) -> tuple[list[dict], dict]:
+def nativeIdentity(path: Path) -> dict:
+  import pefile
+
+  with pefile.PE(str(path)) as binary:
+    fixed = binary.VS_FIXEDFILEINFO[0]
+    versions = {}
+    for block in getattr(binary, 'FileInfo', []):
+      for item in block:
+        for table in getattr(item, 'StringTable', []):
+          versions.update(table.entries)
+    return {
+      'path': str(path.resolve()), 'bytes': path.stat().st_size, 'sha256': fileHash(path),
+      'machine': binary.FILE_HEADER.Machine,
+      'file_version': '.'.join(map(str, (fixed.FileVersionMS >> 16,
+        fixed.FileVersionMS & 65535, fixed.FileVersionLS >> 16, fixed.FileVersionLS & 65535))),
+      'product_version': versions.get(b'ProductVersion', b'').decode('utf-8'),
+    }
+
+
+def verifyPythonConsumer(consumer: Path, owner: Path) -> dict:
+  import pefile
+
+  with pefile.PE(str(consumer)) as binary, pefile.PE(str(owner)) as python:
+    imports = [symbol.name for entry in binary.DIRECTORY_ENTRY_IMPORT
+                if entry.dll.lower() == b'python312.dll' for symbol in entry.imports]
+    exports = {symbol.name for symbol in python.DIRECTORY_ENTRY_EXPORT.symbols if symbol.name}
+    if not imports or any(name is None or name not in exports for name in imports):
+      raise ValueError('TorchVision image extension requires Python symbols absent from Core')
+    return {'path': str(consumer.resolve()), 'sha256': fileHash(consumer),
+            'python_import_count': len(imports), 'missing_python_exports': [],
+            'owner_sha256': fileHash(owner)}
+
+
+def qualifyVendoredPython(source: Path, relative: Path, corePython: Path | None,
+                          torchInstallReport: Path | None) -> dict:
+  if relative.as_posix() != TORCHVISION_PYTHON['path']:
+    raise ValueError('External runtime must not contain another Python: ' + str(relative))
+  if corePython is None or torchInstallReport is None:
+    raise ValueError('Known TorchVision Python duplicate requires Core and wheel provenance')
+  report = json.loads(torchInstallReport.read_text(encoding='utf-8-sig'))
+  installed = [item for item in report['install']
+                if canonicalName(item['metadata']['name']) == 'torchvision']
+  if (len(installed) != 1 or installed[0]['metadata']['version'] != RUNTIME_VERSIONS['torchvision']
+      or installed[0]['download_info']['url'] != TORCHVISION_WHEEL_URL
+      or installed[0]['download_info']['archive_info']['hashes'].get('sha256')
+        != TORCHVISION_WHEEL_SHA256):
+    raise ValueError('TorchVision duplicate does not identify the reviewed wheel')
+  distributions = [item for item in importlib.metadata.distributions(path=[str(source)])
+                    if canonicalName(item.metadata.get('Name', '')) == 'torchvision']
+  if len(distributions) != 1 or distributions[0].version != RUNTIME_VERSIONS['torchvision']:
+    raise ValueError('TorchVision duplicate has ambiguous or unexpected installed owner')
+  records = [row for row in csv.reader(io.StringIO(distributions[0].read_text('RECORD') or ''))
+              if row and row[0].replace('\\', '/') == TORCHVISION_PYTHON['path']]
+  digest = base64.urlsafe_b64encode(bytes.fromhex(TORCHVISION_PYTHON['sha256'])).decode().rstrip('=')
+  if (len(records) != 1 or records[0][1:] != [
+      'sha256=' + digest, str(TORCHVISION_PYTHON['bytes'])]):
+    raise ValueError('TorchVision duplicate does not match its reviewed wheel RECORD')
+  duplicate = nativeIdentity(source / relative)
+  if any(duplicate[key] != expected for key, expected in TORCHVISION_PYTHON.items() if key != 'path'):
+    raise ValueError('TorchVision duplicate DLL bytes, PE architecture or version changed')
+  rejectLink(corePython)
+  owner = nativeIdentity(corePython)
+  if (corePython.name != 'python312.dll' or isInside(corePython, source)
+      or owner['machine'] != 0x8664 or owner['product_version'] != PYTHON_VERSION):
+    raise ValueError('Core must own the selected AMD64 CPython ' + PYTHON_VERSION)
+  consumer = verifyPythonConsumer(source / 'torchvision/image.pyd', corePython)
+  return {
+    'path': relative.as_posix(), 'excluded_file': duplicate, 'owner': owner,
+    'distribution': 'torchvision', 'distribution_version': RUNTIME_VERSIONS['torchvision'],
+    'wheel_url': TORCHVISION_WHEEL_URL, 'wheel_sha256': TORCHVISION_WHEEL_SHA256,
+    'wheel_record': records[0], 'consumer': consumer,
+    'reason': 'Reviewed CP312 wheel duplicate omitted; the frozen Core is the only Python owner',
+    'runtime_acceptance': 'Requires actual image encode/decode and Core-only Python DLL loading',
+  }
+
+
+def copyRuntime(source: Path, destination: Path, crtWheel: Path, *,
+                corePython: Path | None = None,
+                torchInstallReport: Path | None = None) -> tuple[list[dict], dict, list[dict]]:
   if destination.exists():
     raise FileExistsError('Runtime destination must be new')
   destination.mkdir(parents=True)
   records = []
+  omitted = []
   for path in sorted(source.rglob('*')):
     relative = path.relative_to(source)
     if isExcluded(relative):
@@ -228,7 +320,8 @@ def copyRuntime(source: Path, destination: Path, crtWheel: Path) -> tuple[list[d
     if path.is_dir():
       continue
     if isInterpreterFile(path):
-      raise ValueError('External runtime must not contain another Python: ' + str(relative))
+      omitted.append(qualifyVendoredPython(source, relative, corePython, torchInstallReport))
+      continue
     target = destination / relative
     target.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(path, target)
@@ -239,7 +332,7 @@ def copyRuntime(source: Path, destination: Path, crtWheel: Path) -> tuple[list[d
     target = destination / relative
     records.append({'path': relative, 'bytes': target.stat().st_size, 'sha256': fileHash(target)})
   records.sort(key=lambda item: item['path'])
-  return records, crt
+  return records, crt, omitted
 
 
 def writePureFixture(runtime: Path, marker: str, version: str) -> None:
@@ -665,6 +758,7 @@ def parseArgs(argv: list[str] | None = None) -> argparse.Namespace:
   parser.add_argument('--output', required=True, type=Path)
   parser.add_argument('--constraints', required=True, type=Path)
   parser.add_argument('--crt-wheel', required=True, type=Path)
+  parser.add_argument('--torch-install-report', required=True, type=Path)
   parser.add_argument('--timeout', type=int, default=180)
   return parser.parse_args(argv)
 
@@ -711,10 +805,15 @@ def main(argv: list[str] | None = None) -> int:
     (output / 'empty-cwd').mkdir()
     summary['cases'].append(runProbe(executable, runtime, source, reports, environment,
                                       'core', 'core-without-runtime', args.timeout))
-    runtimeFiles, crt = copyRuntime(Path(runtimeInfo['purelib']), runtime, args.crt_wheel.resolve())
+    runtimeFiles, crt, omitted = copyRuntime(
+      Path(runtimeInfo['purelib']), runtime, args.crt_wheel.resolve(),
+      corePython=executable.parent / '_internal/python312.dll',
+      torchInstallReport=args.torch_install_report.resolve())
     summary['runtime'] = summarizeFiles(runtimeFiles)
     summary['runtime']['crt'] = crt
-    writeReport(reports / 'runtime-files.json', {'files': runtimeFiles, 'crt': crt})
+    summary['runtime']['excluded_vendored_python'] = omitted
+    writeReport(reports / 'runtime-files.json', {'files': runtimeFiles, 'crt': crt,
+                                                'excluded_vendored_python': omitted})
     writePureFixture(runtime, 'v1', '1.0.0')
     for mode in ('pure', 'native', 'torch', 'ort', 'dino'):
       extra = {'expected_marker': 'v1', 'expected_fixture_version': '1.0.0'} if mode == 'pure' else {}

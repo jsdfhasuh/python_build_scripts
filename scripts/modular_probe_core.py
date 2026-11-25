@@ -217,10 +217,12 @@ def recordOrigins(report: dict, runtimeRoot: Path, sourceRoot: Path | None) -> N
   report['python_dlls'] = pythonDlls
   require(all(Path(path).name.casefold() in ('python312.dll', 'python3.dll')
               for path in pythonDlls), 'An unexpected Python runtime DLL entered the process')
-  require(any(Path(path).name.casefold() == 'python312.dll' for path in pythonDlls),
-          'The frozen process did not load python312.dll')
+  require(sum(Path(path).name.casefold() == 'python312.dll' for path in pythonDlls) == 1,
+          'The frozen process must load exactly one python312.dll')
   require(all(isWithin(Path(path), coreRoot) for path in pythonDlls),
           'A second external Python DLL entered the frozen process')
+  report['python_files'] = [{'path': path, 'sha256': fileHash(Path(path)),
+                             'bytes': Path(path).stat().st_size} for path in pythonDlls]
   vcRuntimeDlls = [path for path in report['loaded_libraries']
                    if Path(path).name.casefold().startswith('vcruntime140')
                    and Path(path).suffix.casefold() == '.dll']
@@ -341,9 +343,15 @@ def checkTorch(runtimeRoot: Path, report: dict) -> None:
                        dtype=torch.float32)
   scores = torch.tensor([0.9, 0.8, 0.7], dtype=torch.float32)
   require(ops.nms(boxes, scores, 0.5).tolist() == [0, 2], 'External TorchVision NMS failed')
+  imageOps = importExternal('torchvision.io', runtimeRoot)
+  pixels = torch.arange(12, dtype=torch.uint8).reshape(3, 2, 2)
+  encoded = imageOps.encode_png(pixels)
+  require(torch.equal(imageOps.decode_png(encoded), pixels),
+          'TorchVision native image extension failed with the Core-owned Python DLL')
   recordDistribution(report, 'torch', runtimeRoot)
   recordDistribution(report, 'torchvision', runtimeRoot)
   report['checks'].update(torch_cpu='PASS', torchvision_cpu_nms='PASS',
+                          torchvision_image_roundtrip='PASS',
                           torch_version=torch.__version__, torchvision_version=vision.__version__,
                           cuda_build=torch.version.cuda)
   available = torch.cuda.is_available()
