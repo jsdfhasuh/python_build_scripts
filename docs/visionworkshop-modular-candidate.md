@@ -224,7 +224,7 @@ No operation publishes anything.
 
 A Core-only source fix can reuse a completed candidate's module archives by
 explicitly supplying `reuse_run_id` and `reuse_run_attempt`. The current request
-selects application `e44eacec0e3732801e872a69a318c74dd5e03bba` and the original
+selects application `591f8bef7b2292caf50f4848e3047518e490742c` and the original
 module ZIPs from run `45616400076`, attempt 1. That source run failed its first
 EXE CLI check; its build was `BUILT`. Reuse preserves that failure status and
 does not transfer native qualification to the new candidate.
