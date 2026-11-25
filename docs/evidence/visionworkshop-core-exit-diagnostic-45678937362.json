@@ -1,0 +1,1210 @@
+{
+  "schema_version": 1,
+  "scope": "Compact transcription of nine complete, hash-verified bounded JSON log projections from an immutable original-Core diagnostic; full event inventories remain in the source artifact.",
+  "run": {
+    "id": 45678937362,
+    "run_attempt": 1,
+    "diagnostic_attempt": 4,
+    "head_sha": "cb98e222c5accce762fc074fe21c1b8fb196c704",
+    "job_id": 139433951583,
+    "status": "completed",
+    "conclusion": "success",
+    "url": "https://github.com/jsdfhasuh/python_build_scripts/actions/runs/45678937362"
+  },
+  "artifact": {
+    "id": 15054350469,
+    "name": "visionworkshop-core-exit-diagnostic-45678937362-1",
+    "bytes": 206118,
+    "api_digest": "sha256:690c9934025f5bf5fc82c47f87a1fb143c0db7509bcf7c39d823fa7bb2ee2b09",
+    "outer_archive_rehashed_locally": false,
+    "reason": "Local executor unavailable; API identity recorded separately from independently reassembled log projection hashes."
+  },
+  "test_execution": {
+    "platform": "Windows",
+    "guards": [
+      {
+        "file": "test_vision_train_core_diagnostic.py",
+        "tests": 16,
+        "seconds": 0.6,
+        "status": "PASS",
+        "skipped": 0
+      },
+      {
+        "file": "test_vision_train_native_debug.py",
+        "tests": 17,
+        "seconds": 0.041,
+        "status": "PASS",
+        "skipped": 0
+      },
+      {
+        "file": "test_vision_train_diagnostic_reports.py",
+        "tests": 4,
+        "seconds": 0.008,
+        "status": "PASS",
+        "skipped": 0
+      }
+    ],
+    "actual_native_fixtures": "PASS",
+    "actual_original_core_source_and_inventory": "PASS"
+  },
+  "observations": {
+    "debugger_observed_core": {
+      "pid": 1400,
+      "exit_code": 0,
+      "seconds": 36.172,
+      "forced_cleanup": false,
+      "unexpected_exceptions": 0,
+      "root_unicode_characters": 88
+    },
+    "debugger_observed_gui": {
+      "pid": 9148,
+      "exit_code": 0,
+      "seconds": 19.719,
+      "forced_cleanup": false,
+      "unexpected_exceptions": 0,
+      "root_unicode_characters": 88,
+      "close_message": "WM_CLOSE",
+      "stable_visible_enabled_seconds": 1.0779999999999745
+    },
+    "dll_search": {
+      "root_unicode_characters": 111,
+      "duplicate": {
+        "planned": 218,
+        "successful": 217,
+        "first_failure_index": 217,
+        "first_failure_stage": "numpy-delvewheel",
+        "winerror": 206,
+        "successful_utf16_bytes_with_nul": 65408,
+        "attempted_utf16_bytes_with_nul": 65682,
+        "handles_closed": 217,
+        "cleanup_errors": []
+      },
+      "unique": {
+        "planned": 109,
+        "successful": 109,
+        "first_failure": null,
+        "successful_utf16_bytes_with_nul": 32826,
+        "handles_closed": 109,
+        "cleanup_errors": []
+      },
+      "scope": "Standalone stdlib calls at the same verified Core path, retaining cookies until exit. Measured sums include one NUL per registration; no claim about undocumented Windows internal buffer layout."
+    },
+    "original_core_unchanged": {
+      "files": 11322,
+      "bytes": 627769495,
+      "inventory_sha256": "b981b8111d462a496fb55d3adbe237c43d5364fc2f3f1e2e448c23b1f1572c9f",
+      "checkpoints": 3,
+      "status": "PASS"
+    }
+  },
+  "limits": [
+    "Original full candidate 45659615499 remains FAIL with exit 0xc0000005.",
+    "Debug-observed successful exits do not establish the cause or a fix of the earlier ordinary exit crash.",
+    "The standalone duplicate-directory failure is demonstrated separately from native exit behavior.",
+    "No module installation, annotation, algorithm/resource/worker/GPU matrix was run in this diagnostic.",
+    "No original Core byte was modified or rebuilt; no release was published."
+  ],
+  "log_projection_verification": {
+    "groups": 9,
+    "all_contiguous": true,
+    "all_byte_counts_matched": true,
+    "all_sha256_matched": true,
+    "independently_rechecked_by_parent": true,
+    "encoding": "Complete ASCII JSON projected by the diagnostic logger, excluding the GitHub timestamp and chunk envelope."
+  },
+  "projections": [
+    {
+      "label": "source",
+      "projection_bytes": 2379,
+      "projection_sha256": "e2b28c30fdebac08c0a3d1c522509160b07712be11e86828256263472f3d22c6",
+      "report": {
+        "label": "source",
+        "projection": {
+          "artifacts": {
+            "core": {
+              "digest": "sha256:fefae3ffd2e7b4b6e096079521c4f98e73a4a1aaadc9a7d69c21ce4f034420aa",
+              "id": 15045973042,
+              "name": "visionworkshop-core-candidate-45659615499-1",
+              "size_in_bytes": 180443248
+            },
+            "evidence": {
+              "digest": "sha256:eed972a2d2a487445335d09722fb62bdaa926efd75ba1db5ad911864829ebf81",
+              "id": 15046836955,
+              "name": "visionworkshop-modular-evidence-45659615499-1",
+              "size_in_bytes": 73474221
+            }
+          },
+          "diagnostic_builder_sha": "cb98e222c5accce762fc074fe21c1b8fb196c704",
+          "reports": {
+            "modular-acceptance/reports/modular-product-summary.json": {
+              "bytes": 67647,
+              "sha256": "13d21194bbf69fb89fda520d25aaa10bb4af70926e0ded70504f427d8f4b7a58"
+            },
+            "modular-candidate/reports/core-files.json": {
+              "bytes": 2191870,
+              "sha256": "6cf70a4b56a049d5635112fea70bd4d0bf564fe01673e85f32e221b86dac39eb"
+            },
+            "modular-candidate/reports/modular-build-summary.json": {
+              "bytes": 2831947,
+              "sha256": "69ca135db97b5f8e1f8b6d4cf9a7990bdf0ec7f3c2bb75a06539a71bf0cabffc"
+            }
+          },
+          "request": {
+            "artifacts": {
+              "core": {
+                "bytes": 180443248,
+                "id": 15045973042,
+                "name": "visionworkshop-core-candidate-45659615499-1",
+                "sha256": "fefae3ffd2e7b4b6e096079521c4f98e73a4a1aaadc9a7d69c21ce4f034420aa"
+              },
+              "evidence": {
+                "bytes": 73474221,
+                "id": 15046836955,
+                "name": "visionworkshop-modular-evidence-45659615499-1",
+                "sha256": "eed972a2d2a487445335d09722fb62bdaa926efd75ba1db5ad911864829ebf81"
+              }
+            },
+            "core_archive": {
+              "bytes": 180443076,
+              "name": "VisionWorkshop-Core-0.0.0.zip",
+              "sha256": "14e62ed16acb684c1ed09573c24ec7b52482dd0d867dbf52df254275d9c7c0d9"
+            },
+            "core_sha256": "9b508d684ec2d594cbd2b162063fd6dc45b9982553f9276ef2bb8010b27064ad",
+            "debugger_observed": true,
+            "diagnostic_attempt": 4,
+            "dll_search_probe": true,
+            "normal_gui_comparison": true,
+            "schema_version": 2,
+            "source_app_sha": "591f8bef7b2292caf50f4848e3047518e490742c",
+            "source_head_sha": "d3ace70e41a41b4334a9e44d2dbec0d4907f077d",
+            "source_run_attempt": 1,
+            "source_run_id": 45659615499
+          },
+          "source_build": {
+            "app_sha": "591f8bef7b2292caf50f4848e3047518e490742c",
+            "build_id": "candidate-45659615499-1",
+            "packager_sha": "d3ace70e41a41b4334a9e44d2dbec0d4907f077d"
+          },
+          "source_product_status": "FAIL",
+          "source_run": {
+            "conclusion": "failure",
+            "head_sha": "d3ace70e41a41b4334a9e44d2dbec0d4907f077d",
+            "id": 45659615499,
+            "run_attempt": 1,
+            "status": "completed"
+          },
+          "status": "PREPARED"
+        },
+        "projection_kind": "source",
+        "source": {
+          "bytes": 3440,
+          "path": "source-receipt.json",
+          "sha256": "420c97fe578bdd3eaa56f02d8a302fd74ecd1180ee8c3747d169bd468212b047",
+          "status": "READ"
+        }
+      }
+    },
+    {
+      "label": "fixtures",
+      "projection_bytes": 1378,
+      "projection_sha256": "46e7083f1ad444310795d150b613232f89874f4e8d716820aa8ffdae7277ee1f",
+      "report": {
+        "label": "fixtures",
+        "projection": {
+          "base_python": "C:\\hostedtoolcache\\windows\\Python\\3.12.10\\x64\\python.exe",
+          "controller_executable": "C:\\hostedtoolcache\\windows\\Python\\3.12.10\\x64\\python.exe",
+          "fixtures": [
+            {
+              "actual_exit_code": 0,
+              "actual_process_status": "PASS",
+              "fixture": "normal",
+              "fixture_marker": {
+                "marker": {
+                  "executable": "C:\\hostedtoolcache\\windows\\Python\\3.12.10\\x64\\python.exe",
+                  "fixture": "normal",
+                  "pid": 6676
+                },
+                "sha256": "e811602875c46b52f7ed646ab1d6565c76e9480968b94614be329a586de53249"
+              },
+              "fixture_marker_error": null,
+              "report_sha256": "0aee1366a25187d2875436c19e69dee4d3436ccc0063402e46ee497401b3f479",
+              "verification": "PASS"
+            },
+            {
+              "actual_exit_code": 3221225477,
+              "actual_process_status": "FAIL",
+              "fixture": "access-violation",
+              "fixture_marker": {
+                "marker": {
+                  "executable": "C:\\hostedtoolcache\\windows\\Python\\3.12.10\\x64\\python.exe",
+                  "fixture": "access-violation",
+                  "pid": 8088
+                },
+                "sha256": "90f54a5a13ccca8d2f0407b989785ef50c9021f80fc1bac7869378fa4e2c60f7"
+              },
+              "fixture_marker_error": null,
+              "report_sha256": "51429cbf90ad917e681f1bf5121fbeb6387926c8e87b19db8d3d842608b8af68",
+              "verification": "PASS"
+            }
+          ],
+          "scope": "Actual Windows stdlib child/exception controller fixtures, not product qualification",
+          "status": "PASS"
+        },
+        "projection_kind": "complete",
+        "source": {
+          "bytes": 1503,
+          "path": "native-fixture-summary.json",
+          "sha256": "af408bc2c69a019f266aca987ef2ad8b5d260854e4e5a38089259850854d9210",
+          "status": "READ"
+        }
+      }
+    },
+    {
+      "label": "fixture-normal",
+      "projection_bytes": 1589,
+      "projection_sha256": "01b8d4131c3bfb6e4c421d39a731a0fae3d96188423cc55c8dab62d1b11571e1",
+      "report": {
+        "label": "fixture-normal",
+        "projection": {
+          "active_module_count": 32,
+          "command": [
+            "C:\\hostedtoolcache\\windows\\Python\\3.12.10\\x64\\python.exe",
+            "-I",
+            "-S",
+            "-B",
+            "D:\\a\\python_build_scripts\\python_build_scripts\\packager\\scripts\\vision_train_native_debug.py",
+            "--fixture-child",
+            "normal"
+          ],
+          "debug_exit_code": 0,
+          "debugger_observed": true,
+          "elapsed_seconds": 0.125,
+          "event_count": 42,
+          "exceptions": [
+            {
+              "code": 2147483651,
+              "code_hex": "0x80000003",
+              "continuation": "DBG_CONTINUE",
+              "expected_initial_break": true,
+              "first_chance": true,
+              "flags": 0,
+              "instruction": {
+                "active_module": {
+                  "base": 140729540935680,
+                  "base_hex": "0x7ffe264c0000",
+                  "file_handle_closed": true,
+                  "load_sequence": 2,
+                  "offset": 1175037,
+                  "offset_hex": "0x11edfd",
+                  "path": "c:\\windows\\system32\\ntdll.dll",
+                  "path_source": "debug-event-file-handle",
+                  "size": 2506752
+                },
+                "address": 140729542110717,
+                "address_hex": "0x7ffe265dedfd",
+                "unloaded_candidates": []
+              },
+              "parameters": [
+                0
+              ],
+              "pid": 6676,
+              "tid": 2032
+            }
+          ],
+          "exit_code": 0,
+          "forced_cleanup": false,
+          "initial_break_seen": true,
+          "layout": {
+            "CreateProcessInfo": 72,
+            "CreateThreadInfo": 24,
+            "DebugEvent": 176,
+            "DebugStringInfo": 16,
+            "ExceptionInfo": 160,
+            "ExceptionRecord": 152,
+            "LoadDllInfo": 40
+          },
+          "pid": 6676,
+          "projection_scope": "All exception records and exit/cleanup fields; full module/event inventory retained in source artifact",
+          "scope": "Debugger-observed native exit; no target memory/register modification",
+          "status": "PASS",
+          "timeout_seconds": 30,
+          "unloaded_module_count": 1
+        },
+        "projection_kind": "native",
+        "source": {
+          "bytes": 29359,
+          "path": "normal/reports/native-debug.json",
+          "sha256": "0aee1366a25187d2875436c19e69dee4d3436ccc0063402e46ee497401b3f479",
+          "status": "READ"
+        }
+      }
+    },
+    {
+      "label": "fixture-access-violation",
+      "projection_bytes": 2456,
+      "projection_sha256": "7fa0f8472bdc722b1300727b1c8042618281c350e3e9cd7ae5cc5c0283854b65",
+      "report": {
+        "label": "fixture-access-violation",
+        "projection": {
+          "active_module_count": 31,
+          "command": [
+            "C:\\hostedtoolcache\\windows\\Python\\3.12.10\\x64\\python.exe",
+            "-I",
+            "-S",
+            "-B",
+            "D:\\a\\python_build_scripts\\python_build_scripts\\packager\\scripts\\vision_train_native_debug.py",
+            "--fixture-child",
+            "access-violation"
+          ],
+          "debug_exit_code": 3221225477,
+          "debugger_observed": true,
+          "elapsed_seconds": 0.359,
+          "event_count": 45,
+          "exceptions": [
+            {
+              "code": 2147483651,
+              "code_hex": "0x80000003",
+              "continuation": "DBG_CONTINUE",
+              "expected_initial_break": true,
+              "first_chance": true,
+              "flags": 0,
+              "instruction": {
+                "active_module": {
+                  "base": 140729540935680,
+                  "base_hex": "0x7ffe264c0000",
+                  "file_handle_closed": true,
+                  "load_sequence": 2,
+                  "offset": 1175037,
+                  "offset_hex": "0x11edfd",
+                  "path": "c:\\windows\\system32\\ntdll.dll",
+                  "path_source": "debug-event-file-handle",
+                  "size": 2506752
+                },
+                "address": 140729542110717,
+                "address_hex": "0x7ffe265dedfd",
+                "unloaded_candidates": []
+              },
+              "parameters": [
+                0
+              ],
+              "pid": 8088,
+              "tid": 7800
+            },
+            {
+              "code": 3221225477,
+              "code_hex": "0xc0000005",
+              "continuation": "DBG_EXCEPTION_NOT_HANDLED",
+              "expected_initial_break": false,
+              "first_chance": true,
+              "flags": 0,
+              "instruction": {
+                "active_module": null,
+                "address": 0,
+                "address_hex": "0x0",
+                "unloaded_candidates": []
+              },
+              "memory_access": {
+                "active_module": null,
+                "address": 0,
+                "address_hex": "0x0",
+                "kind": "execute",
+                "raw_kind": 8,
+                "unloaded_candidates": []
+              },
+              "parameters": [
+                8,
+                0
+              ],
+              "pid": 8088,
+              "tid": 8356
+            },
+            {
+              "code": 3221225477,
+              "code_hex": "0xc0000005",
+              "continuation": "DBG_EXCEPTION_NOT_HANDLED",
+              "expected_initial_break": false,
+              "first_chance": false,
+              "flags": 0,
+              "instruction": {
+                "active_module": null,
+                "address": 0,
+                "address_hex": "0x0",
+                "unloaded_candidates": []
+              },
+              "memory_access": {
+                "active_module": null,
+                "address": 0,
+                "address_hex": "0x0",
+                "kind": "execute",
+                "raw_kind": 8,
+                "unloaded_candidates": []
+              },
+              "parameters": [
+                8,
+                0
+              ],
+              "pid": 8088,
+              "tid": 8356
+            }
+          ],
+          "exit_code": 3221225477,
+          "forced_cleanup": false,
+          "initial_break_seen": true,
+          "layout": {
+            "CreateProcessInfo": 72,
+            "CreateThreadInfo": 24,
+            "DebugEvent": 176,
+            "DebugStringInfo": 16,
+            "ExceptionInfo": 160,
+            "ExceptionRecord": 152,
+            "LoadDllInfo": 40
+          },
+          "pid": 8088,
+          "projection_scope": "All exception records and exit/cleanup fields; full module/event inventory retained in source artifact",
+          "scope": "Debugger-observed native exit; no target memory/register modification",
+          "status": "FAIL",
+          "timeout_seconds": 30,
+          "unloaded_module_count": 1
+        },
+        "projection_kind": "native",
+        "source": {
+          "bytes": 32123,
+          "path": "access-violation/reports/native-debug.json",
+          "sha256": "51429cbf90ad917e681f1bf5121fbeb6387926c8e87b19db8d3d842608b8af68",
+          "status": "READ"
+        }
+      }
+    },
+    {
+      "label": "diagnostic",
+      "projection_bytes": 8629,
+      "projection_sha256": "e7630189e0e8c95699d99e55146f4f470851922861ec30284f5b5ad8306a93a5",
+      "report": {
+        "label": "diagnostic",
+        "projection": {
+          "cases": [
+            {
+              "core_inventory_sha256": "b981b8111d462a496fb55d3adbe237c43d5364fc2f3f1e2e448c23b1f1572c9f",
+              "core_unchanged": {
+                "bytes": 627769495,
+                "changed": [],
+                "checkpoint": "after-exit",
+                "extra": [],
+                "file_count": 11322,
+                "inventory_sha256": "b981b8111d462a496fb55d3adbe237c43d5364fc2f3f1e2e448c23b1f1572c9f",
+                "missing": [],
+                "report": "core-unchanged-after-exit.json",
+                "report_sha256": "cb4982b71e56880f413186e4e66c6770d6211cceb2677c2f58ef0a4fc8ffc3bc",
+                "status": "PASS"
+              },
+              "debugger_observed": true,
+              "end_utc": "2026-11-25T18:52:34.759427+00:00",
+              "executable_sha256": "4d22e43eb180a943113ac690c95c7beb839d9450044c04a9325526127d55dbc6",
+              "name": "core-without-modules",
+              "process": {
+                "command": [
+                  "D:\\a\\python_build_scripts\\python_build_scripts\\core-exit-diagnostic\\c\\\u4e2d \u6587\\VisionWorkshop\\VisionWorkshop.exe",
+                  "--modular-runtime-check",
+                  "--case",
+                  "core",
+                  "--output",
+                  "D:\\a\\python_build_scripts\\python_build_scripts\\core-exit-diagnostic\\c\\reports\\core-without-modules.json"
+                ],
+                "debug_exit_code": 0,
+                "debugger_observed": true,
+                "elapsed_seconds": 36.172,
+                "error": null,
+                "exit_code": 0,
+                "forced_cleanup": false,
+                "native_report": {
+                  "path": "native-debug.json",
+                  "sha256": "5835f9ff1890208ff4dc6c78c6b7abc5f598de3597ff4238d93a0e34f446c91d"
+                },
+                "pid": 1400,
+                "status": "PASS"
+              },
+              "root_unicode_characters": 88,
+              "root_utf16_bytes": 176,
+              "source_root_unicode_characters": 88,
+              "start_utc": "2026-11-25T18:51:58.550621+00:00",
+              "status": "PASS"
+            },
+            {
+              "core_inventory_sha256": "b981b8111d462a496fb55d3adbe237c43d5364fc2f3f1e2e448c23b1f1572c9f",
+              "core_unchanged": {
+                "bytes": 627769495,
+                "changed": [],
+                "checkpoint": "after-exit",
+                "extra": [],
+                "file_count": 11322,
+                "inventory_sha256": "b981b8111d462a496fb55d3adbe237c43d5364fc2f3f1e2e448c23b1f1572c9f",
+                "missing": [],
+                "report": "core-unchanged-after-exit.json",
+                "report_sha256": "cb4982b71e56880f413186e4e66c6770d6211cceb2677c2f58ef0a4fc8ffc3bc",
+                "status": "PASS"
+              },
+              "debugger_observed": true,
+              "end_utc": "2026-11-25T18:54:27.770408+00:00",
+              "executable_sha256": "4d22e43eb180a943113ac690c95c7beb839d9450044c04a9325526127d55dbc6",
+              "name": "gui-close",
+              "process": {
+                "command": [
+                  "D:\\a\\python_build_scripts\\python_build_scripts\\core-exit-diagnostic\\g\\\u4e2d \u6587\\VisionWorkshop\\VisionWorkshop.exe"
+                ],
+                "debug_exit_code": 0,
+                "debugger_observed": true,
+                "elapsed_seconds": 19.719,
+                "error": null,
+                "exit_code": 0,
+                "forced_cleanup": false,
+                "native_report": {
+                  "path": "native-debug.json",
+                  "sha256": "30c65e1ebe1e53101304a52bf37956dd4484c62bc09f944441817aa90834d044"
+                },
+                "pid": 9148,
+                "status": "PASS"
+              },
+              "root_unicode_characters": 88,
+              "root_utf16_bytes": 176,
+              "source_root_unicode_characters": 88,
+              "start_utc": "2026-11-25T18:54:08.014658+00:00",
+              "status": "PASS"
+            }
+          ],
+          "debugger_observed": true,
+          "diagnostic_builder_sha": "cb98e222c5accce762fc074fe21c1b8fb196c704",
+          "dll_search_probe": {
+            "core_unchanged": {
+              "bytes": 627769495,
+              "changed": [],
+              "checkpoint": "after-dll-probe",
+              "extra": [],
+              "file_count": 11322,
+              "inventory_sha256": "b981b8111d462a496fb55d3adbe237c43d5364fc2f3f1e2e448c23b1f1572c9f",
+              "missing": [],
+              "report": "core-unchanged-after-dll-probe.json",
+              "report_sha256": "f53b7dc6666f749315402ebb6148271a645fcadf8f3e0bc7f23ee2dd70973d1e",
+              "status": "PASS"
+            },
+            "observations": [
+              {
+                "command": [
+                  "C:\\hostedtoolcache\\windows\\Python\\3.12.10\\x64\\python.exe",
+                  "-I",
+                  "-S",
+                  "-B",
+                  "D:\\a\\python_build_scripts\\python_build_scripts\\packager\\scripts\\vision_train_dll_search_probe.py",
+                  "--input",
+                  "D:\\a\\python_build_scripts\\python_build_scripts\\core-exit-diagnostic\\core-without-modules\\reports\\dll-search-input.json",
+                  "--mode",
+                  "duplicate",
+                  "--output",
+                  "D:\\a\\python_build_scripts\\python_build_scripts\\core-exit-diagnostic\\core-without-modules\\reports\\dll-search-duplicate.json"
+                ],
+                "exit_code": 0,
+                "mode": "duplicate",
+                "observation": {
+                  "budget_definition": "Sum of directory UTF16 bytes including one NUL per registration; not a claimed Windows internal buffer layout",
+                  "cleanup_errors": [],
+                  "core_root": "D:\\a\\python_build_scripts\\python_build_scripts\\core-exit-diagnostic\\core-without-modules\\\u4e2d\u6587 \u6a21\u5757\u9a8c\u6536\\VisionWorkshop",
+                  "core_sha256": "9b508d684ec2d594cbd2b162063fd6dc45b9982553f9276ef2bb8010b27064ad",
+                  "executable": "C:\\hostedtoolcache\\windows\\Python\\3.12.10\\x64\\python.exe",
+                  "first_failure": {
+                    "attempted_cumulative_utf16_bytes_with_nul": 65682,
+                    "errno": 2,
+                    "error": "[WinError 206] The filename or extension is too long: 'D:\\\\a\\\\python_build_scripts\\\\python_build_scripts\\\\core-exit-diagnostic\\\\core-without-modules\\\\\u4e2d\u6587 \u6a21\u5757\u9a8c\u6536\\\\VisionWorkshop\\\\site-packages\\\\numpy.libs'",
+                    "error_type": "FileNotFoundError",
+                    "index": 217,
+                    "path": "D:\\a\\python_build_scripts\\python_build_scripts\\core-exit-diagnostic\\core-without-modules\\\u4e2d\u6587 \u6a21\u5757\u9a8c\u6536\\VisionWorkshop\\site-packages\\numpy.libs",
+                    "stage": "numpy-delvewheel",
+                    "status": "FAIL",
+                    "utf16_bytes_with_nul": 274,
+                    "winerror": 206
+                  },
+                  "handles_closed": 217,
+                  "input_sha256": "c8e018fd10fabee40b2c7ba49faf342450d01b457c2f2c03922eb82fa4b209f3",
+                  "mode": "duplicate",
+                  "pid": 7256,
+                  "planned_directory_count": 218,
+                  "root_unicode_characters": 111,
+                  "root_utf16_bytes": 222,
+                  "scope": "Standalone stdlib AddDllDirectory calls only; no Core imports or native DLL loads",
+                  "status": "OBSERVED",
+                  "successful_directory_count": 217,
+                  "successful_utf16_bytes_with_nul": 65408
+                },
+                "pid": 7256,
+                "report_sha256": "bac5111ededca45a4cc53d3ca13840f93681655fa926405ba608b80268900540",
+                "source_entry_count": 218
+              },
+              {
+                "command": [
+                  "C:\\hostedtoolcache\\windows\\Python\\3.12.10\\x64\\python.exe",
+                  "-I",
+                  "-S",
+                  "-B",
+                  "D:\\a\\python_build_scripts\\python_build_scripts\\packager\\scripts\\vision_train_dll_search_probe.py",
+                  "--input",
+                  "D:\\a\\python_build_scripts\\python_build_scripts\\core-exit-diagnostic\\core-without-modules\\reports\\dll-search-input.json",
+                  "--mode",
+                  "unique",
+                  "--output",
+                  "D:\\a\\python_build_scripts\\python_build_scripts\\core-exit-diagnostic\\core-without-modules\\reports\\dll-search-unique.json"
+                ],
+                "exit_code": 0,
+                "mode": "unique",
+                "observation": {
+                  "budget_definition": "Sum of directory UTF16 bytes including one NUL per registration; not a claimed Windows internal buffer layout",
+                  "cleanup_errors": [],
+                  "core_root": "D:\\a\\python_build_scripts\\python_build_scripts\\core-exit-diagnostic\\core-without-modules\\\u4e2d\u6587 \u6a21\u5757\u9a8c\u6536\\VisionWorkshop",
+                  "core_sha256": "9b508d684ec2d594cbd2b162063fd6dc45b9982553f9276ef2bb8010b27064ad",
+                  "executable": "C:\\hostedtoolcache\\windows\\Python\\3.12.10\\x64\\python.exe",
+                  "first_failure": null,
+                  "handles_closed": 109,
+                  "input_sha256": "c8e018fd10fabee40b2c7ba49faf342450d01b457c2f2c03922eb82fa4b209f3",
+                  "mode": "unique",
+                  "pid": 7152,
+                  "planned_directory_count": 109,
+                  "root_unicode_characters": 111,
+                  "root_utf16_bytes": 222,
+                  "scope": "Standalone stdlib AddDllDirectory calls only; no Core imports or native DLL loads",
+                  "status": "OBSERVED",
+                  "successful_directory_count": 109,
+                  "successful_utf16_bytes_with_nul": 32826
+                },
+                "pid": 7152,
+                "report_sha256": "0952c8cf68f4dc6685f2e8d01b961928e76827679a0f0c88b411b9222f5cfe73",
+                "source_entry_count": 109
+              }
+            ],
+            "projection_scope": "Complete first-failure and registration-count/budget/cleanup summary; individual successful registrations remain in artifact",
+            "root": "D:\\a\\python_build_scripts\\python_build_scripts\\core-exit-diagnostic\\core-without-modules\\\u4e2d\u6587 \u6a21\u5757\u9a8c\u6536\\VisionWorkshop",
+            "root_unicode_characters": 111,
+            "root_utf16_bytes": 222,
+            "status": "OBSERVED"
+          },
+          "published": false,
+          "scope": "Original immutable Core diagnostic observations; no rebuild/modules/full candidate matrix",
+          "source_build": {
+            "app_sha": "591f8bef7b2292caf50f4848e3047518e490742c",
+            "build_id": "candidate-45659615499-1",
+            "packager_sha": "d3ace70e41a41b4334a9e44d2dbec0d4907f077d"
+          },
+          "source_product_status": "FAIL",
+          "source_request": {
+            "artifacts": {
+              "core": {
+                "bytes": 180443248,
+                "id": 15045973042,
+                "name": "visionworkshop-core-candidate-45659615499-1",
+                "sha256": "fefae3ffd2e7b4b6e096079521c4f98e73a4a1aaadc9a7d69c21ce4f034420aa"
+              },
+              "evidence": {
+                "bytes": 73474221,
+                "id": 15046836955,
+                "name": "visionworkshop-modular-evidence-45659615499-1",
+                "sha256": "eed972a2d2a487445335d09722fb62bdaa926efd75ba1db5ad911864829ebf81"
+              }
+            },
+            "core_archive": {
+              "bytes": 180443076,
+              "name": "VisionWorkshop-Core-0.0.0.zip",
+              "sha256": "14e62ed16acb684c1ed09573c24ec7b52482dd0d867dbf52df254275d9c7c0d9"
+            },
+            "core_sha256": "9b508d684ec2d594cbd2b162063fd6dc45b9982553f9276ef2bb8010b27064ad",
+            "debugger_observed": true,
+            "diagnostic_attempt": 4,
+            "dll_search_probe": true,
+            "normal_gui_comparison": true,
+            "schema_version": 2,
+            "source_app_sha": "591f8bef7b2292caf50f4848e3047518e490742c",
+            "source_head_sha": "d3ace70e41a41b4334a9e44d2dbec0d4907f077d",
+            "source_run_attempt": 1,
+            "source_run_id": 45659615499
+          },
+          "status": "PASS"
+        },
+        "projection_kind": "diagnostic",
+        "source": {
+          "bytes": 203330,
+          "path": "diagnostic-summary.json",
+          "sha256": "3cba0c1f4fb413ed5a6ecfd78ec0dda5348083db22ffd9856ac9f910700bea24",
+          "status": "READ"
+        }
+      }
+    },
+    {
+      "label": "core-native",
+      "projection_bytes": 1673,
+      "projection_sha256": "d5a92d768bd3794bc823fa903a6d09a7ccb55a423fbe9a4f5f321a4cab6aa313",
+      "report": {
+        "label": "core-native",
+        "projection": {
+          "active_module_count": 144,
+          "command": [
+            "D:\\a\\python_build_scripts\\python_build_scripts\\core-exit-diagnostic\\c\\\u4e2d \u6587\\VisionWorkshop\\VisionWorkshop.exe",
+            "--modular-runtime-check",
+            "--case",
+            "core",
+            "--output",
+            "D:\\a\\python_build_scripts\\python_build_scripts\\core-exit-diagnostic\\c\\reports\\core-without-modules.json"
+          ],
+          "debug_exit_code": 0,
+          "debugger_observed": true,
+          "elapsed_seconds": 36.172,
+          "event_count": 245,
+          "exceptions": [
+            {
+              "code": 2147483651,
+              "code_hex": "0x80000003",
+              "continuation": "DBG_CONTINUE",
+              "expected_initial_break": true,
+              "first_chance": true,
+              "flags": 0,
+              "instruction": {
+                "active_module": {
+                  "base": 140729540935680,
+                  "base_hex": "0x7ffe264c0000",
+                  "file_handle_closed": true,
+                  "load_sequence": 2,
+                  "offset": 1175037,
+                  "offset_hex": "0x11edfd",
+                  "path": "c:\\windows\\system32\\ntdll.dll",
+                  "path_source": "debug-event-file-handle",
+                  "size": 2506752
+                },
+                "address": 140729542110717,
+                "address_hex": "0x7ffe265dedfd",
+                "unloaded_candidates": []
+              },
+              "parameters": [
+                0
+              ],
+              "pid": 1400,
+              "tid": 4820
+            }
+          ],
+          "exit_code": 0,
+          "forced_cleanup": false,
+          "initial_break_seen": true,
+          "layout": {
+            "CreateProcessInfo": 72,
+            "CreateThreadInfo": 24,
+            "DebugEvent": 176,
+            "DebugStringInfo": 16,
+            "ExceptionInfo": 160,
+            "ExceptionRecord": 152,
+            "LoadDllInfo": 40
+          },
+          "pid": 1400,
+          "projection_scope": "All exception records and exit/cleanup fields; full module/event inventory retained in source artifact",
+          "scope": "Debugger-observed native exit; no target memory/register modification",
+          "status": "PASS",
+          "timeout_seconds": 300,
+          "unloaded_module_count": 32
+        },
+        "projection_kind": "native",
+        "source": {
+          "bytes": 176486,
+          "path": "c/reports/native-debug.json",
+          "sha256": "5835f9ff1890208ff4dc6c78c6b7abc5f598de3597ff4238d93a0e34f446c91d",
+          "status": "READ"
+        }
+      }
+    },
+    {
+      "label": "core-internal",
+      "projection_bytes": 7731,
+      "projection_sha256": "10562b328ab44145b71cb7bd8424c7692b201f054c45fd2cc170fc273824837a",
+      "report": {
+        "label": "core-internal",
+        "projection": {
+          "case": "core",
+          "elapsed_seconds": 19.375,
+          "executable": "D:\\a\\python_build_scripts\\python_build_scripts\\core-exit-diagnostic\\c\\\u4e2d \u6587\\VisionWorkshop\\VisionWorkshop.exe",
+          "frozen": true,
+          "network_attempts": [],
+          "pid": 1400,
+          "platform": "win32",
+          "python": "3.12.10",
+          "result": {
+            "capabilities": {
+              "backend_class": "backend.unavailable_backend.UnavailableBackend",
+              "dataset": {
+                "dataset_id": "6664150abe6c3311079e9db09b2bb9958c1f309c6fb0ce41fe4ff4119ea20edf",
+                "identity_sha256": "8ca3b8e639a56c44df8139a9969b7f128753f2a5ea9fac66d6019b93c3999858",
+                "manifest_path": "datasets/yolo/detect/dataset_manifest.json",
+                "status": "ready"
+              },
+              "local": {
+                "begin_train": {
+                  "class": "PyQt5.QtWidgets.QPushButton",
+                  "enabled": false,
+                  "object_name": "begin_train",
+                  "text": "\u5f00\u59cb\u672c\u5730\u8bad\u7ec3",
+                  "tooltip": "\u5f53\u524d\u4e0d\u53ef\u7528\uff1a\u672c\u5730 YOLO MODULE_MISSING: \u6240\u9700\u79bb\u7ebf\u6a21\u5757\u4e0d\u53ef\u7528\uff1aYOLO \u7b97\u6cd5\uff08feature.yolo\uff09\u3001\u5171\u4eab Torch 2.10 / CUDA 12.8 \u8fd0\u884c\u5e93\uff08runtime.torch\uff09\u3002\u8bf7\u5bfc\u5165\u5339\u914d\u7684\u79bb\u7ebf\u6a21\u5757\u5305\uff0c\u5173\u95ed\u5168\u90e8\u7a97\u53e3\u548c\u5de5\u4f5c\u8fdb\u7a0b\u540e\u91cd\u542f\u3002MODULE_MISSING: \u8bf7\u5148\u5bfc\u5165\u79bb\u7ebf\u6a21\u5757\uff1aYOLO \u7b97\u6cd5\u3001\u5171\u4eab Torch 2.10 / CUDA 12.8 \u8fd0\u884c\u5e93\u3002",
+                  "visible": true
+                },
+                "simplify_dataset": {
+                  "class": "PyQt5.QtWidgets.QPushButton",
+                  "enabled": false,
+                  "object_name": "simplify_dataset",
+                  "text": "\u7cbe\u7b80\u6570\u636e\u96c6",
+                  "tooltip": "MODULE_MISSING: \u6240\u9700\u79bb\u7ebf\u6a21\u5757\u4e0d\u53ef\u7528\uff1a\u5171\u4eab Torch 2.10 / CUDA 12.8 \u8fd0\u884c\u5e93\uff08runtime.torch\uff09\u3001\u5171\u4eab\u89c6\u89c9\u6a21\u578b\u8fd0\u884c\u5e93\uff08runtime.vision\uff09\u3001\u56fe\u7247\u7cbe\u7b80 DINOv2 \u8d44\u6e90\uff08resource.image-simplification\uff09\u3002\u8bf7\u5bfc\u5165\u5339\u914d\u7684\u79bb\u7ebf\u6a21\u5757\u5305\uff0c\u5173\u95ed\u5168\u90e8\u7a97\u53e3\u548c\u5de5\u4f5c\u8fdb\u7a0b\u540e\u91cd\u542f\u3002MODULE_MISSING: \u8bf7\u5148\u5bfc\u5165\u79bb\u7ebf\u6a21\u5757\uff1a\u5171\u4eab Torch 2.10 / CUDA 12.8 \u8fd0\u884c\u5e93\u3001\u5171\u4eab\u89c6\u89c9\u6a21\u578b\u8fd0\u884c\u5e93\u3001\u56fe\u7247\u7cbe\u7b80 DINOv2 \u8d44\u6e90",
+                  "visible": false
+                },
+                "test_model": {
+                  "class": "PyQt5.QtWidgets.QPushButton",
+                  "enabled": false,
+                  "object_name": "test_model",
+                  "text": "\u6d4b\u8bd5\u5f53\u524d\u56fe\u7247",
+                  "tooltip": "\u5f53\u524d\u4e0d\u53ef\u7528\uff1a\u672c\u5730 YOLO MODULE_MISSING: \u6240\u9700\u79bb\u7ebf\u6a21\u5757\u4e0d\u53ef\u7528\uff1aYOLO \u7b97\u6cd5\uff08feature.yolo\uff09\u3001\u5171\u4eab Torch 2.10 / CUDA 12.8 \u8fd0\u884c\u5e93\uff08runtime.torch\uff09\u3002\u8bf7\u5bfc\u5165\u5339\u914d\u7684\u79bb\u7ebf\u6a21\u5757\u5305\uff0c\u5173\u95ed\u5168\u90e8\u7a97\u53e3\u548c\u5de5\u4f5c\u8fdb\u7a0b\u540e\u91cd\u542f\u3002MODULE_MISSING: \u8bf7\u5148\u5bfc\u5165\u79bb\u7ebf\u6a21\u5757\uff1aYOLO \u7b97\u6cd5\u3001\u5171\u4eab Torch 2.10 / CUDA 12.8 \u8fd0\u884c\u5e93\u3002",
+                  "visible": false
+                },
+                "training_readiness_status": {
+                  "class": "PyQt5.QtWidgets.QLabel",
+                  "enabled": true,
+                  "object_name": "training_readiness_status",
+                  "text": "\u672c\u5730\u8bad\u7ec3\uff1a\u672a\u5c31\u7eea",
+                  "tooltip": "\u672c\u5730\u8bad\u7ec3\u6682\u4e0d\u53ef\u7528\n\u5f53\u524d\u963b\u6b62\u539f\u56e0\uff1a\u672c\u5730 YOLO MODULE_MISSING: \u6240\u9700\u79bb\u7ebf\u6a21\u5757\u4e0d\u53ef\u7528\uff1aYOLO \u7b97\u6cd5\uff08feature.yolo\uff09\u3001\u5171\u4eab Torch 2.10 / CUDA 12.8 \u8fd0\u884c\u5e93\uff08runtime.torch\uff09\u3002\u8bf7\u5bfc\u5165\u5339\u914d\u7684\u79bb\u7ebf\u6a21\u5757\u5305\uff0c\u5173\u95ed\u5168\u90e8\u7a97\u53e3\u548c\u5de5\u4f5c\u8fdb\u7a0b\u540e\u91cd\u542f\u3002MODULE_MISSING: \u8bf7\u5148\u5bfc\u5165\u79bb\u7ebf\u6a21\u5757\uff1aYOLO \u7b97\u6cd5\u3001\u5171\u4eab Torch 2.10 / CUDA 12.8 \u8fd0\u884c\u5e93\n\u5904\u7406\u540e\u4f1a\u81ea\u52a8\u66f4\u65b0\u5c31\u7eea\u72b6\u6001\u3002",
+                  "visible": true
+                }
+              },
+              "not_run": [
+                "remote submission",
+                "CNN model UI",
+                "DINO deployment model UI"
+              ],
+              "project": {
+                "backend": "yolo",
+                "path": "D:\\a\\python_build_scripts\\python_build_scripts\\core-exit-diagnostic\\c\\reports\\core-without-modules-files\\project",
+                "project_id": "19617a94-ff73-405b-b4dd-207fb0bf60a9",
+                "task": "detect"
+              },
+              "reasons": {
+                "kaggle_training": "",
+                "local_training": "\u672c\u5730 YOLO MODULE_MISSING: \u6240\u9700\u79bb\u7ebf\u6a21\u5757\u4e0d\u53ef\u7528\uff1aYOLO \u7b97\u6cd5\uff08feature.yolo\uff09\u3001\u5171\u4eab Torch 2.10 / CUDA 12.8 \u8fd0\u884c\u5e93\uff08runtime.torch\uff09\u3002\u8bf7\u5bfc\u5165\u5339\u914d\u7684\u79bb\u7ebf\u6a21\u5757\u5305\uff0c\u5173\u95ed\u5168\u90e8\u7a97\u53e3\u548c\u5de5\u4f5c\u8fdb\u7a0b\u540e\u91cd\u542f\u3002MODULE_MISSING: \u8bf7\u5148\u5bfc\u5165\u79bb\u7ebf\u6a21\u5757\uff1aYOLO \u7b97\u6cd5\u3001\u5171\u4eab Torch 2.10 / CUDA 12.8 \u8fd0\u884c\u5e93",
+                "model_test": "\u672c\u5730 YOLO MODULE_MISSING: \u6240\u9700\u79bb\u7ebf\u6a21\u5757\u4e0d\u53ef\u7528\uff1aYOLO \u7b97\u6cd5\uff08feature.yolo\uff09\u3001\u5171\u4eab Torch 2.10 / CUDA 12.8 \u8fd0\u884c\u5e93\uff08runtime.torch\uff09\u3002\u8bf7\u5bfc\u5165\u5339\u914d\u7684\u79bb\u7ebf\u6a21\u5757\u5305\uff0c\u5173\u95ed\u5168\u90e8\u7a97\u53e3\u548c\u5de5\u4f5c\u8fdb\u7a0b\u540e\u91cd\u542f\u3002MODULE_MISSING: \u8bf7\u5148\u5bfc\u5165\u79bb\u7ebf\u6a21\u5757\uff1aYOLO \u7b97\u6cd5\u3001\u5171\u4eab Torch 2.10 / CUDA 12.8 \u8fd0\u884c\u5e93"
+              },
+              "remote": {
+                "begin_kaggle_train": {
+                  "class": "PyQt5.QtWidgets.QPushButton",
+                  "enabled": true,
+                  "object_name": "begin_kaggle_train",
+                  "text": "\u5f00\u59cb Kaggle \u8bad\u7ec3",
+                  "tooltip": "\u63d0\u4ea4\u4e00\u6761\u65b0\u7684 Kaggle \u8bad\u7ec3\u4efb\u52a1\u3002\u7ee7\u7eed\u5df2\u6709\u4efb\u52a1\u8bf7\u5728\u4efb\u52a1\u5217\u8868\u4e2d\u9009\u62e9\u5bf9\u5e94\u64cd\u4f5c\u3002",
+                  "visible": true
+                },
+                "remote_start": {
+                  "class": "PyQt5.QtWidgets.QPushButton",
+                  "enabled": true,
+                  "object_name": "remote_start_proxy",
+                  "text": "\u5f00\u59cb Kaggle \u8bad\u7ec3",
+                  "tooltip": "\u63d0\u4ea4\u4e00\u6761\u65b0\u7684 Kaggle \u8bad\u7ec3\u4efb\u52a1\u3002\u7ee7\u7eed\u5df2\u6709\u4efb\u52a1\u8bf7\u5728\u4efb\u52a1\u5217\u8868\u4e2d\u9009\u62e9\u5bf9\u5e94\u64cd\u4f5c\u3002",
+                  "visible": true
+                },
+                "training_readiness_status": {
+                  "class": "PyQt5.QtWidgets.QLabel",
+                  "enabled": true,
+                  "object_name": "training_readiness_status",
+                  "text": "Kaggle\u8bad\u7ec3\uff1a\u5df2\u5c31\u7eea",
+                  "tooltip": "Kaggle \u8bad\u7ec3\u57fa\u7840\u6761\u4ef6\u5df2\u5c31\u7eea\uff1a\u5f53\u524d\u9879\u76ee\u652f\u6301\u4e91\u7aef\u8bad\u7ec3\uff0c\u8bad\u7ec3\u6570\u636e\u68c0\u67e5\u5df2\u901a\u8fc7\u3002\n\u70b9\u51fb\u201c\u5f00\u59cb Kaggle \u8bad\u7ec3\u201d\u540e\u4ecd\u4f1a\u68c0\u67e5\u63d0\u4ea4\u914d\u7f6e\u3001\u51ed\u636e\u548c\u7f51\u7edc\u7b49\u6761\u4ef6\u3002",
+                  "visible": true
+                }
+              },
+              "remote_target": "kaggle",
+              "scope": "actual YOLO and image-simplification missing-module controls; Kaggle UI readiness only",
+              "screenshots": {
+                "kaggle": true,
+                "local": true
+              },
+              "status": "PASS",
+              "workspace_class": "ui.workspace_view.WorkspaceView"
+            },
+            "cleanup": {
+              "errors": [],
+              "status": "PASS",
+              "window_closed": true,
+              "workers_stopped": true
+            },
+            "gui": {
+              "enabled": true,
+              "screenshot_saved": true,
+              "visible": true
+            },
+            "initial_optional_imports": [],
+            "optional_imports": [],
+            "qt_callback_errors": [],
+            "qt_font": "MS Shell Dlg 2,8.25,-1,5,50,0,0,0,0,0",
+            "qt_platform": "windows",
+            "scope": "actual Core home, YOLO and image-simplification controls; no training or remote submission",
+            "unexpected_dialogs": []
+          },
+          "runtime_identity": {
+            "core_sha256": "9b508d684ec2d594cbd2b162063fd6dc45b9982553f9276ef2bb8010b27064ad",
+            "generation": 0,
+            "modules": {}
+          },
+          "status": "PASS"
+        },
+        "projection_kind": "core",
+        "source": {
+          "bytes": 35356,
+          "path": "c/reports/core-without-modules.json",
+          "sha256": "961b4f93f0d6f6215ad421e90af87882f657f8079804564fbdb78b0a190315db",
+          "status": "READ"
+        }
+      }
+    },
+    {
+      "label": "gui-native",
+      "projection_bytes": 2227,
+      "projection_sha256": "d88187bee85bec3a444313f8c0e90b0cece51ff3d9a096c025100f7f1bf1c8aa",
+      "report": {
+        "label": "gui-native",
+        "projection": {
+          "active_module_count": 133,
+          "command": [
+            "D:\\a\\python_build_scripts\\python_build_scripts\\core-exit-diagnostic\\g\\\u4e2d \u6587\\VisionWorkshop\\VisionWorkshop.exe"
+          ],
+          "debug_exit_code": 0,
+          "debugger_observed": true,
+          "elapsed_seconds": 19.719,
+          "event_count": 208,
+          "exceptions": [
+            {
+              "code": 2147483651,
+              "code_hex": "0x80000003",
+              "continuation": "DBG_CONTINUE",
+              "expected_initial_break": true,
+              "first_chance": true,
+              "flags": 0,
+              "instruction": {
+                "active_module": {
+                  "base": 140729540935680,
+                  "base_hex": "0x7ffe264c0000",
+                  "file_handle_closed": true,
+                  "load_sequence": 2,
+                  "offset": 1175037,
+                  "offset_hex": "0x11edfd",
+                  "path": "c:\\windows\\system32\\ntdll.dll",
+                  "path_source": "debug-event-file-handle",
+                  "size": 2506752
+                },
+                "address": 140729542110717,
+                "address_hex": "0x7ffe265dedfd",
+                "unloaded_candidates": []
+              },
+              "parameters": [
+                0
+              ],
+              "pid": 9148,
+              "tid": 4880
+            }
+          ],
+          "exit_code": 0,
+          "forced_cleanup": false,
+          "gui": {
+            "close_message": "WM_CLOSE",
+            "close_window": {
+              "class": "Qt5152QWindowIcon",
+              "enabled": true,
+              "hwnd": 328034,
+              "pid": 9148,
+              "title": "VisionWorkshop",
+              "visible": true
+            },
+            "observed_windows": [
+              {
+                "class": "Qt5152QWindowIcon",
+                "enabled": true,
+                "hwnd": 328034,
+                "pid": 9148,
+                "title": "VisionWorkshop",
+                "visible": true
+              },
+              {
+                "class": "MSCTFIME UI",
+                "enabled": false,
+                "hwnd": 328018,
+                "pid": 9148,
+                "title": "MSCTFIME UI",
+                "visible": false
+              },
+              {
+                "class": "IME",
+                "enabled": false,
+                "hwnd": 262288,
+                "pid": 9148,
+                "title": "Default IME",
+                "visible": false
+              }
+            ],
+            "window_stability": {
+              "minimum_seconds": 1,
+              "observations": 16,
+              "since": 822.953,
+              "stable_seconds": 1.0779999999999745,
+              "window": {
+                "class": "Qt5152QWindowIcon",
+                "enabled": true,
+                "hwnd": 328034,
+                "pid": 9148,
+                "title": "VisionWorkshop",
+                "visible": true
+              }
+            }
+          },
+          "initial_break_seen": true,
+          "layout": {
+            "CreateProcessInfo": 72,
+            "CreateThreadInfo": 24,
+            "DebugEvent": 176,
+            "DebugStringInfo": 16,
+            "ExceptionInfo": 160,
+            "ExceptionRecord": 152,
+            "LoadDllInfo": 40
+          },
+          "pid": 9148,
+          "projection_scope": "All exception records and exit/cleanup fields; full module/event inventory retained in source artifact",
+          "scope": "Debugger-observed native exit; no target memory/register modification",
+          "status": "PASS",
+          "timeout_seconds": 135,
+          "unloaded_module_count": 24
+        },
+        "projection_kind": "native",
+        "source": {
+          "bytes": 156951,
+          "path": "g/reports/native-debug.json",
+          "sha256": "30c65e1ebe1e53101304a52bf37956dd4484c62bc09f944441817aa90834d044",
+          "status": "READ"
+        }
+      }
+    },
+    {
+      "label": "dll-search",
+      "projection_bytes": 4741,
+      "projection_sha256": "7a519a9807d21fd61173bdf8f46b18cf5257153282b2c25afaabf72818248e93",
+      "report": {
+        "label": "dll-search",
+        "projection": {
+          "core_unchanged": {
+            "bytes": 627769495,
+            "changed": [],
+            "checkpoint": "after-dll-probe",
+            "extra": [],
+            "file_count": 11322,
+            "inventory_sha256": "b981b8111d462a496fb55d3adbe237c43d5364fc2f3f1e2e448c23b1f1572c9f",
+            "missing": [],
+            "report": "core-unchanged-after-dll-probe.json",
+            "report_sha256": "f53b7dc6666f749315402ebb6148271a645fcadf8f3e0bc7f23ee2dd70973d1e",
+            "status": "PASS"
+          },
+          "observations": [
+            {
+              "command": [
+                "C:\\hostedtoolcache\\windows\\Python\\3.12.10\\x64\\python.exe",
+                "-I",
+                "-S",
+                "-B",
+                "D:\\a\\python_build_scripts\\python_build_scripts\\packager\\scripts\\vision_train_dll_search_probe.py",
+                "--input",
+                "D:\\a\\python_build_scripts\\python_build_scripts\\core-exit-diagnostic\\core-without-modules\\reports\\dll-search-input.json",
+                "--mode",
+                "duplicate",
+                "--output",
+                "D:\\a\\python_build_scripts\\python_build_scripts\\core-exit-diagnostic\\core-without-modules\\reports\\dll-search-duplicate.json"
+              ],
+              "exit_code": 0,
+              "mode": "duplicate",
+              "observation": {
+                "budget_definition": "Sum of directory UTF16 bytes including one NUL per registration; not a claimed Windows internal buffer layout",
+                "cleanup_errors": [],
+                "core_root": "D:\\a\\python_build_scripts\\python_build_scripts\\core-exit-diagnostic\\core-without-modules\\\u4e2d\u6587 \u6a21\u5757\u9a8c\u6536\\VisionWorkshop",
+                "core_sha256": "9b508d684ec2d594cbd2b162063fd6dc45b9982553f9276ef2bb8010b27064ad",
+                "executable": "C:\\hostedtoolcache\\windows\\Python\\3.12.10\\x64\\python.exe",
+                "first_failure": {
+                  "attempted_cumulative_utf16_bytes_with_nul": 65682,
+                  "errno": 2,
+                  "error": "[WinError 206] The filename or extension is too long: 'D:\\\\a\\\\python_build_scripts\\\\python_build_scripts\\\\core-exit-diagnostic\\\\core-without-modules\\\\\u4e2d\u6587 \u6a21\u5757\u9a8c\u6536\\\\VisionWorkshop\\\\site-packages\\\\numpy.libs'",
+                  "error_type": "FileNotFoundError",
+                  "index": 217,
+                  "path": "D:\\a\\python_build_scripts\\python_build_scripts\\core-exit-diagnostic\\core-without-modules\\\u4e2d\u6587 \u6a21\u5757\u9a8c\u6536\\VisionWorkshop\\site-packages\\numpy.libs",
+                  "stage": "numpy-delvewheel",
+                  "status": "FAIL",
+                  "utf16_bytes_with_nul": 274,
+                  "winerror": 206
+                },
+                "handles_closed": 217,
+                "input_sha256": "c8e018fd10fabee40b2c7ba49faf342450d01b457c2f2c03922eb82fa4b209f3",
+                "mode": "duplicate",
+                "pid": 7256,
+                "planned_directory_count": 218,
+                "root_unicode_characters": 111,
+                "root_utf16_bytes": 222,
+                "scope": "Standalone stdlib AddDllDirectory calls only; no Core imports or native DLL loads",
+                "status": "OBSERVED",
+                "successful_directory_count": 217,
+                "successful_utf16_bytes_with_nul": 65408
+              },
+              "pid": 7256,
+              "report_sha256": "bac5111ededca45a4cc53d3ca13840f93681655fa926405ba608b80268900540",
+              "source_entry_count": 218
+            },
+            {
+              "command": [
+                "C:\\hostedtoolcache\\windows\\Python\\3.12.10\\x64\\python.exe",
+                "-I",
+                "-S",
+                "-B",
+                "D:\\a\\python_build_scripts\\python_build_scripts\\packager\\scripts\\vision_train_dll_search_probe.py",
+                "--input",
+                "D:\\a\\python_build_scripts\\python_build_scripts\\core-exit-diagnostic\\core-without-modules\\reports\\dll-search-input.json",
+                "--mode",
+                "unique",
+                "--output",
+                "D:\\a\\python_build_scripts\\python_build_scripts\\core-exit-diagnostic\\core-without-modules\\reports\\dll-search-unique.json"
+              ],
+              "exit_code": 0,
+              "mode": "unique",
+              "observation": {
+                "budget_definition": "Sum of directory UTF16 bytes including one NUL per registration; not a claimed Windows internal buffer layout",
+                "cleanup_errors": [],
+                "core_root": "D:\\a\\python_build_scripts\\python_build_scripts\\core-exit-diagnostic\\core-without-modules\\\u4e2d\u6587 \u6a21\u5757\u9a8c\u6536\\VisionWorkshop",
+                "core_sha256": "9b508d684ec2d594cbd2b162063fd6dc45b9982553f9276ef2bb8010b27064ad",
+                "executable": "C:\\hostedtoolcache\\windows\\Python\\3.12.10\\x64\\python.exe",
+                "first_failure": null,
+                "handles_closed": 109,
+                "input_sha256": "c8e018fd10fabee40b2c7ba49faf342450d01b457c2f2c03922eb82fa4b209f3",
+                "mode": "unique",
+                "pid": 7152,
+                "planned_directory_count": 109,
+                "root_unicode_characters": 111,
+                "root_utf16_bytes": 222,
+                "scope": "Standalone stdlib AddDllDirectory calls only; no Core imports or native DLL loads",
+                "status": "OBSERVED",
+                "successful_directory_count": 109,
+                "successful_utf16_bytes_with_nul": 32826
+              },
+              "pid": 7152,
+              "report_sha256": "0952c8cf68f4dc6685f2e8d01b961928e76827679a0f0c88b411b9222f5cfe73",
+              "source_entry_count": 109
+            }
+          ],
+          "projection_scope": "Complete first-failure and registration-count/budget/cleanup summary; individual successful registrations remain in artifact",
+          "root": "D:\\a\\python_build_scripts\\python_build_scripts\\core-exit-diagnostic\\core-without-modules\\\u4e2d\u6587 \u6a21\u5757\u9a8c\u6536\\VisionWorkshop",
+          "root_unicode_characters": 111,
+          "root_utf16_bytes": 222,
+          "status": "OBSERVED"
+        },
+        "projection_kind": "dll",
+        "source": {
+          "bytes": 146292,
+          "path": "core-without-modules/reports/dll-search-summary.json",
+          "sha256": "de42a660ec67647317072027d323f9d3b19bc3daf26a2f24a2e647bff4a496b8",
+          "status": "READ"
+        }
+      }
+    }
+  ]
+}

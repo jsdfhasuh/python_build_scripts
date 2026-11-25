@@ -93,6 +93,27 @@ class WorkflowSafetyTests(unittest.TestCase):
     self.assertEqual(events['workflow_dispatch']['inputs']['reuse_run_id']['default'], '')
     self.assertEqual(events['push']['paths'], ['ci/visionworkshop-modular-candidate.json'])
 
+  def test_candidate_projections_are_read_only_always_and_do_not_skip_the_product_gate(self) -> None:
+    data, _ = loadWorkflow('visionworkshop-modular-candidate.yml')
+    steps = getSteps(data)
+    actual = [i for i, step in enumerate(steps)
+              if 'packager/scripts/verify_vision_train_modular_product.py' in step.get('run', '')]
+    logging = [i for i, step in enumerate(steps)
+               if 'packager/scripts/report_vision_train_modular_candidate.py' in step.get('run', '')]
+    uploads = [i for i, step in enumerate(steps)
+               if step.get('name') == 'Upload candidate evidence independently']
+    self.assertEqual((len(actual), len(logging), len(uploads)), (1, 1, 1))
+    self.assertLess(actual[0], logging[0])
+    self.assertLess(logging[0], uploads[0])
+    self.assertEqual(steps[logging[0]]['if'], 'always()')
+    self.assertNotIn('GH_TOKEN', steps[logging[0]].get('env', {}))
+    self.assertIn('python -I -S -B', steps[logging[0]]['run'])
+    self.assertNotIn('continue-on-error', steps[actual[0]])
+    self.assertNotIn('continue-on-error', steps[logging[0]])
+    guards = next(step for step in steps
+                  if step.get('name') == 'Verify builder and native Windows transaction contracts')
+    self.assertIn('test_vision_train_candidate_reports.py', guards['run'])
+
   def test_core_exit_diagnostic_only_downloads_reviewed_core_without_rebuilding(self) -> None:
     data, events = loadWorkflow('visionworkshop-core-diagnostic.yml')
     job = data['jobs']['windows-core-exit-diagnostic']

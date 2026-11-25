@@ -94,7 +94,10 @@ def configureCore(root: Path, core: dict) -> None:
   for directory in [internal, *(root / item for item in core['dll_dirs'])]:
     if not directory.is_dir() or not directory.resolve().is_relative_to(root):
       raise RuntimeError('Core native directory is missing or outside this installation')
-    DLL_HANDLES.append(os.add_dll_directory(str(directory)))
+  # Only the frozen standard library needs a search directory before the manager.
+  # RuntimeGuard.mount owns the one registration of verified Core/module dirs.
+  # Registering those dirs here too can exhaust the Windows search-path budget.
+  DLL_HANDLES.append(os.add_dll_directory(str(internal)))
   for record in core.get('preload_dlls', []):
     path = verifyFile(root, record)
     DLL_HANDLES.append(ctypes.CDLL(str(path), winmode=0x1100))

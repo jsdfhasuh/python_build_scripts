@@ -146,6 +146,8 @@ jobs:
         run: |
           $env:VISIONWORKSHOP_MODULE_SOURCE = Join-Path $env:GITHUB_WORKSPACE 'source'
           Push-Location packager
+          & $env:BUILD_PYTHON -m unittest discover -s tests -p test_vision_train_candidate_reports.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'Read-only candidate log projection guards failed' }
           & $env:BUILD_PYTHON -m unittest discover -s tests -p test_vision_train_modular_build.py -v
           if ($LASTEXITCODE -ne 0) { throw 'Modular builder unit checks failed' }
           & $env:BUILD_PYTHON -m unittest discover -s tests -p test_vision_train_modular_reuse.py -v
@@ -277,6 +279,13 @@ jobs:
             --output modular-acceptance --pt-timeout 1200 `
             2>&1 | Tee-Object reports/modular-acceptance.log
           if ($LASTEXITCODE -ne 0) { throw 'Real modular product acceptance failed' }
+
+      - name: Print bounded hash-bound candidate report projections
+        if: always()
+        shell: pwsh
+        run: |
+          python -I -S -B packager/scripts/report_vision_train_modular_candidate.py --build modular-candidate/reports --product modular-acceptance/reports
+          if ($LASTEXITCODE -ne 0) { throw 'Candidate log projection failed; full reports remain in the artifact' }
 
       - name: Upload candidate evidence independently
         if: ${{ !cancelled() }}

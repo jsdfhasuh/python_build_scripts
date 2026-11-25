@@ -361,6 +361,82 @@ class ModularBuildTests(unittest.TestCase):
     (root / 'core.json').write_bytes(embedded.encode())
     return root, document, embedded
 
+
+  def makeLauncherCore(self):
+    root = (self.root / 'LauncherCore').resolve()
+    (root / '_internal').mkdir(parents=True)
+    (root / 'python').mkdir()
+    (root / 'site-packages/PyQt5/Qt5/plugins').mkdir(parents=True)
+    (root / 'site-packages/PyQt5/Qt5/bin').mkdir()
+    (root / 'site-packages/PyQt5/Qt5/bin/QtWebEngineProcess.exe').write_bytes(b'fixture')
+    (root / 'site-packages/numpy.libs').mkdir()
+    (root / 'native').mkdir()
+    profile = json.loads((ROOT / 'ci/visionworkshop-msvc-runtime.json').read_text(encoding='utf-8'))
+    records = []
+    for name in profile['preload_order']:
+      path = root / profile['core_files'][name]
+      path.write_bytes(('unloaded CRT fixture: ' + name + '\n').encode('ascii'))
+      records.append({'path': path.relative_to(root).as_posix(),
+                      'size': path.stat().st_size, 'sha256': fileHash(path)})
+    self.assertEqual(len(records), 9)
+    core = {'python_paths': ['python', 'site-packages'],
+            'dll_dirs': ['native', 'site-packages/PyQt5/Qt5/bin', 'site-packages/numpy.libs'],
+            'preload_dlls': records}
+    fakeSystem = SimpleNamespace(_MEIPASS=str(root / '_internal'),
+                                 path=[str(root / '_internal/base_library.zip'), str(self.root)],
+                                 dont_write_bytecode=False)
+    return root, core, fakeSystem
+
+  def test_launcher_registers_only_internal_and_keeps_all_nine_verified_crt_preloads(self):
+    root, core, fakeSystem = self.makeLauncherCore()
+    handles, events = [], []
+    def register(path):
+      events.append(('directory', path))
+      return object()
+    def preload(path, *, winmode):
+      events.append(('preload', path, winmode))
+      return object()
+    with patch.object(launcher, 'sys', fakeSystem), patch.object(launcher, 'DLL_HANDLES', handles), \
+         patch.dict(launcher.os.environ), \
+         patch.object(launcher.os, 'add_dll_directory', side_effect=register, create=True) as add, \
+         patch.object(launcher.ctypes, 'CDLL', side_effect=preload):
+      launcher.configureCore(root, core)
+    add.assert_called_once_with(str(root / '_internal'))
+    self.assertEqual(events, [('directory', str(root / '_internal'))] + [
+      ('preload', str(root / record['path']), 0x1100) for record in core['preload_dlls']])
+    self.assertEqual(len(handles), 10)
+    self.assertEqual(fakeSystem.path, [str(root / 'python'), str(root / 'site-packages'),
+                                      str(root / '_internal/base_library.zip')])
+    self.assertTrue(fakeSystem.dont_write_bytecode)
+
+  def test_deferred_core_dll_directories_are_still_checked_before_registration(self):
+    root, core, fakeSystem = self.makeLauncherCore()
+    (self.root / 'outside-native').mkdir()
+    for invalid in ('missing-native', '../outside-native',
+                    'site-packages/PyQt5/Qt5/bin/QtWebEngineProcess.exe'):
+      with self.subTest(invalid=invalid), patch.object(launcher, 'sys', fakeSystem), \
+           patch.object(launcher, 'DLL_HANDLES', []), patch.dict(launcher.os.environ), \
+           patch.object(launcher.os, 'add_dll_directory', create=True) as add, \
+           patch.object(launcher.ctypes, 'CDLL') as preload, \
+           self.assertRaisesRegex(RuntimeError, 'Core native directory is missing or outside'):
+        launcher.configureCore(root, dict(core, dll_dirs=core['dll_dirs'] + [invalid]))
+      add.assert_not_called()
+      preload.assert_not_called()
+
+  def test_single_registration_does_not_bypass_preloaded_crt_hash_verification(self):
+    root, core, fakeSystem = self.makeLauncherCore()
+    path = root / core['preload_dlls'][0]['path']
+    original = path.read_bytes()
+    path.write_bytes(b'X' + original[1:])
+    with patch.object(launcher, 'sys', fakeSystem), patch.object(launcher, 'DLL_HANDLES', []), \
+         patch.dict(launcher.os.environ), \
+         patch.object(launcher.os, 'add_dll_directory', create=True) as add, \
+         patch.object(launcher.ctypes, 'CDLL') as preload, \
+         self.assertRaisesRegex(RuntimeError, 'Core file integrity check failed'):
+      launcher.configureCore(root, core)
+    add.assert_called_once_with(str(root / '_internal'))
+    preload.assert_not_called()
+
   def test_stdlib_source_verification_runs_without_importing_the_manager(self):
     root, document, embedded = self.makeCore()
     self.assertEqual(launcher.verifyCore(root, embedded), document)
