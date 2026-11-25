@@ -23,6 +23,12 @@ from scripts.verify_vision_train_modules import cleanEnvironment
 from scripts.verify_vision_train_modules import writeReport
 
 
+def productEnvironment(output: Path) -> dict:
+  environment = cleanEnvironment(output)
+  environment['QT_QPA_PLATFORM'] = 'windows'
+  return environment
+
+
 def terminateTree(process, directory: Path) -> None:
   if process.poll() is not None:
     return
@@ -460,8 +466,9 @@ def main(argv=None) -> int:
       summary['core_integrity_checks'].append(
         verifyCoreUnchanged(executable.parent, baseline, reports, name))
 
-    environment = cleanEnvironment(output)
+    environment = productEnvironment(output)
     summary.update(core_sha256=coreDigest, build=core['build'],
+                    qt_platform_requested=environment['QT_QPA_PLATFORM'],
                     module_builds=build.get('module_builds', {
                       name: core['build'] for name in archives}),
                     module_reuse=build.get('module_reuse', {'enabled': False}),

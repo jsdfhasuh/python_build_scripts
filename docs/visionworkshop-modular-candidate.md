@@ -180,7 +180,7 @@ No operation publishes anything.
 
 A Core-only source fix can reuse a completed candidate's module archives by
 explicitly supplying `reuse_run_id` and `reuse_run_attempt`. The current request
-selects application `b1201a03313da762cdd2854a0cd1ff4f87ed87b1` and the original
+selects application `e44eacec0e3732801e872a69a318c74dd5e03bba` and the original
 module ZIPs from run `45616400076`, attempt 1. That source run failed its first
 EXE CLI check; its build was `BUILT`. Reuse preserves that failure status and
 does not transfer native qualification to the new candidate.
@@ -235,6 +235,23 @@ upgrade or registry migration. The default CLI remains a full construction when
 The Windows workflow first runs the shared module contract and actual Windows
 ZIP/transaction/lease and cold-repair tests, plus the legacy fixed-worker
 run-permission tests and annotation diagnostic guards.
+After preparing the runtime dependencies, a separate interpreter probe creates
+a real `QApplication` with the native `windows` platform. It records the default
+font and available families, actual fallback glyph indexes, and ASCII/Chinese
+`QPainter.drawText` pixels on a `QImage` compared with a blank baseline. PNGs and
+process/report identities are saved before downloading reuse assets or freezing
+Core. Empty
+rendering or unsupported ASCII fails; visible Chinese missing-glyph boxes are
+explicitly `UNSUPPORTED`, with the probe marked `LIMITED`, not Chinese visual
+acceptance. No system font or product UI is changed by the probe.
+
+Only this probe and the actual product acceptance use `QT_QPA_PLATFORM=windows`.
+The product driver overrides the shared clean environment's `offscreen` value
+and records the requested platform; the app independently checks the actual Qt
+platform. Source tests and the original B2 probe retain `offscreen`. The early
+interpreter result does not replace inspection of the actual frozen product's
+screenshots.
+
 It then builds the windowed product EXE and round-trips every LZMA ZIP, checking
 the actual compressed per-file size against the shared download limit.
 
@@ -393,6 +410,48 @@ hashes, all changed receipt identities and evidence artifact `15034115936`
 (34,697,589 bytes; verified SHA-256
 `11b7c8d8e200ae55adf82d52045b4e5cdc94e906a3b5aec20389695bdc5fe4ea`).
 This run produced no new Core ZIP or product EXE acceptance result.
+
+[Run 45643325579](https://github.com/jsdfhasuh/python_build_scripts/actions/runs/45643325579)
+at builder `abad01f6457c8f051006342259206e60acd7aea6`, app
+`b1201a03313da762cdd2854a0cd1ff4f87ed87b1`, completed the actual immutable
+source-module qualification and new Core construction in 1,120.796 seconds.
+All eleven original module ZIPs and manifests, including their original build
+identities, remained unchanged. The actual fifteen original/fresh RECORD pairs
+contain 28,693 rows; exactly 22 already excluded `Scripts/*.exe` SHA fields
+differed. Every other raw row/field, retained runtime inventory and non-RECORD
+payload matched. Both raw receipts and the unchanged-fresh-staging checks are
+saved in this run's evidence; this is now observed qualification rather than
+an inference from projected inventories.
+
+The newly frozen Core ZIP is 180,430,293 bytes, SHA-256
+`b52de8727769c0b34ce432b3188394bc555b1f1a00f8c616411a701a2f29d259`.
+All twelve ZIPs total 2,791,220,497 bytes. The real EXE's explicit-output status
+command exited zero, and a separate detached process with null standard handles
+and no `--output` passed the default-result-file check. The Core case then
+created the actual GUI and missing-module controls, closed its window/workers,
+and recorded no optional-framework imports or Python network attempts. However,
+its subsequent native-source audit rejected the observed Windows Defender
+`MpOAV.dll` under `C:/ProgramData/Microsoft/Windows Defender/Platform/` because
+that path was outside the original product and Windows system roots. The run
+did not collect this external DLL's signature or OS registration, so the full
+Core case and product remain **FAIL**. Annotation, module lifecycle, model and
+worker cases were not reached; no assertion is waived by these observations.
+
+Visual inspection of `core-window.png` and `core-yolo-local.png` found widget
+outlines/icons but no rendered text, despite correct Chinese Qt properties in
+the JSON. This run used the `offscreen` Qt platform, so its control-state and
+screenshot-existence observations are not visual acceptance. The next candidate
+uses the native Windows platform and the early font probe described above; the
+old blank-text images and failed Core result remain evidence of this run.
+
+Evidence artifact `15039047778` is 73,329,961 bytes, with downloaded SHA-256
+`85b35f95373c067fd695ca8f2710548aac60e270ec4127a61f51d0ab76e6649a`.
+The complete archive identities, receipt proof, actual CLI results, failure and
+report bindings are preserved in
+`docs/evidence/visionworkshop-modular-candidate-45643325579.json`.
+Further Core-only candidates continue to select the original `45616400076`
+source. A reused run's fresh installed report is not automatically treated as
+the original module's retained RECORD provenance.
 
 ## Initial Windows gate result
 
