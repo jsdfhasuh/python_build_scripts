@@ -427,6 +427,38 @@ def makeCatalog(profile: dict, ownership: dict, distributions: dict, resources: 
   return catalog
 
 
+def validateAuxiliaryPayload(site: Path, distributions: dict, provenance: dict,
+                             ownership: dict, declarations: list[dict]) -> dict:
+  files = []
+  for declaration in declarations:
+    name = declaration['distribution']
+    relative = declaration['path'].removeprefix('site-packages/')
+    item, origin = distributions.get(name, {}), provenance.get(name, {})
+    providers = [distribution for distribution in ownership['distribution_owners']
+                 if relative in distributions[distribution]['records']]
+    if (providers != [name] or item.get('version') != declaration['version']
+        or origin.get('version') != declaration['version']
+        or origin.get('sha256') != declaration['wheel_sha256']
+        or ownership['distribution_owners'].get(name) != declaration['owner']
+        or ownership['import_owners'].get(declaration['import_root']) != declaration['owner']
+        or declaration['import_root'] not in item.get('import_roots', [])):
+      raise BuildConfigError('Auxiliary site payload differs from its reviewed owner/wheel: ' + relative)
+    path = site / relative
+    rejectLinks(path)
+    row = item['records'][relative]
+    digest = base64.urlsafe_b64encode(bytes.fromhex(declaration['sha256'])).decode().rstrip('=')
+    if row[1:] != ['sha256=' + digest, str(declaration['size'])]:
+      raise BuildConfigError('Auxiliary site payload RECORD differs from its original bytes: ' + relative)
+    verifyRecordHash(path, row)
+    if path.stat().st_size != declaration['size'] or fileHash(path) != declaration['sha256']:
+      raise BuildConfigError('Auxiliary site payload bytes changed: ' + relative)
+    files.append({'declaration': declaration, 'wheel_provenance': origin,
+                  'installed_record': row, 'record_sha256': item['record_sha256'],
+                  'installed_path': str(path.resolve()), 'payload_unchanged': True})
+  return {'status': 'PASS', 'files': files,
+          'scope': 'Exact original auxiliary wheel files; no new import namespace or automatic .pth execution'}
+
+
 def validateReadlineProvider(site: Path, distributions: dict, provenance: dict,
                              ownership: dict, declaration: dict) -> dict:
   name, namespace = declaration['distribution'], declaration['namespace']
@@ -640,6 +672,9 @@ def buildCandidate(args) -> dict:
         raise BuildConfigError('Added dependency archive differs from its reviewed digest: ' + name)
     readline = qualifyReadlineCompatibility(args.build_python.resolve(), buildInfo, site,
       distributions, provenance, ownership, contract, reports)
+    auxiliary = validateAuxiliaryPayload(site, distributions, provenance, ownership,
+                                          contract.AUXILIARY_PAYLOAD_FILES)
+    loader.writeReport(reports / 'auxiliary-payload-compatibility.json', auxiliary)
     inventory = inventoryPayload(site, distributions, ownership,
                                  namespaceProviders=profile['namespace_providers'], omittedPython=omitted)
     loader.writeReport(reports / 'installed-distributions.json', {'distributions': distributions,
@@ -671,6 +706,7 @@ def buildCandidate(args) -> dict:
       'namespace_providers': profile['namespace_providers'],
       'distribution_providers': profile['distribution_providers'],
       'windows_stdlib_compatibility': contract.READLINE_COMPATIBILITY,
+      'auxiliary_payload_files': contract.AUXILIARY_PAYLOAD_FILES,
       'msvcp_compatibility': contract.MSVCP140_COMPATIBILITY,
       'core_crt_profile_sha256': fileHash(ROOT / profile['crt_profile'])})
     lock['distributions']['ultralytics'] = sourcePackage
@@ -755,6 +791,7 @@ def buildCandidate(args) -> dict:
                   unique_python_files=pythonFiles, source=sourceState, vendor_sources=vendor,
                   profile_sha256=fileHash(args.profile),
                   readline_compatibility=readline,
+                  auxiliary_payload_compatibility=auxiliary,
                   packager=packagerState, branding=branding)
     return result
   except Exception as error:

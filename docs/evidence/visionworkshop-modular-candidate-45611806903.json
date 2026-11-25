@@ -1,0 +1,210 @@
+{
+  "schema_version": 1,
+  "scope": "Official CRT preparation and narrow readline qualification passed; stopped at module auxiliary payload metadata before freezing",
+  "run": {
+    "id": 45611806903,
+    "job_id": 139196978231,
+    "url": "https://github.com/jsdfhasuh/python_build_scripts/actions/runs/45611806903",
+    "builder_sha": "4d8321a0aebd8a1eae0baf8294ef8462869834df",
+    "app_sha": "683698093e852a17d68b92165ec7cdc57ed113d0",
+    "conclusion": "failure"
+  },
+  "artifact": {
+    "id": 15021865959,
+    "name": "visionworkshop-modular-evidence-45611806903-1",
+    "bytes": 31976487,
+    "sha256": "150d27439957f7acb76b0326666b4443f368f4303b6e5f14d78460c9768eabb5",
+    "downloaded_sha256_verified": true
+  },
+  "completed_gates": {
+    "builder_tests": 33,
+    "shared_contract_tests": 29,
+    "windows_transaction_tests": 17,
+    "repair_annotation_font_resource_guards": {
+      "passed": 92,
+      "skipped": 1,
+      "skip_reason": "Official font not prepared at the early source-test stage"
+    },
+    "protocol_3_fixed_worker_permission_tests": 3,
+    "prepared_official_font_and_both_original_vendor_aliases": {
+      "passed": 1,
+      "skipped": 0
+    },
+    "selected_dependency_preparation": "PASS",
+    "pre_source_vendor_pip_check": "PASS",
+    "offline_resource_preparation": "PASS",
+    "official_crt_cab_extraction_and_source_inventory": "PASS",
+    "isolated_windows_readline_absence_and_exact_shim": "PASS",
+    "sklearn_71_original_native_files_static_import_coverage": "PASS"
+  },
+  "failure": {
+    "stage": "contract.validate_manifest before freeze",
+    "code": "MODULE_OWNER",
+    "message": "Original coloredlogs.pth auxiliary wheel file was treated as an undeclared import root",
+    "original_auxiliary_files": [
+      {
+        "owner": "runtime.ort",
+        "distribution": "coloredlogs",
+        "version": "15.0.1",
+        "path": "site-packages/coloredlogs.pth",
+        "size": 147,
+        "sha256": "dda83a855986efa5cd87f0248b0199c0086eb0e8e7fece7d6741959c5ce39536",
+        "wheel": {
+          "version": "15.0.1",
+          "url": "https://files.pythonhosted.org/packages/a7/06/3d6badcf13db419e25b07041d9c7b4a2c331d3f4e7134445ec5df57714cd/coloredlogs-15.0.1-py2.py3-none-any.whl",
+          "sha256": "612ee75c546f53e92e70049c9dbfcc18c935a2b9a53b66085ce9ef6a6e5c0934",
+          "report_sha256": "66b005c4fc87d1747af032350fd4ef7782e78caaef5b636cb1f273a2924dd18a"
+        },
+        "installed_record": [
+          "coloredlogs.pth",
+          "sha256=3ag6hVmG76XNh_AkiwGZwAhusOjn_s59Z0GVnFzjlTY",
+          "147"
+        ],
+        "original_wheel_member_and_record_confirmed": true
+      },
+      {
+        "owner": "runtime.science",
+        "distribution": "scipy",
+        "version": "1.17.0",
+        "path": "site-packages/scipy-1.17.0-cp312-cp312-win_amd64.whl",
+        "size": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "wheel": {
+          "version": "1.17.0",
+          "url": "https://files.pythonhosted.org/packages/92/ce/672ed546f96d5d41ae78c4b9b02006cedd0b3d6f2bf5bb76ea455c320c28/scipy-1.17.0-cp312-cp312-win_amd64.whl",
+          "sha256": "0937a0b0d8d593a198cededd4c439a0ea216a3f36653901ea1f3e4be949056f8",
+          "report_sha256": "66b005c4fc87d1747af032350fd4ef7782e78caaef5b636cb1f273a2924dd18a"
+        },
+        "installed_record": [
+          "scipy-1.17.0-cp312-cp312-win_amd64.whl",
+          "sha256=47DEQpj8HBSa-_TImW-5JCeuQeRkm5NMpJWZG3hSuFU",
+          "0"
+        ],
+        "original_wheel_member_and_record_confirmed": true
+      }
+    ]
+  },
+  "actual_dependency_requires": {
+    "runtime.torch": [],
+    "runtime.ort": [],
+    "runtime.science": [],
+    "runtime.vision": [
+      "runtime.torch"
+    ],
+    "feature.yolo": [
+      "runtime.science",
+      "runtime.torch"
+    ],
+    "feature.patchcore": [
+      "runtime.science",
+      "runtime.torch",
+      "runtime.vision"
+    ]
+  },
+  "compatibility_findings": [
+    {
+      "status": "explicit-provider",
+      "source": "feature.yolo",
+      "requirement": "opencv-python>=4.6.0",
+      "selected_distribution": "opencv-contrib-python-headless",
+      "selected_version": "4.11.0.86",
+      "alias_metadata_version": null
+    },
+    {
+      "status": "explicit-provider",
+      "source": "anomalib",
+      "requirement": "opencv-python-headless>=4.5.3.56",
+      "selected_distribution": "opencv-contrib-python-headless",
+      "selected_version": "4.11.0.86",
+      "alias_metadata_version": "4.11.0.86"
+    },
+    {
+      "status": "observed/unqualified",
+      "source": "feature.yolo",
+      "requirement": "torch>=1.8.0,<2.10,!=2.4.0; sys_platform == 'win32'",
+      "selected_distribution": "torch",
+      "selected_version": "2.10.0+cu128",
+      "release_gate": "Unresolved vendor compatibility declaration"
+    },
+    {
+      "status": "observed/unqualified",
+      "source": "feature.yolo",
+      "requirement": "torch>=1.8.0,<2.10",
+      "selected_distribution": "torch",
+      "selected_version": "2.10.0+cu128",
+      "release_gate": "Unresolved vendor compatibility declaration"
+    }
+  ],
+  "not_run": [
+    "Product EXE freezing",
+    "Core and module ZIP construction",
+    "Actual product native/offline/module/repair/update/resource cases",
+    "Physical GPU execution",
+    "Physical disconnected-machine acceptance",
+    "Core upgrade migration",
+    "Production DINO ONNX worker and its original numerical contract",
+    "Selected official CRT product ABI execution"
+  ],
+  "report_bindings": {
+    "reports/module-repair-annotation-source.xml": {
+      "bytes": 14383,
+      "sha256": "ce62c2539e173b00b025181a8c160f0e01983540e0a93bf093049eee81562b8c"
+    },
+    "reports/offline-fonts-native.xml": {
+      "bytes": 389,
+      "sha256": "1b9cc5c054ee5adf4958158c3d76e5f6634a6120e2d9e3be25b819e0b6692eef"
+    },
+    "reports/runtime-install.json": {
+      "bytes": 2152805,
+      "sha256": "66b005c4fc87d1747af032350fd4ef7782e78caaef5b636cb1f273a2924dd18a"
+    },
+    "reports/provider-install.json": {
+      "bytes": 29587,
+      "sha256": "912a452fd3fde3f9b59e8231478cd6965efdb9c2023ababe8038e0b18f6bf5f2"
+    },
+    "reports/resource-preparation.json": {
+      "bytes": 3849,
+      "sha256": "c0f02d8aa2375d7526d68b0c531eff43e64be8e742f3fcb342a8df85b10cbe2b"
+    },
+    "modular-candidate/reports/ownership.json": {
+      "bytes": 10219,
+      "sha256": "72ae6c5038fe721577fe0e932a52051e522f3d2bc52c324d5f6ce09b57d2ab95"
+    },
+    "modular-candidate/reports/installed-distributions.json": {
+      "bytes": 11131507,
+      "sha256": "f8bbaf3e0aebcdd3a003f9daee48dca49c32da79125390602c56a2c8dd23d1be"
+    },
+    "modular-candidate/reports/installed-file-ownership.json": {
+      "bytes": 10979775,
+      "sha256": "c8db9cc8d53a50669468567218028703f88531806332e69fa4d83e23c5269e23"
+    },
+    "modular-candidate/reports/modular-build-summary.json": {
+      "bytes": 983,
+      "sha256": "57b24651215b898993f8bdecdd53f43d4e780754838988568ec48c93f25efb82"
+    },
+    "modular-crt/reports/official-crt-preparation.json": {
+      "bytes": 575660,
+      "sha256": "6c1c00d1f3ae848a8710c5a7a7d188283001780e61fed90a8600d92fbe968eea"
+    },
+    "modular-crt/reports/extract-official-runtime-cab.process.json": {
+      "bytes": 344,
+      "sha256": "7c3d4a72cc767765df92230095b757804aa1d6edb174329342b1979c4ac2c679"
+    },
+    "modular-crt/reports/extract-official-crt-files.process.json": {
+      "bytes": 336,
+      "sha256": "28bfad2cd6db0471f1eeda42d7601fc8aefa4f1c03c8d99488dfbee563aa1b55"
+    },
+    "modular-candidate/reports/readline-compatibility.json": {
+      "bytes": 1588,
+      "sha256": "b8d7b539fa0797e39f2a694b958d3bc168bccd704be2e65dc4234a36dd3ed638"
+    },
+    "modular-candidate/reports/shared-crt-compatibility.json": {
+      "bytes": 2256581,
+      "sha256": "e615dd6ca71f84db6a4a0ae7163fd7552848b982e7375abaa868a9c051e30a2e"
+    },
+    "modular-candidate/reports/core-crt-source.json": {
+      "bytes": 2411078,
+      "sha256": "60a891b2e428dfce017392b4b70efbd4337726511ba6f9d904c2123c92d27250"
+    }
+  }
+}

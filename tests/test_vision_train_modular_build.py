@@ -27,6 +27,7 @@ from vision_train_modular_build import pinnedSeeds
 from vision_train_modular_build import prepareAssets
 from vision_train_modular_build import PROFILE
 from vision_train_modular_build import writeCanonical
+from vision_train_modular_build import validateAuxiliaryPayload
 from vision_train_modular_build import validateReadlineProvider
 from vision_train_modular_build import verifyPreparedCoreResource
 from vision_train_module_inventory import buildDependencyLock
@@ -131,6 +132,51 @@ class ModularBuildTests(unittest.TestCase):
     (self.site / 'readline.py').write_bytes(data + b'# changed\n')
     with self.assertRaises(BuildConfigError):
       validateReadlineProvider(self.site, distributions, provenance, ownership, declaration)
+
+  def test_auxiliary_wheel_files_keep_bytes_and_require_exact_record_provider(self):
+    payloads = {'coloredlogs': ('coloredlogs.pth', b'import coloredlogs\n'),
+                'scipy': ('scipy-1.17.0-cp312-cp312-win_amd64.whl', b'')}
+    versions = {'coloredlogs': '15.0.1', 'scipy': '1.17.0'}
+    modules = {'coloredlogs': 'runtime.ort', 'scipy': 'runtime.science'}
+    declarations, provenance = [], {}
+    for name, (path, data) in payloads.items():
+      self.distribution(name, {name + '/__init__.py': b'', path: data}, version=versions[name])
+      declarations.append({'owner': modules[name], 'distribution': name, 'version': versions[name],
+                           'path': 'site-packages/' + path, 'size': len(data),
+                           'sha256': hashlib.sha256(data).hexdigest(), 'wheel_sha256': 'a' * 64,
+                           'import_root': name})
+      provenance[name] = {'version': versions[name], 'sha256': 'a' * 64,
+                          'url': 'https://example.test/' + name + '.whl'}
+    distributions = readDistributions(self.site)
+    ownership = self.ownership(distributions, {'runtime.ort': ['coloredlogs==15.0.1'],
+                                               'runtime.science': ['scipy==1.17.0']})
+    result = validateAuxiliaryPayload(self.site, distributions, provenance, ownership, declarations)
+    self.assertEqual(result['status'], 'PASS')
+    self.assertEqual(len(result['files']), 2)
+    self.assertEqual(set(ownership['import_owners']), {'coloredlogs', 'scipy'})
+    for path, data in payloads.values():
+      self.assertEqual((self.site / path).read_bytes(), data)
+    for invalid in ('wheel', 'version', 'owner', 'import-owner', 'record', 'second-provider'):
+      with self.subTest(invalid=invalid):
+        actual, origins, owners = deepcopy(distributions), deepcopy(provenance), deepcopy(ownership)
+        if invalid == 'wheel':
+          origins['coloredlogs']['sha256'] = 'b' * 64
+        elif invalid == 'version':
+          actual['coloredlogs']['version'] = '15.0.2'
+        elif invalid == 'owner':
+          owners['distribution_owners']['coloredlogs'] = 'core'
+        elif invalid == 'import-owner':
+          owners['import_owners']['coloredlogs'] = 'core'
+        elif invalid == 'record':
+          actual['scipy']['records'][payloads['scipy'][0]][2] = ''
+        else:
+          actual['other'] = {'records': {'coloredlogs.pth': []}}
+          owners['distribution_owners']['other'] = 'runtime.ort'
+        with self.assertRaises(BuildConfigError):
+          validateAuxiliaryPayload(self.site, actual, origins, owners, declarations)
+    (self.site / 'coloredlogs.pth').write_bytes(b'changed')
+    with self.assertRaises(BuildConfigError):
+      validateAuxiliaryPayload(self.site, distributions, provenance, ownership, declarations)
 
   def test_conflicting_record_alias_is_rejected(self):
     metadata = self.distribution('example', {'example/__init__.py': b'VALUE=1\n'})

@@ -317,6 +317,8 @@ def verifySingleModuleUpdate(executable, archive, reports, environment, identity
 
 
 def checkCase(executable, case, reports, name, environment, core, expectedIdentity, timeout=300):
+  # A registered .pth must remain inert even when its opt-in variable is enabled.
+  environment = dict(environment, COLOREDLOGS_AUTO_INSTALL='1')
   report, process = invoke(executable, ['--modular-runtime-check', '--case', case],
                            reports, name, environment, timeout=timeout)
   if (report.get('status') != 'PASS' or report.get('case') != case
@@ -325,6 +327,14 @@ def checkCase(executable, case, reports, name, environment, core, expectedIdenti
       or Path(report.get('executable', '')).resolve() != executable.resolve()
       or report.get('runtime_identity') != expectedIdentity or report.get('network_attempts')):
     raise RuntimeError('Fixed product check has inconsistent execution identity or status: ' + name)
+  if 'runtime.ort' in expectedIdentity['modules']:
+    auxiliary = report.get('inert_pth', {})
+    if (auxiliary.get('status') != 'PASS' or auxiliary.get('module_id') != 'runtime.ort'
+        or auxiliary.get('manifest_sha256') != expectedIdentity['modules']['runtime.ort']
+        or auxiliary.get('COLOREDLOGS_AUTO_INSTALL') != '1'
+        or auxiliary.get('imported_during_mount') is not False
+        or auxiliary.get('normal_import_succeeded') is not True):
+      raise RuntimeError('The retained .pth boundary was not exercised by the actual EXE: ' + name)
   for package, origin in report['loaded_packages'].items():
     owner = 'core' if package in core['import_roots'] else next(
       (module for module, item in core['catalog'].items() if package in item['import_roots']), None)
@@ -336,6 +346,7 @@ def checkCase(executable, case, reports, name, environment, core, expectedIdenti
       raise RuntimeError('Package loaded outside its exact installed owner: ' + package)
   return {'name': name, 'status': 'PASS', 'pid': process['pid'], 'report': name + '.json',
           'sha256': process['report_sha256'], 'runtime_identity': report['runtime_identity'],
+          'inert_pth': report.get('inert_pth'),
           'scope': report.get('scope'), 'result': report.get('result')}
 
 

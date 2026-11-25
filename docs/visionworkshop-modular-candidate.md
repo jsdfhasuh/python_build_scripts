@@ -228,6 +228,9 @@ The GUI lease observation deliberately terminates a disposable GUI process after
 the observation and is not evidence of graceful user-driven shutdown.
 The Python socket/DNS audit is an application-level offline check; it does not
 claim a physically disconnected machine or whole-system network capture.
+The DINO runtime case covers environment inspection and a small native ORT
+graph. Its success, and the separate pretrained-resource or PT worker cases,
+do not qualify the production DINO ONNX worker; that worker remains `NOT_RUN`.
 The driver records a complete initial Core inventory, including EXE and
 `_internal`, and compares it after pending installation, activation, repair,
 removal, complete native/worker execution and rollback. Only the explicit root
@@ -293,3 +296,25 @@ This run produced no Core/module ZIP or product EXE acceptance result.
 The checked artifact identity, exact source gates and actual module dependency
 edges are preserved in
 `docs/evidence/visionworkshop-modular-candidate-45603279133.json`.
+
+[Run 45611806903](https://github.com/jsdfhasuh/python_build_scripts/actions/runs/45611806903)
+passed 33 builder checks, 29 contract checks, 17 Windows transaction checks,
+92 source guards and all three legacy worker checks. Its separate prepared-font
+check passed with zero skips. The official CRT's two CAB extraction steps,
+complete source hashes and static native import coverage passed, as did the
+isolated Windows readline absence observation and original shim validation.
+Construction then stopped before freezing because the original wheel's
+`coloredlogs.pth` was classified as an import root. A complete installed-inventory
+review also identified SciPy's original, empty top-level wheel-name marker;
+both files require exact auxiliary-file ownership, not a new import namespace.
+Their original wheel members and RECORD entries have been checked. No generic
+`.pth` or `.whl` allowance, automatic `.pth` execution or payload rewriting is
+introduced. The native acceptance driver explicitly enables
+`COLOREDLOGS_AUTO_INSTALL=1` so the product must prove the retained hook stays
+inert before third-party imports.
+
+This run produced no Core/module ZIP and no product EXE execution result.
+Evidence artifact `15021865959` is 31,976,487 bytes, SHA-256
+`150d27439957f7acb76b0326666b4443f368f4303b6e5f14d78460c9768eabb5`;
+its source gates and report hashes are recorded in
+`docs/evidence/visionworkshop-modular-candidate-45611806903.json`.
