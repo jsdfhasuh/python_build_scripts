@@ -282,9 +282,14 @@ def qualifyVendoredPython(source: Path, relative: Path, corePython: Path | None,
   records = [row for row in csv.reader(io.StringIO(distributions[0].read_text('RECORD') or ''))
               if row and row[0].replace('\\', '/') == TORCHVISION_PYTHON['path']]
   digest = base64.urlsafe_b64encode(bytes.fromhex(TORCHVISION_PYTHON['sha256'])).decode().rstrip('=')
-  if (len(records) != 1 or records[0][1:] != [
-      'sha256=' + digest, str(TORCHVISION_PYTHON['bytes'])]):
-    raise ValueError('TorchVision duplicate does not match its reviewed wheel RECORD')
+  hashed = [row for row in records if row[1:] == [
+    'sha256=' + digest, str(TORCHVISION_PYTHON['bytes'])]]
+  aliases = [row for row in records if row == [TORCHVISION_PYTHON['path'], '', '']]
+  # The wheel uses a backslash RECORD path. pip preserves it and adds the
+  # installed slash path with blank hash/size; both identify this same file.
+  if len(hashed) != 1 or len(aliases) > 1 or len(records) != len(hashed) + len(aliases):
+    raise ValueError('TorchVision duplicate has conflicting installed RECORD ownership: '
+                     + repr(records[:4]))
   duplicate = nativeIdentity(source / relative)
   if any(duplicate[key] != expected for key, expected in TORCHVISION_PYTHON.items() if key != 'path'):
     raise ValueError('TorchVision duplicate DLL bytes, PE architecture or version changed')
@@ -298,7 +303,7 @@ def qualifyVendoredPython(source: Path, relative: Path, corePython: Path | None,
     'path': relative.as_posix(), 'excluded_file': duplicate, 'owner': owner,
     'distribution': 'torchvision', 'distribution_version': RUNTIME_VERSIONS['torchvision'],
     'wheel_url': TORCHVISION_WHEEL_URL, 'wheel_sha256': TORCHVISION_WHEEL_SHA256,
-    'wheel_record': records[0], 'consumer': consumer,
+    'wheel_record': hashed[0], 'installed_record_aliases': aliases, 'consumer': consumer,
     'reason': 'Reviewed CP312 wheel duplicate omitted; the frozen Core is the only Python owner',
     'runtime_acceptance': 'Requires actual image encode/decode and Core-only Python DLL loading',
   }
@@ -796,6 +801,13 @@ def main(argv: list[str] | None = None) -> int:
     summary['build_tools'] = BUILD_VERSIONS
     summary['runtime_distribution_inventory_sha256'] = objectHash(runtimeInfo['distributions'])
     runCommand([str(runtimePython), '-m', 'pip', 'check'], reports, 'runtime-pip-check')
+    interpreterPreflight = qualifyVendoredPython(
+      Path(runtimeInfo['purelib']), Path(TORCHVISION_PYTHON['path']),
+      Path(buildInfo['base_prefix']) / 'python312.dll', args.torch_install_report.resolve())
+    writeReport(reports / 'interpreter-ownership-preflight.json', {
+      'scope': 'Compiler/runtime inputs before freezing; final Core and loaded DLLs checked later',
+      'status': 'PASS', 'reviewed_duplicate': interpreterPreflight,
+    })
     executable = buildCore(buildPython, buildInfo, output, reports)
     coreFiles = inventory(executable.parent)
     writeReport(reports / 'core-files.json', {'files': coreFiles})

@@ -40,8 +40,21 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: '3.12.10'
-          cache: pip
-          cache-dependency-path: packager/ci/vision-train-modular-probe-constraints.txt
+
+      - name: Locate pip download cache
+        id: pip-cache-path
+        shell: pwsh
+        run: |
+          $pipCachePath = python -m pip cache dir
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot locate pip cache' }
+          "directory=$pipCachePath" | Out-File $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Restore reviewed dependency downloads
+        id: module-pip-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ steps.pip-cache-path.outputs.directory }}
+          key: vw-b2-pip-${{ runner.os }}-cp31210-${{ hashFiles('packager/ci/vision-train-modular-probe-constraints.txt') }}
 
       - name: Create isolated build and runtime preparation environments
         shell: pwsh
@@ -111,6 +124,13 @@ jobs:
             throw 'Pinned CRT source wheel hash differs'
           }
           "CRT_WHEEL=$wheel" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Save successful downloads before acceptance
+        if: ${{ steps.module-pip-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ steps.pip-cache-path.outputs.directory }}
+          key: ${{ steps.module-pip-cache.outputs.cache-primary-key }}
 
       - name: Check loader harness before compiling
         shell: pwsh

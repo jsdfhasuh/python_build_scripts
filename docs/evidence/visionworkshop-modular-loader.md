@@ -142,6 +142,22 @@ Core DLL 与官方 3.12.10 embeddable ZIP 中的 DLL 完全一致，也与第二
 `python312.dll`，同时记录其 SHA256。16 项定向测试与使用真实固定 wheel 的静态资格检查
 通过；尚待下一轮 Windows 真实运算，不记为 B2 整体完成。
 
+### 第三轮：已安装 RECORD 的路径别名
+
+[运行 45582001546](https://github.com/jsdfhasuh/python_build_scripts/actions/runs/45582001546)
+绑定 `4c707301a5e4fae8def1c9bf4f75fbfce4a9b528`。Core 无模块启动继续通过，但资格检查在
+复制阶段拒绝已安装 RECORD。原因是本 wheel 的原始 RECORD 使用反斜杠；pip 保留原有的
+正确摘要记录，同时添加同一文件的斜杠路径、空摘要/大小记录。使用真实 Windows wheel
+执行 pip 安装已复现，且与固定
+[pip 25.0.1 的安装记录逻辑](https://github.com/pypa/pip/blob/25.0.1/src/pip/_internal/operations/install/wheel.py)
+一致。这不是 DLL 字节或 ABI 变化。
+
+资格检查现只核对该单文件：一个正确摘要记录，允许附带一个标准斜杠空摘要别名；矛盾
+摘要、额外重复记录、未知解释器及实际 DLL 字节/PE 变化仍拒绝。不比较整份安装 RECORD，
+不限制 pip 正常生成的 INSTALLER、入口脚本或 pyc 条目。16 项定向检查通过；使用真实 pip
+安装后的 wheel 和 Core DLL 执行资格检查通过。此后把输入资格预检放到冻结编译之前，
+并在依赖准备成功后立即保存下载缓存，避免后续验收失败丢失缓存而重复下载。
+
 ## 后续依赖
 
 实验结果用于确定 A4/B3 的模块布局与公共依赖归属，再实现 A5/B4 的离线安装、更新、

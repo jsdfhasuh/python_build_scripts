@@ -220,6 +220,9 @@ class ModularProbeTests(unittest.TestCase):
 
   def testOnlyReviewedTorchvisionPythonDuplicateIsOmitted(self):
     source, report, corePython, duplicate, owner = self.makeVendoredPython()
+    record = source / 'torchvision-0.25.0+cu128.dist-info/RECORD'
+    with record.open('a', encoding='utf-8') as stream:
+      stream.write('torchvision/python312.dll,,\n')
     def extract(_wheel, destination):
       (destination / 'msvcp140.dll').write_bytes(b'CRT fixture')
       return {'licenses': []}
@@ -235,6 +238,7 @@ class ModularProbeTests(unittest.TestCase):
     self.assertEqual(len(omitted), 1)
     self.assertEqual(omitted[0]['excluded_file']['sha256'], probe.TORCHVISION_PYTHON['sha256'])
     self.assertEqual(omitted[0]['owner']['product_version'], '3.12.10')
+    self.assertEqual(omitted[0]['installed_record_aliases'], [['torchvision/python312.dll', '', '']])
     self.assertNotIn('torchvision/python312.dll', {item['path'] for item in files})
 
   def testReviewedDuplicateRuleRejectsDifferentAbiPayloadOrWheel(self):
@@ -252,6 +256,12 @@ class ModularProbeTests(unittest.TestCase):
         duplicate, dict(owner, product_version='3.12.12')]), \
          self.assertRaisesRegex(ValueError, 'Core must own'):
       probe.qualifyVendoredPython(source, Path('torchvision/python312.dll'), corePython, report)
+    record = source / 'torchvision-0.25.0+cu128.dist-info/RECORD'
+    original = record.read_text(encoding='utf-8')
+    record.write_text(original + 'torchvision/python312.dll,sha256=wrong,7470920\n', encoding='utf-8')
+    with self.assertRaisesRegex(ValueError, 'conflicting installed RECORD ownership'):
+      probe.qualifyVendoredPython(source, Path('torchvision/python312.dll'), corePython, report)
+    record.write_text(original, encoding='utf-8')
     changed = json.loads(report.read_text())
     changed['install'][0]['download_info']['archive_info']['hashes']['sha256'] = '0' * 64
     report.write_text(json.dumps(changed), encoding='utf-8')
