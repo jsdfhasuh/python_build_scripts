@@ -32,6 +32,8 @@ EXCLUDED_ROOTS = {'pip', 'pip.py', 'pyinstaller', '_pyinstaller_hooks_contrib',
                   'altgraph', 'pefile.py', 'peutils.py', 'pytest', '_pytest'}
 STDLIB_EXCLUDED = {'site-packages', 'test', 'tests', 'idlelib', 'tkinter', '_tkinter', 'turtle', 'turtledemo',
                    'ensurepip', 'venv', '__pycache__', '__phello__'}
+BOOTSTRAP_MODULES = {'struct', 'pyimod01_archive', 'pyimod02_importers',
+                     'pyimod03_ctypes', 'pyimod04_pywin32'}
 
 
 def writeReport(path: Path, document: dict) -> None:
@@ -257,7 +259,7 @@ def writePureFixture(runtime: Path, marker: str, version: str) -> None:
 def cleanEnvironment(output: Path) -> dict:
   environment = os.environ.copy()
   for key in list(environment):
-    if key.upper().startswith(('PYTHON', 'CONDA', 'VIRTUAL_ENV')):
+    if key.upper() == 'PATH' or key.upper().startswith(('PYTHON', 'CONDA', 'VIRTUAL_ENV')):
       environment.pop(key)
   system = Path(os.environ['SystemRoot'])
   user = output / 'isolated-user'
@@ -277,8 +279,78 @@ def cleanEnvironment(output: Path) -> dict:
   return environment
 
 
+def cleanBuildEnvironment(info: dict, output: Path) -> dict:
+  environment = cleanEnvironment(output)
+  base = Path(info['base_prefix']).resolve()
+  system = Path(os.environ['SystemRoot']).resolve()
+  environment['PATH'] = os.pathsep.join(str(path) for path in (
+    base, base / 'DLLs', system / 'System32', system))
+  return environment
+
+
+def validateBinarySources(analysis: dict, info: dict, system: Path) -> list[dict]:
+  owners = [('build_venv', Path(info['prefix'])), ('python_base', Path(info['base_prefix'])),
+            ('windows_system', system / 'System32'), ('windows_system', system / 'WinSxS')]
+  records = []
+  for destination, source, kind in analysis['binaries']:
+    path = Path(source)
+    owner = next((name for name, root in owners if isInside(path, root)), None)
+    if not path.is_absolute() or owner is None:
+      raise ValueError('Core native dependency came from an unapproved build source: ' + source)
+    rejectLink(path)
+    records.append({'destination': destination, 'path': str(path.resolve()), 'owner': owner,
+                    'kind': kind, 'bytes': path.stat().st_size, 'sha256': fileHash(path)})
+  return sorted(records, key=lambda item: item['destination'])
+
+
+def validateArchiveInventory(record: dict, executable: Path) -> None:
+  identity = record.get('executable', {})
+  archive = record.get('archive', {})
+  if (record.get('schema_version') != 1
+      or record.get('reader_version') != BUILD_VERSIONS['pyinstaller']
+      or identity.get('path') != str(executable.resolve())
+      or identity.get('bytes') != executable.stat().st_size
+      or identity.get('sha256') != fileHash(executable)
+      or archive.get('python_version') != 312
+      or archive.get('python_library') != 'python312.dll'):
+    raise ValueError('CArchive build evidence does not identify the selected frozen Core')
+  modules = record.get('bootstrap_modules', {})
+  members = record.get('members', [])
+  indexed = {item['name']: item for item in members}
+  embedded = {name for name, item in indexed.items() if item['archive_type'] in {'m', 'M'}}
+  if (set(modules) != BOOTSTRAP_MODULES or embedded != BOOTSTRAP_MODULES
+      or len(indexed) != len(members)):
+    raise ValueError('CArchive bootstrap inventory must contain exactly the pinned module set')
+  for name, module in modules.items():
+    member = indexed[name]
+    if (module.get('archive_type') != member['archive_type']
+        or module.get('payload_sha256') != member['payload_sha256']
+        or not re.fullmatch('[0-9a-f]{64}', module.get('payload_sha256', ''))
+        or module.get('code_filename') != name + '.py'):
+      raise ValueError('CArchive bootstrap payload evidence mismatch: ' + name)
+
+
+def validateBootstrapReport(report: dict, record: dict, executable: Path) -> None:
+  archive = report.get('bootstrap_archive', {})
+  expected = record['archive']
+  if (archive.get('path') != str(executable.resolve())
+      or archive.get('sha256') != record['executable']['sha256']
+      or archive.get('python_version') != expected['python_version']
+      or archive.get('python_library') != expected['python_library']):
+    raise ValueError('Frozen bootstrap archive differs from the independently inspected Core')
+  modules = report.get('bootstrap_modules', {})
+  if set(modules) != BOOTSTRAP_MODULES:
+    raise ValueError('Frozen bootstrap report must contain exactly the pinned module set')
+  for name, module in modules.items():
+    expectedModule = record['bootstrap_modules'][name]
+    if (any(module.get(key) != expectedModule[key] for key in (
+        'archive_type', 'payload_sha256', 'code_filename'))
+        or module.get('module_file') != expectedModule['code_filename']):
+      raise ValueError('Frozen bootstrap does not match the embedded code payload: ' + name)
+
+
 def validateProbeReport(report: dict, *, mode: str, runId: str, pid: int,
-                        executable: Path, runtime: Path, source: Path) -> None:
+                        executable: Path, runtime: Path, source: Path, archive: dict) -> None:
   if (report.get('schema_version') != 1 or report.get('status') != 'PASS'
       or report.get('mode') != mode or report.get('run_id') != runId
       or report.get('pid') != pid or report.get('frozen') is not True
@@ -287,6 +359,7 @@ def validateProbeReport(report: dict, *, mode: str, runId: str, pid: int,
   reportedExe = report.get('sys_executable', report.get('executable', ''))
   if not reportedExe or Path(reportedExe).resolve() != executable.resolve():
     raise ValueError('Frozen probe did not execute the selected Core executable')
+  validateBootstrapReport(report, archive, executable)
   origins = report.get('module_origins', report.get('imports', {}))
   if not isinstance(origins, dict):
     raise ValueError('Frozen probe must expose actual imported file origins')
@@ -320,7 +393,8 @@ def runProbe(executable: Path, runtime: Path, source: Path, reports: Path,
   report = json.loads(reportPath.read_text(encoding='utf-8-sig'))
   process = json.loads((reports / (name + '.process.json')).read_text(encoding='utf-8'))
   validateProbeReport(report, mode=mode, runId=runId, pid=process['pid'],
-                      executable=executable, runtime=runtime, source=source)
+                      executable=executable, runtime=runtime, source=source,
+                      archive=json.loads((reports / 'core-carchive.json').read_text(encoding='utf-8')))
   return {'name': name, 'mode': mode, 'report': reportPath.name,
           'process': name + '.process.json', 'status': 'PASS', 'run_id': runId,
           'gpu': report.get('gpu', {'status': 'NOT_RUN'})}
@@ -392,7 +466,8 @@ def verifyLoadedFileLock(executable: Path, runtime: Path, source: Path, reports:
         raise RuntimeError('Native extension lock did not release without modifying its bytes')
       report = json.loads(reportPath.read_text(encoding='utf-8-sig'))
       validateProbeReport(report, mode='hold', runId=runId, pid=process.pid,
-                          executable=executable, runtime=runtime, source=source)
+                          executable=executable, runtime=runtime, source=source,
+                          archive=json.loads((reports / 'core-carchive.json').read_text(encoding='utf-8')))
       result = {'name': name, 'status': 'PASS', 'run_id': runId, 'pid': process.pid,
                 'exit_code': code, 'target': str(target), 'sha256': before,
                 'write_access_while_loaded': False, 'windows_error': error,
@@ -442,6 +517,64 @@ def windowsFileVersion(path: Path) -> str:
                            fixed[3] >> 16, fixed[3] & 65535)))
 
 
+def inspectCoreArchive(python: Path, executable: Path, reports: Path,
+                       environment: dict) -> dict:
+  program = '''import hashlib
+import importlib.metadata
+import json
+import marshal
+from pathlib import Path
+import struct
+import sys
+import types
+from PyInstaller.archive.readers import CArchiveReader
+
+executable = Path(sys.argv[1]).resolve()
+archive = CArchiveReader(str(executable))
+with executable.open('rb') as stream:
+  executableHash = hashlib.file_digest(stream, 'sha256').hexdigest()
+  stream.seek(archive._end_offset - archive._COOKIE_LENGTH)
+  cookie = struct.unpack(archive._COOKIE_FORMAT, stream.read(archive._COOKIE_LENGTH))
+record = {
+  'schema_version': 1, 'reader': 'PyInstaller.archive.readers.CArchiveReader',
+  'reader_version': importlib.metadata.version('pyinstaller'),
+  'executable': {'path': str(executable), 'bytes': executable.stat().st_size,
+                 'sha256': executableHash},
+  'archive': {'python_version': cookie[4],
+              'python_library': cookie[5].rstrip(b'\\0').decode('utf-8'),
+              'start_offset': archive._start_offset, 'end_offset': archive._end_offset},
+  'options': archive.options, 'members': [], 'bootstrap_modules': {},
+}
+for name, (offset, packed, unpacked, compression, kind) in sorted(archive.toc.items()):
+  payload = archive.extract(name)
+  if len(payload) != unpacked:
+    raise ValueError('CArchive member length mismatch: ' + name)
+  payloadHash = hashlib.sha256(payload).hexdigest()
+  record['members'].append({
+    'name': name, 'archive_type': kind, 'offset': offset, 'compressed_bytes': packed,
+    'bytes': unpacked, 'compression': compression, 'payload_sha256': payloadHash,
+  })
+  if kind in {'m', 'M'}:
+    code = marshal.loads(payload)
+    if not isinstance(code, types.CodeType):
+      raise ValueError('CArchive bootstrap member is not a code object: ' + name)
+    record['bootstrap_modules'][name] = {
+      'archive_type': kind, 'payload_sha256': payloadHash, 'code_filename': code.co_filename,
+    }
+Path(sys.argv[2]).write_text(json.dumps(record, ensure_ascii=False, indent=2) + '\\n',
+                            encoding='utf-8')
+print(json.dumps({'members': len(record['members']),
+                  'bootstrap_modules': sorted(record['bootstrap_modules'])}))
+'''
+  destination = reports / 'core-carchive.json'
+  runCommand([str(python), '-I', '-B', '-c', program, str(executable), str(destination)],
+             reports, 'core-carchive-inspection', cwd=reports.parent / 'compiler-input',
+             env=environment)
+  record = json.loads(destination.read_text(encoding='utf-8'))
+  validateArchiveInventory(record, executable)
+  return record
+
+
 def buildCore(python: Path, info: dict, output: Path, reports: Path) -> Path:
   import pprint
 
@@ -479,7 +612,22 @@ def buildCore(python: Path, info: dict, output: Path, reports: Path) -> Path:
   command = [str(python), '-I', '-B', '-m', 'PyInstaller', '--clean', '--noconfirm',
              '--distpath', str(output / 'compiler-output'), '--workpath', str(output / 'compiler-work'),
              str(spec)]
-  runCommand(command, reports, 'core-build', timeout=900, cwd=specRoot)
+  environment = cleanBuildEnvironment(info, output)
+  writeReport(reports / 'core-build-environment.json', {
+    'executable': str(python), 'cwd': str(specRoot), 'path': environment['PATH'].split(os.pathsep),
+    'removed_inherited_variable_names': sorted(key for key in os.environ
+      if key.upper() == 'PATH' or key.upper().startswith(('PYTHON', 'CONDA', 'VIRTUAL_ENV'))),
+    'python_isolated_mode': True,
+  })
+  runCommand(command, reports, 'core-build', timeout=900, cwd=specRoot, env=environment)
+  analysis = json.loads((reports / 'core-analysis.json').read_text(encoding='utf-8'))
+  sources = validateBinarySources(analysis, info, Path(os.environ['SystemRoot']).resolve())
+  writeReport(reports / 'core-binary-sources.json', {
+    'status': 'PASS', 'python_base': info['base_prefix'], 'build_venv': info['prefix'],
+    'windows_system_roots': [str(Path(os.environ['SystemRoot']) / name)
+                             for name in ('System32', 'WinSxS')],
+    'files': sources,
+  })
   built = output / 'compiler-output/VisionWorkshopProbeCore'
   install = output / 'probe-install/外置 模块/Core'
   install.parent.mkdir(parents=True)
@@ -493,9 +641,9 @@ def buildCore(python: Path, info: dict, output: Path, reports: Path) -> Path:
   banned = {'torch', 'torchvision', 'onnxruntime', 'numpy', 'PyQt5', 'pandas'}
   if any((install / '_internal' / name).exists() for name in banned):
     raise RuntimeError('Core unexpectedly bundled an optional third-party package')
-  analysis = json.loads((reports / 'core-analysis.json').read_text(encoding='utf-8'))
   if any(item[0].split('.')[0] in banned for item in analysis['pure']):
     raise RuntimeError('Core PYZ unexpectedly bundled an optional third-party package')
+  inspectCoreArchive(python, executable, reports, environment)
   return executable
 
 

@@ -1,8 +1,15 @@
+import copy
+import hashlib
 import importlib.util
 import json
+import marshal
+import os
 from pathlib import Path
+import struct
 import tempfile
 import unittest
+from unittest import mock
+import zlib
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -10,6 +17,10 @@ SPEC = importlib.util.spec_from_file_location(
   'verifyVisionTrainModules', ROOT / 'scripts/verify_vision_train_modules.py')
 probe = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(probe)
+CORE_SPEC = importlib.util.spec_from_file_location(
+  'modularProbeCore', ROOT / 'scripts/modular_probe_core.py')
+coreProbe = importlib.util.module_from_spec(CORE_SPEC)
+CORE_SPEC.loader.exec_module(coreProbe)
 
 
 class ModularProbeTests(unittest.TestCase):
@@ -24,17 +35,117 @@ class ModularProbeTests(unittest.TestCase):
     self.core.write_bytes(b'fixture')
     self.source = self.root / 'application'
     self.source.mkdir()
+    self.archive = self.makeArchive()
+
+  def makeArchive(self):
+    modules = {name: {'archive_type': 'm', 'payload_sha256': hashlib.sha256(
+      name.encode()).hexdigest(), 'code_filename': name + '.py'}
+      for name in probe.BOOTSTRAP_MODULES}
+    return {
+      'schema_version': 1, 'reader_version': probe.BUILD_VERSIONS['pyinstaller'],
+      'executable': {'path': str(self.core), 'bytes': self.core.stat().st_size,
+                     'sha256': probe.fileHash(self.core)},
+      'archive': {'python_version': 312, 'python_library': 'python312.dll'},
+      'bootstrap_modules': modules,
+      'members': [dict(name=name, archive_type=value['archive_type'],
+                       payload_sha256=value['payload_sha256']) for name, value in modules.items()],
+    }
 
   def makeReport(self):
     return {'schema_version': 1, 'status': 'PASS', 'mode': 'pure', 'run_id': 'run-1',
             'pid': 123, 'frozen': True, 'python': '3.12.10',
             'sys_executable': str(self.core),
+            'bootstrap_archive': dict(self.archive['archive'], path=str(self.core),
+                                       sha256=self.archive['executable']['sha256']),
+            'bootstrap_modules': {name: dict(value, module_file=value['code_filename'])
+                                    for name, value in self.archive['bootstrap_modules'].items()},
             'module_origins': {'vw_external_fixture': str(
               self.runtime / 'vw_external_fixture/__init__.py')}}
 
   def validate(self, report):
     probe.validateProbeReport(report, mode='pure', runId='run-1', pid=123,
-                              executable=self.core, runtime=self.runtime, source=self.source)
+                              executable=self.core, runtime=self.runtime, source=self.source,
+                              archive=self.archive)
+
+  def testBootstrapInventoryBindsExactExecutableAndEmbeddedModules(self):
+    probe.validateArchiveInventory(self.archive, self.core)
+    altered = copy.deepcopy(self.archive)
+    altered['members'].append({'name': 'unreviewed_module', 'archive_type': 'm',
+                              'payload_sha256': '0' * 64})
+    with self.assertRaisesRegex(ValueError, 'pinned module set'):
+      probe.validateArchiveInventory(altered, self.core)
+    altered = copy.deepcopy(self.archive)
+    altered['bootstrap_modules']['struct']['payload_sha256'] = '0' * 64
+    with self.assertRaisesRegex(ValueError, 'payload evidence mismatch'):
+      probe.validateArchiveInventory(altered, self.core)
+    self.core.write_bytes(b'changed executable')
+    with self.assertRaisesRegex(ValueError, 'selected frozen Core'):
+      probe.validateArchiveInventory(self.archive, self.core)
+
+  def testBootstrapExceptionDoesNotAllowCwdOrSubstitutedEvidence(self):
+    self.validate(self.makeReport())
+    report = self.makeReport()
+    report['bootstrap_archive']['sha256'] = '0' * 64
+    with self.assertRaisesRegex(ValueError, 'independently inspected Core'):
+      self.validate(report)
+    report = self.makeReport()
+    report['bootstrap_modules']['struct']['module_file'] = str(self.root / 'struct.py')
+    with self.assertRaisesRegex(ValueError, 'embedded code payload'):
+      self.validate(report)
+    report = self.makeReport()
+    report['module_origins']['ordinary_relative_module'] = 'ordinary_relative_module.py'
+    with self.assertRaisesRegex(ValueError, 'Invalid import origin'):
+      self.validate(report)
+
+  def testCoreArchiveReaderUsesEmbeddedPayloadAndRejectsTruncation(self):
+    payloads, entries = bytearray(), bytearray()
+    expected = {}
+    for name in sorted(probe.BOOTSTRAP_MODULES):
+      payload = marshal.dumps(compile('MARKER = 1', name + '.py', 'exec'))
+      packed = zlib.compress(payload)
+      encodedName = name.encode() + b'\0'
+      entries.extend(struct.pack('!IIIIBc', 18 + len(encodedName), len(payloads),
+                                 len(packed), len(payload), 1, b'm'))
+      entries.extend(encodedName)
+      payloads.extend(packed)
+      expected[name] = hashlib.sha256(payload).hexdigest()
+    cookie = struct.pack('!8sIIII64s', b'MEI\x0c\x0b\x0a\x0b\x0e',
+                          len(payloads) + len(entries) + 88, len(payloads), len(entries),
+                          312, b'python312.dll')
+    self.core.write_bytes(b'MZ fixture executable' + payloads + entries + cookie)
+    report = coreProbe.readBootstrapArchive(self.core)
+    self.assertEqual({name: value['payload_sha256']
+                      for name, value in report['bootstrap_modules'].items()}, expected)
+    self.assertEqual(report['bootstrap_archive']['sha256'], probe.fileHash(self.core))
+    self.core.write_bytes(self.core.read_bytes()[:-1])
+    with self.assertRaisesRegex(RuntimeError, 'complete CArchive cookie'):
+      coreProbe.readBootstrapArchive(self.core)
+
+  def testBuildEnvironmentAndBinaryInventoryRejectRunnerJava(self):
+    base = self.root / 'CPython'
+    venv = self.root / 'build-venv'
+    windows = self.root / 'Windows'
+    java = self.root / 'Java/bin/ucrtbase.dll'
+    binary = base / 'python312.dll'
+    for file in (java, binary):
+      file.parent.mkdir(parents=True, exist_ok=True)
+      file.write_bytes(b'native fixture')
+    info = {'prefix': str(venv), 'base_prefix': str(base)}
+    with mock.patch.dict(os.environ, {'SystemRoot': str(windows), 'Path': str(java.parent),
+                                      'PATH': str(java.parent), 'PYTHONPATH': str(java.parent)}):
+      environment = probe.cleanBuildEnvironment(info, self.root / 'output')
+    self.assertNotIn(str(java.parent), environment['PATH'])
+    self.assertNotIn('Path', environment)
+    self.assertNotIn('PYTHONPATH', environment)
+    self.assertEqual(environment['PATH'].split(os.pathsep),
+                     [str(base), str(base / 'DLLs'), str(windows / 'System32'), str(windows)])
+    records = probe.validateBinarySources(
+      {'binaries': [('python312.dll', str(binary), 'BINARY')]}, info, windows)
+    self.assertEqual(records[0]['owner'], 'python_base')
+    self.assertEqual(records[0]['sha256'], probe.fileHash(binary))
+    with self.assertRaisesRegex(ValueError, 'unapproved build source'):
+      probe.validateBinarySources({'binaries': [('ucrtbase.dll', str(java), 'BINARY')]},
+                                   info, windows)
 
   def testProbeRejectsStaleWrongProcessOrNonFrozenEvidence(self):
     self.validate(self.makeReport())

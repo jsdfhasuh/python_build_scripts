@@ -116,7 +116,7 @@ jobs:
         shell: pwsh
         working-directory: packager
         run: |
-          & $env:BUILD_PYTHON -m unittest discover -s tests -p test_vision_train_modules.py -v
+          & $env:BUILD_PYTHON -m unittest discover -s tests -p 'test_*modul*.py' -v
           if ($LASTEXITCODE -ne 0) { throw 'Loader harness unit checks failed' }
 
       - name: Build real frozen Core and test external modules

@@ -6,13 +6,17 @@ import hashlib
 import importlib
 import importlib.metadata
 import json
+import marshal
 import os
 from pathlib import Path
 import platform
+import struct
 import sys
 import time
 import traceback
+import types
 import uuid
+import zlib
 
 
 SCHEMA_VERSION = 1
@@ -22,6 +26,13 @@ FORBIDDEN_DINO = ('torch', 'torchvision', 'anomalib', 'lightning', 'lightning_fa
                   'pytorch_lightning', 'transformers')
 DLL_HANDLES = []
 NETWORK_ATTEMPTS = []
+BOOTSTRAP_NAMES = ('struct', 'pyimod01_archive', 'pyimod02_importers',
+                   'pyimod03_ctypes', 'pyimod04_pywin32')
+# Capture identities before adding any external package or application path.
+BOOTSTRAP_AT_START = {name: sys.modules.get(name) for name in BOOTSTRAP_NAMES}
+CARCHIVE_MAGIC = b'MEI\x0c\x0b\x0a\x0b\x0e'
+CARCHIVE_COOKIE = struct.Struct('!8sIIII64s')
+CARCHIVE_ENTRY = struct.Struct('!IIIIBc')
 
 
 def require(condition: bool, message: str) -> None:
@@ -43,6 +54,79 @@ def fileHash(path: Path) -> str:
     for block in iter(lambda: stream.read(4 * 1024 ** 2), b''):
       hasher.update(block)
   return hasher.hexdigest()
+
+
+def readBootstrapArchive(executable: Path) -> dict:
+  # PyInstaller 6.18 imports CArchive module entries with PyImport_ExecCodeModule.
+  # Their relative co_filename becomes __file__; it does not identify a CWD file.
+  image = executable.read_bytes()
+  cookieOffset = image.rfind(CARCHIVE_MAGIC)
+  require(0 <= cookieOffset <= len(image) - CARCHIVE_COOKIE.size,
+          'Core executable has no complete CArchive cookie')
+  _, archiveBytes, tocOffset, tocBytes, pythonVersion, pythonLibrary = (
+    CARCHIVE_COOKIE.unpack_from(image, cookieOffset))
+  archiveStart = cookieOffset + CARCHIVE_COOKIE.size - archiveBytes
+  tocStart = archiveStart + tocOffset
+  tocEnd = tocStart + tocBytes
+  require(0 <= archiveStart <= tocStart <= tocEnd == cookieOffset,
+          'Core CArchive has invalid TOC bounds')
+  pythonLibrary = pythonLibrary.rstrip(b'\0').decode('ascii')
+  require(pythonVersion == 312 and pythonLibrary.casefold() == 'python312.dll',
+          'Core CArchive does not target the selected CPython ABI')
+  modules = {}
+  cursor = tocStart
+  while cursor < tocEnd:
+    require(cursor + CARCHIVE_ENTRY.size <= tocEnd, 'Truncated Core CArchive TOC header')
+    entryBytes, offset, storedBytes, rawBytes, compression, archiveType = (
+      CARCHIVE_ENTRY.unpack_from(image, cursor))
+    require(CARCHIVE_ENTRY.size < entryBytes <= tocEnd - cursor,
+            'Invalid Core CArchive TOC entry length')
+    nameBytes = image[cursor + CARCHIVE_ENTRY.size:cursor + entryBytes]
+    require(nameBytes.endswith(b'\0'), 'Unterminated Core CArchive member name')
+    name = nameBytes.rstrip(b'\0').decode('utf-8')
+    cursor += entryBytes
+    if name not in BOOTSTRAP_NAMES:
+      continue
+    require(name not in modules, 'Duplicate Core CArchive bootstrap member: ' + name)
+    require(archiveType in (b'm', b'M') and compression in (0, 1),
+            'Core bootstrap entry is not a CArchive Python module: ' + name)
+    require(0 < rawBytes <= 8 * 1024 ** 2 and 0 < storedBytes
+            and 0 <= offset <= tocOffset - storedBytes,
+            'Invalid Core CArchive bootstrap payload bounds: ' + name)
+    payload = image[archiveStart + offset:archiveStart + offset + storedBytes]
+    if compression:
+      decoder = zlib.decompressobj()
+      payload = decoder.decompress(payload, rawBytes + 1)
+      require(decoder.eof and not decoder.unused_data and not decoder.unconsumed_tail,
+              'Invalid Core CArchive bootstrap compression: ' + name)
+    require(len(payload) == rawBytes, 'Core bootstrap payload size mismatch: ' + name)
+    code = marshal.loads(payload)
+    require(isinstance(code, types.CodeType) and code.co_filename == name + '.py',
+            'Unexpected Core CArchive bootstrap code filename: ' + name)
+    modules[name] = {'archive_type': archiveType.decode('ascii'),
+                     'payload_sha256': hashlib.sha256(payload).hexdigest(),
+                     'code_filename': code.co_filename}
+  require(set(modules) == set(BOOTSTRAP_NAMES), 'Core CArchive is missing bootstrap modules')
+  return {'bootstrap_archive': {'path': str(executable.resolve()),
+                                 'sha256': hashlib.sha256(image).hexdigest(),
+                                 'python_version': pythonVersion,
+                                 'python_library': pythonLibrary},
+          'bootstrap_modules': modules}
+
+
+def recordBootstrapOrigins(report: dict) -> set[str]:
+  modules = report.get('bootstrap_modules', {})
+  require(set(modules) == set(BOOTSTRAP_NAMES), 'Verified Core bootstrap evidence is missing')
+  for name, evidence in modules.items():
+    module = sys.modules.get(name)
+    require(module is not None and module is BOOTSTRAP_AT_START[name],
+            'Core CArchive bootstrap module was replaced: ' + name)
+    moduleFile = getattr(module, '__file__', None)
+    require(moduleFile == evidence['code_filename'] == name + '.py',
+            'Core CArchive bootstrap origin changed: ' + name)
+    evidence['module_file'] = moduleFile
+    evidence['module_spec_origin'] = getattr(getattr(module, '__spec__', None), 'origin', None)
+  return set(modules)
 
 
 def writeReport(path: Path, value: dict) -> None:
@@ -93,6 +177,7 @@ def loadedLibraries() -> list[str]:
 
 
 def recordOrigins(report: dict, runtimeRoot: Path, sourceRoot: Path | None) -> None:
+  bootstrap = recordBootstrapOrigins(report)
   coreRoot = Path(sys.executable).resolve().parent
   permitted = [coreRoot, runtimeRoot]
   if sourceRoot is not None:
@@ -102,6 +187,9 @@ def recordOrigins(report: dict, runtimeRoot: Path, sourceRoot: Path | None) -> N
   unexpected = {}
   embedded = {}
   for name, module in tuple(sys.modules.items()):
+    if name in bootstrap:
+      embedded[name] = 'carchive'
+      continue
     specification = getattr(module, '__spec__', None)
     if getattr(specification, 'origin', None) in ('built-in', 'frozen'):
       embedded[name] = specification.origin
@@ -133,6 +221,16 @@ def recordOrigins(report: dict, runtimeRoot: Path, sourceRoot: Path | None) -> N
           'The frozen process did not load python312.dll')
   require(all(isWithin(Path(path), coreRoot) for path in pythonDlls),
           'A second external Python DLL entered the frozen process')
+  vcRuntimeDlls = [path for path in report['loaded_libraries']
+                   if Path(path).name.casefold().startswith('vcruntime140')
+                   and Path(path).suffix.casefold() == '.dll']
+  report['vcruntime_dlls'] = vcRuntimeDlls
+  require(any(Path(path).name.casefold() == 'vcruntime140.dll' for path in vcRuntimeDlls),
+          'The frozen process did not load its VCRUNTIME140 ABI dependency')
+  require(all(isWithin(Path(path), coreRoot) for path in vcRuntimeDlls),
+          'A VCRUNTIME140 DLL loaded outside the CPython Core')
+  report['vcruntime_files'] = [{'path': path, 'sha256': fileHash(Path(path)),
+                               'bytes': Path(path).stat().st_size} for path in vcRuntimeDlls]
   nativePrefixes = ('torch', 'c10', 'cublas', 'cudnn', 'cudart', 'cufft', 'curand',
                     'cusolver', 'cusparse', 'nvrtc', 'nvjitlink', 'onnxruntime', 'qt5',
                     'libiomp', 'libscipy_openblas', 'msvcp140')
@@ -173,6 +271,10 @@ def configureRuntime(runtimeRoot: Path, report: dict) -> None:
   coreLibraries = Path(sys._MEIPASS).resolve()
   require(isWithin(coreLibraries, coreRoot), 'Frozen standard library is outside Core')
   DLL_HANDLES.append(os.add_dll_directory(str(coreLibraries)))
+  for name in ('vcruntime140.dll', 'vcruntime140_1.dll'):
+    library = coreLibraries / name
+    require(library.is_file(), 'Core is missing its exact CPython ABI dependency: ' + name)
+    DLL_HANDLES.append(ctypes.CDLL(str(library), winmode=0x1100))
   crt = runtimeRoot / 'msvcp140.dll'
   require(crt.is_file(), 'External runtime has no explicitly owned msvcp140.dll')
   digest = fileHash(crt)
@@ -245,16 +347,24 @@ def checkTorch(runtimeRoot: Path, report: dict) -> None:
                           torch_version=torch.__version__, torchvision_version=vision.__version__,
                           cuda_build=torch.version.cuda)
   available = torch.cuda.is_available()
+  devices = cudaDeviceCount()
+  report['checks'].update(torch_cuda_available=available, cuda_driver_probe=devices)
   if available:
+    report['gpu'] = {'status': 'FAIL', 'scope': 'Torch matmul and TorchVision NMS',
+                     'driver_probe': devices}
     actual = (left.cuda() @ right.cuda()).cpu().tolist()
     chosen = ops.nms(boxes.cuda(), scores.cuda(), 0.5).cpu().tolist()
     torch.cuda.synchronize()
     require(actual == expected and chosen == [0, 2], 'External Torch GPU operation failed')
     report['gpu'] = {'status': 'PASS', 'scope': 'Torch matmul and TorchVision NMS',
-                     'device': torch.cuda.get_device_name(0)}
+                     'device': torch.cuda.get_device_name(0), 'driver_probe': devices}
   else:
+    if devices['available']:
+      report['gpu'] = {'status': 'FAIL', 'driver_probe': devices,
+                       'reason': 'CUDA driver exposes a device but Torch cannot use CUDA'}
+      raise RuntimeError(report['gpu']['reason'])
     report['gpu'] = {'status': 'NOT_RUN', 'reason': 'torch.cuda.is_available() is false',
-                     'device_count': torch.cuda.device_count()}
+                     'device_count': torch.cuda.device_count(), 'driver_probe': devices}
 
 
 def loadQtBeforeCompute(runtimeRoot: Path, report: dict) -> None:
@@ -423,6 +533,7 @@ def main() -> int:
     require(os.name == 'nt', 'This probe targets Windows DLL loading')
     require(report['python'] == PYTHON_VERSION, 'Probe requires exact CPython ' + PYTHON_VERSION)
     require(not isWithin(reportPath, runtimeRoot), 'Reports cannot modify the external runtime')
+    report.update(readBootstrapArchive(Path(sys.executable)))
     reportPath.parent.mkdir(parents=True, exist_ok=True)
     sys.dont_write_bytecode = True
     os.environ['PYTHONDONTWRITEBYTECODE'] = '1'

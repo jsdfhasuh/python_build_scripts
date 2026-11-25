@@ -67,6 +67,49 @@ DINO 使用的是原应用 `environment()` 加载路径加独立 ORT 小图，�
 `VisionWorkshopProbeCore.zip` 仅用于本实验，不包含产品 GUI 和外部运行库，不能当成
 已经缩减完成的 VisionWorkshop 安装包。
 
+## 首轮真实 Windows 结果
+
+[运行 45575679761](https://github.com/jsdfhasuh/python_build_scripts/actions/runs/45575679761)
+绑定打包提交 `2dbd6c13423f926c5998d3c16850b731ac8f9f0e`，结果为 **FAIL**，没有通过 B2。
+Core 已实际启动，但后续来源校验发现两个需要修正的问题：
+
+1. PyInstaller CArchive 的 `struct` 和四个 `pyimod` 引导模块使用相对 `__file__`。
+   验证脚本错误地把这些内嵌模块解析成工作目录中的源码。修正须由真实 EXE 的 CArchive
+   清单佐证其身份，不允许将工作目录或任意相对导入加入白名单。
+2. 编译阶段继承的 runner PATH 导致 PyInstaller 从 runner 的 Java 安装目录采集 43 个
+   UCRT/API-set 文件，合计 2,316,216 字节，其中 UCRT 已实际加载。下一轮须隔离编译时
+   PATH 并验证原生输入来源；仅隔离运行时 PATH 不足以保证构建来源可重复。
+
+首轮 CPython ABI forwarder、VCRT140 和 VCRT140_1 的来源、目标摘要及实际加载位置
+一致，Python 为精确 3.12.10。尚未运行到外置依赖矩阵，不能根据这次 Core 启动推断
+Torch、ORT、模块重载或 GPU 通过。失败报告保留在 artifact `15004042782`，其 ZIP SHA256
+为 `4e8ae9298ec88306abe6fc071b98ea667faf2fc7a1c8668f2e6ec69156785fa8`。
+
+## 首轮问题修复与本地验证
+
+修复保留原有来源边界，不将工作目录或任意相对路径加入白名单：
+
+- 构建后使用固定 PyInstaller 6.18.0 的 `CArchiveReader` 读取真实 EXE，记录文件大小、
+  SHA256、CPython ABI，以及五个引导模块的归档类型、代码文件名和解压后 payload SHA256。
+- 冻结进程从自身 EXE 独立读取同一归档，核对引导模块未被替换；宿主校验其报告与构建后
+  清单一致。普通模块仍必须提供 Core、外部运行库或获准第一方源码范围内的绝对来源。
+- 编译时 PATH 仅包含本次 CPython、其 DLL 目录和 Windows 系统目录；额外核对 Analysis
+  中每个原生输入的真实来源。来自 runner Java 或其他工具安装目录的输入直接报错。
+- 显式先加载 Core 自有的 `vcruntime140.dll` 和 `vcruntime140_1.dll`，再加载已固定摘要的
+  MSVCP 与 Qt/计算库；实际进程报告核对 VCRT 来源。检测到 GPU 设备但 Torch 无法使用时
+  记录失败，不能再归为无硬件未执行。
+
+本地 14 项定向测试通过，包括首轮来源误判、新增 CArchive 证据绑定、普通相对导入拒绝、
+Java 来源拒绝和归档截断。全量运行 457 项，450 项通过、6 项平台跳过、1 项失败：
+`test_dry_run_previews_body_without_writing_outputs` 的目录不变断言观察到临时测试仓库
+`.git/objects/maintenance.lock` 消失，与首轮已有环境现象相同。定向复跑该用例及其
+`load_tests` 同组的 5 项，共 6 项通过；未删除、修改或放宽该断言。
+Python 语法与工作流 YAML 解析通过。这些均为验证脚本测试，
+修正后的真实 Windows 运行尚待重新执行，不能据此将 B2 或产品模块化标记为通过。
+
+归档结构对照固定版本
+[PyInstaller 6.18.0 CArchive reader](https://github.com/pyinstaller/pyinstaller/blob/v6.18.0/PyInstaller/archive/readers.py)。
+
 ## 后续依赖
 
 实验结果用于确定 A4/B3 的模块布局与公共依赖归属，再实现 A5/B4 的离线安装、更新、
