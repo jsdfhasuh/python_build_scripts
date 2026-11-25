@@ -1,6 +1,22 @@
 {
   "schema_version": 1,
   "branding_profile": "profiles/visionworkshop.json",
+  "core_prepared_resources": [
+    {
+      "path": "static/fonts/NotoSansCJKsc-Regular.otf",
+      "source_url": "https://raw.githubusercontent.com/notofonts/noto-cjk/523d033d6cb47f4a80c58a35753646f5c3608a78/Sans/OTF/SimplifiedChinese/NotoSansCJKsc-Regular.otf",
+      "size": 16437364,
+      "git_blob_sha1": "dc15562470b4f842321894787a0d066879ccff8b",
+      "sha256": "2c76254f6fc379fddfce0a7e84fb5385bb135d3e399294f6eeb6680d0365b74b"
+    },
+    {
+      "path": "static/fonts/LICENSE-NotoSansCJK.txt",
+      "source_url": "https://raw.githubusercontent.com/notofonts/noto-cjk/523d033d6cb47f4a80c58a35753646f5c3608a78/LICENSE",
+      "size": 4301,
+      "git_blob_sha1": "d952d62c065f3f35fb83a173496e90b21525aef3",
+      "sha256": "6a73f9541c2de74158c0e7cf6b0a58ef774f5a780bf191f2d7ec9cc53efe2bf2"
+    }
+  ],
   "constraints": "ci/vision-train-modular-probe-constraints.txt",
   "constraint_origin": "Production runtime 45544329988; selected dependency closures only",
   "extra_pins": {

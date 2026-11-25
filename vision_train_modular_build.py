@@ -16,6 +16,7 @@ import sys
 import time
 import tomllib
 import traceback
+from urllib.request import urlopen
 from pathlib import Path
 
 from build_config import BuildConfigError
@@ -152,6 +153,7 @@ def prepareInputs(args) -> dict:
 
 def prepareAssets(args) -> dict:
   source = args.source_root.resolve()
+  profile, _pins = loadProfile(args.profile)
   assets = args.assets_root.resolve()
   if (assets == source or assets.is_relative_to(source) or source.is_relative_to(assets)
       or assets.is_relative_to(ROOT)):
@@ -176,7 +178,9 @@ def prepareAssets(args) -> dict:
       cache = dino['prepare_default']()
       copyTree(cache, destination)
       dino['verify_default'](destination)
+    prepareCoreResources(assets, profile)
     result = {'files': fileRecords(assets), 'resource_root': str(assets),
+              'core_resource_sources': profile['core_prepared_resources'],
               'preparation_sources': {name: fileHash(source / name) for name in (
                 'anomaly_func/pretrained_weights.py', 'anomaly_func/dinov2_resources.py',
                 'scripts/prepare_image_simplification_weights.py',
@@ -186,6 +190,59 @@ def prepareAssets(args) -> dict:
     return result
   finally:
     sys.path.remove(str(source))
+
+
+def verifyPreparedCoreResource(path: Path, declaration: dict) -> None:
+  rejectLinks(path)
+  size = path.stat().st_size
+  if size != declaration['size']:
+    raise BuildConfigError('Prepared Core resource size differs from its fixed source: ' + str(path))
+  gitDigest = hashlib.sha1(('blob ' + str(size) + '\0').encode('ascii'))
+  digest = hashlib.sha256()
+  with path.open('rb') as stream:
+    for chunk in iter(lambda: stream.read(1024 * 1024), b''):
+      gitDigest.update(chunk)
+      digest.update(chunk)
+  if (gitDigest.hexdigest() != declaration['git_blob_sha1']
+      or digest.hexdigest() != declaration['sha256']):
+    raise BuildConfigError('Prepared Core resource digest differs from its fixed source: ' + str(path))
+
+
+def prepareCoreResources(assets: Path, profile: dict) -> None:
+  for declaration in profile['core_prepared_resources']:
+    relative = declaration['path']
+    if (not relative.startswith('static/fonts/') or '\\' in relative or ':' in relative
+        or any(part in ('', '.', '..') for part in relative.split('/'))):
+      raise BuildConfigError('Prepared Core resource path is outside the declared font directory')
+    if not re.fullmatch(
+        r'https://raw\.githubusercontent\.com/notofonts/noto-cjk/[0-9a-f]{40}/.+',
+        declaration['source_url']):
+      raise BuildConfigError('Core font preparation requires an immutable reviewed upstream URL')
+    target = assets / relative
+    if target.exists():
+      verifyPreparedCoreResource(target, declaration)
+      continue
+    target.parent.mkdir(parents=True, exist_ok=True)
+    temporary = target.with_name(target.name + '.download')
+    try:
+      total = 0
+      with urlopen(declaration['source_url'], timeout=90) as reader, temporary.open('xb') as writer:
+        while chunk := reader.read(min(1024 * 1024, declaration['size'] - total + 1)):
+          total += len(chunk)
+          if total > declaration['size']:
+            raise BuildConfigError('Core font download exceeds the reviewed source size')
+          writer.write(chunk)
+      verifyPreparedCoreResource(temporary, declaration)
+      os.replace(temporary, target)
+    finally:
+      temporary.unlink(missing_ok=True)
+
+
+def copyPreparedCoreResources(assets: Path, core: Path, profile: dict) -> None:
+  for declaration in profile['core_prepared_resources']:
+    source = assets / declaration['path']
+    verifyPreparedCoreResource(source, declaration)
+    copyFile(source, core / 'python' / declaration['path'])
 
 
 def loadContract(source: Path):
@@ -401,7 +458,12 @@ def buildFrozenCore(python: Path, info: dict, core: Path, metadata: dict,
                    reports, 'core-build', timeout=900, cwd=compiler, env=environment)
   analysis = json.loads((reports / 'core-analysis.json').read_text(encoding='utf-8'))
   sources = loader.validateBinarySources(analysis, info, Path(os.environ['SystemRoot']).resolve())
-  loader.writeReport(reports / 'core-binary-sources.json', {'status': 'PASS', 'files': sources})
+  compilerSite = Path(info['purelib']).resolve()
+  leaked = [record['path'] for record in sources if Path(record['path']).is_relative_to(compilerSite)]
+  loader.writeReport(reports / 'core-binary-sources.json', {
+    'status': 'FAIL' if leaked else 'PASS', 'files': sources, 'compiler_site_packages_leaks': leaked})
+  if leaked:
+    raise BuildConfigError('Third-party compiler test dependencies leaked into the frozen stdlib Core')
   optional = set(metadata['import_roots'])
   optional.update(root for item in metadata['catalog'].values() for root in item['import_roots'])
   if any(item[0].split('.')[0] in optional for item in analysis['pure']):
@@ -446,7 +508,8 @@ def buildCandidate(args) -> dict:
     if buildInfo['prefix'] == runtimeInfo['prefix']:
       raise BuildConfigError('Keep compiler and dependency preparation environments separate')
     loader.validateVersions(buildInfo, loader.BUILD_VERSIONS)
-    loader.validateVersions(runtimeInfo, loader.RUNTIME_VERSIONS)
+    # The complete candidate validates all selected versions and explicit providers below.
+    # The B2 probe's one-ORT-distribution rule does not describe this preparation environment.
     site = Path(runtimeInfo['purelib'])
     selectedPython = Path(buildInfo['base_prefix']) / 'python312.dll'
     omitted = [loader.qualifyVendoredPython(site, Path(loader.TORCHVISION_PYTHON['path']),
@@ -472,6 +535,7 @@ def buildCandidate(args) -> dict:
     core = output / 'layout/VisionWorkshop'
     modules = output / 'module-staging'
     applicationRoots = copyApplication(source, core, profile)
+    copyPreparedCoreResources(args.assets_root.resolve(), core, profile)
     branding = copyBranding(source, core, profile)
     loader.writeReport(reports / 'core-branding-source.json', branding)
     copyInstalled(site, inventory, core, modules)
@@ -547,6 +611,12 @@ def buildCandidate(args) -> dict:
       raise BuildConfigError('Core contains an unexpected second interpreter executable or DLL')
     if fileHash(core / '_internal/python312.dll') != fileHash(selectedPython):
       raise BuildConfigError('Core CPython DLL differs from the selected build Python')
+    nativeInventory = [record for record in records if record['path'].lower().endswith('.dll')]
+    # Check frozen stdlib DLLs too without changing the already embedded Core JSON.
+    contract.validate_module_set(dict(metadata, native_dlls=nativeInventory), manifests)
+    loader.writeReport(reports / 'core-native-inventory.json', {
+      'status': 'PASS', 'scope': 'All Core DLLs, including frozen _internal, against every module owner',
+      'files': nativeInventory})
     loader.writeReport(reports / 'core-files.json', {'files': records})
     archives = output / 'archives'
     archives.mkdir()

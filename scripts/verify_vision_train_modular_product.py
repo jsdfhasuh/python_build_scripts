@@ -80,6 +80,46 @@ def activeIdentity(status: dict, coreDigest: str) -> dict:
                       if item['active_manifest']}}
 
 
+def verifyDefaultCliOutput(executable, initial, reports, environment, identity):
+  name = 'empty-status-default-output'
+  output = Path(environment['LOCALAPPDATA']) / 'VisionWorkshop/offline-modules/last-result.json'
+  if output.exists():
+    raise RuntimeError('The default CLI result must not predate its actual EXE invocation')
+  command = [str(executable), '--offline-modules', 'status']
+  started = time.monotonic()
+  record = {'name': name, 'status': 'FAIL', 'command': command, 'timeout_seconds': 300,
+            'default_result_file': str(output), 'result_existed_before': False}
+  with (reports / (name + '.stdout.txt')).open('w', encoding='utf-8') as stdout, \
+       (reports / (name + '.stderr.txt')).open('w', encoding='utf-8') as stderr:
+    process = subprocess.Popen(command, cwd=reports.parent / 'empty-cwd', env=environment,
+                               stdout=stdout, stderr=stderr)
+    record['pid'] = process.pid
+    try:
+      code = process.wait(timeout=300)
+      record['exit_code'] = code
+      if code != 0:
+        raise RuntimeError('Windowed CLI without --output exited with ' + str(code))
+      result = json.loads(output.read_text(encoding='utf-8-sig'))
+      if (result.get('ok') is not True or result.get('result') != initial['result']
+          or Path(result.get('result_file', '')).resolve() != output.resolve()
+          or activeIdentity(result, identity['core_sha256']) != identity):
+        raise RuntimeError('Windowed CLI default JSON does not identify the initial empty selection')
+      copy = reports / (name + '.json')
+      copy.write_bytes(output.read_bytes())
+      record.update(status='PASS', report=copy.name, report_sha256=fileHash(copy),
+                    runtime_identity=identity,
+                    scope='Actual windowed EXE without --output, waited by process handle')
+      return record
+    except subprocess.TimeoutExpired:
+      record['status'] = 'TIMEOUT'
+      terminateTree(process, reports)
+      raise
+    finally:
+      record['elapsed_seconds'] = round(time.monotonic() - started, 3)
+      writeReport(reports / (name + '.process.json'), record)
+      terminateTree(process, reports)
+
+
 def coreInventory(root: Path) -> dict:
   inventory = {}
   for child in root.iterdir():
@@ -296,6 +336,8 @@ def main(argv=None) -> int:
     identity = activeIdentity(initial, coreDigest)
     if identity['modules']:
       raise RuntimeError('Fresh Core unexpectedly has active optional modules')
+    summary['cases'].append(verifyDefaultCliOutput(executable, initial, reports,
+                                                 environment, identity))
     summary['cases'].append(checkCase(executable, 'core', reports, 'core-without-modules',
                                       environment, core, identity))
     summary['cases'].append(checkCase(executable, 'annotation', reports,
@@ -315,11 +357,21 @@ def main(argv=None) -> int:
     summary['cases'].append(checkCase(executable, 'dino', reports, 'dino-without-torch',
                                       environment, core, identity))
     checkpoint('ort-repair-and-native-reload')
-    cli(executable, ['remove', 'runtime.ort'], reports, 'ort-remove', environment)
-    empty, _ = cli(executable, ['activate'], reports, 'ort-remove-activate', environment)
+    cli(executable, ['install', str(archives['resource.edgesam'])], reports,
+        'edgesam-install', environment)
+    edge, _ = cli(executable, ['activate'], reports, 'edgesam-activate', environment)
+    identity = activeIdentity(edge, coreDigest)
+    if set(identity['modules']) != {'runtime.ort', 'resource.edgesam'}:
+      raise RuntimeError('Offline EdgeSAM CPU required unrelated optional modules')
+    summary['cases'].append(checkCase(executable, 'edgesam', reports, 'edgesam-without-torch',
+                                      environment, core, identity, timeout=180))
+    checkpoint('edgesam-resource-install-and-cpu')
+    cli(executable, ['remove', 'runtime.ort', 'resource.edgesam'], reports,
+        'ort-and-edgesam-remove', environment)
+    empty, _ = cli(executable, ['activate'], reports, 'ort-and-edgesam-remove-activate', environment)
     summary['cases'].append(checkCase(executable, 'core', reports, 'core-after-remove',
                                       environment, core, activeIdentity(empty, coreDigest)))
-    checkpoint('ort-removal')
+    checkpoint('ort-and-edgesam-removal')
     cli(executable, ['install', *map(str, archives.values())], reports, 'install-all', environment,
         timeout=1200)
     active, _ = cli(executable, ['activate'], reports, 'activate-all', environment, timeout=1200)
@@ -327,7 +379,9 @@ def main(argv=None) -> int:
     if set(identity['modules']) != set(archives):
       raise RuntimeError('The complete candidate set did not activate')
     checkpoint('complete-install-and-activation')
-    for case, timeout in (('torch', 300), ('ort', 300), ('dino', 300), ('yolo', 900), ('pt', args.pt_timeout)):
+    for case, timeout in (('torch', 300), ('ort', 300), ('dino', 300),
+                          ('image-simplification', 240), ('cnn-pretrained', 180),
+                          ('dino-pretrained', 240), ('yolo', 900), ('pt', args.pt_timeout)):
       summary['cases'].append(checkCase(executable, case, reports, case + '-full',
                                         environment, core, identity, timeout=timeout))
     checkpoint('complete-native-and-worker-matrix')

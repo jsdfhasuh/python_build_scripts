@@ -59,6 +59,16 @@ reviewed weights never changes the source checkout. Each weight loader verifies
 its established size and digest. Actual resource bytes receive their own
 manifest entries even when their source location is ignored by Git.
 
+Core also carries the real Noto Sans CJK SC Regular font and its unchanged SIL
+OFL license, prepared from official `notofonts/noto-cjk` commit
+`523d033d6cb47f4a80c58a35753646f5c3608a78`. The immutable URL, exact size, Git
+blob ID and SHA-256 are fixed in the profile and verified before staging. The
+font SHA-256 is `2c76254f6fc379fddfce0a7e84fb5385bb135d3e399294f6eeb6680d0365b74b`;
+the license SHA-256 is `6a73f9541c2de74158c0e7cf6b0a58ef774f5a780bf191f2d7ec9cc53efe2bf2`.
+Both enter the Core runtime inventory. The application prepares byte-identical
+user-cache aliases before activating YOLO, so its font lookup does not need an
+online download or a write into the immutable Core.
+
 Installation reports bind distribution versions to downloaded archive URLs and
 SHA-256 values. The selected distribution RECORD verifies its installed payload.
 Pip's Windows path aliases and preparation-only scripts are handled explicitly;
@@ -82,6 +92,8 @@ and canonical MSVCP DLL. Metadata is serialized with the application's canonical
 encoder and must fit its shared 32 MiB limit; oversized documents fail the build.
 The frozen `_internal` files and EXE are separately tied to the compiler source
 audit and final archive hashes, avoiding an EXE self-hash cycle.
+After freezing, the builder also checks the complete Core DLL inventory,
+including `_internal`, against every module owner before creating any ZIP.
 
 Only the already audited TorchVision wheel's exact redundant `python312.dll` is
 omitted. Its wheel origin, file size, digest and ABI evidence are recorded by the
@@ -143,6 +155,10 @@ the actual compressed per-file size against the shared download limit.
 The acceptance driver runs that EXE from a Chinese and space-containing install
 path with isolated user directories and an empty current directory. It checks:
 
+- A separate windowed CLI invocation without `--output`: its new
+  `%LOCALAPPDATA%/VisionWorkshop/offline-modules/last-result.json` must contain the
+  initial empty selection and identify that result file. The driver waits for
+  the actual process handle and copies the exact JSON into acceptance evidence.
 - Core-only startup, Qt and native operations with optional packages absent.
 - A separate Core-only annotation process: a real rectangle is saved with the
   window's Save action, reread and reopened, then closed through the existing
@@ -158,6 +174,12 @@ path with isolated user directories and an empty current directory. It checks:
   every payload hash must recover without changing generation or active
   identity, and a new EXE process must execute the ORT native fixture afterward.
 - Cold removal and a fresh Core-only process, then complete offline installation.
+- EdgeSAM's actual encoder and decoder from its separate resource ZIP with only
+  ORT installed, explicitly selecting CPU and keeping Torch absent. Both modules
+  are then removed before the fresh Core-only check.
+- Actual loading and CPU execution of the image-simplification, CNN pretrained
+  and DINO pretrained resources using the production loaders and registered
+  weights, with separate time limits and weight/manifest provenance reports.
 - Actual Torch, ORT, DINO, YOLO and native PT fixture entry points using the same
   EXE and exact Core/generation/module identities.
 - A cold rollback followed by another fresh Core-only process.
@@ -173,7 +195,10 @@ removal, complete native/worker execution and rollback. Only the explicit root
 `modules` and `.module-state` stores are excluded. The deliberately corrupted
 file and its before/after digests are retained in the repair evidence.
 
-The workflow uploads candidate ZIPs and evidence as reviewable Actions artifacts.
+The workflow uploads evidence, Core and each of the eleven optional module ZIPs
+as thirteen separate reviewable Actions artifacts. Reports and selected offline
+modules can be downloaded independently. Existing ZIPs are uploaded with outer
+compression disabled.
 A successful bounded CPU matrix is `LIMITED`; GPU hardware execution, existing
 business-model qualification, Core upgrades and power-loss recovery require
 separate evidence. Every unrun check remains explicit. Archive sizes are taken
@@ -203,3 +228,12 @@ has no Pillow. The B2 workflow now selects its exact 17-test probe file; the ful
 product builder tests still run in the dedicated candidate and portable suites.
 No loader assertion or dependency was removed to obtain a pass. B2 artifact
 `15014386635` preserves that separate gate failure.
+
+[Run 45598784332](https://github.com/jsdfhasuh/python_build_scripts/actions/runs/45598784332)
+then passed the same 30/10/13 Windows gates and all 28 repair/annotation guards.
+Its three protocol-3 fixed-worker checks failed on a missing `requests` import
+in the isolated compiler/test environment. The workflow adds the existing pinned
+`requests==2.32.5` test dependency; no worker permission assertion is removed.
+Artifact `15013174037` preserves this result (ZIP SHA-256
+`be3dc742569941440e447237f51dc5966d1004f91e7c6b37fbb0cb01e262bb7d`).
+This second gate run also produced no product candidate or native product result.

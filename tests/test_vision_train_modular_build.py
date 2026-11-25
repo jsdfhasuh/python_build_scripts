@@ -26,6 +26,7 @@ from vision_train_modular_build import pinnedSeeds
 from vision_train_modular_build import prepareAssets
 from vision_train_modular_build import PROFILE
 from vision_train_modular_build import writeCanonical
+from vision_train_modular_build import verifyPreparedCoreResource
 from vision_train_module_inventory import buildDependencyLock
 from vision_train_module_inventory import inventoryPayload
 from vision_train_module_inventory import readDistributions
@@ -297,8 +298,12 @@ class ModularBuildTests(unittest.TestCase):
       path.parent.mkdir(parents=True, exist_ok=True)
       path.write_text(text)
     before = {name: fileHash(source / name) for name in sources}
+    profile, _ = loadProfile(PROFILE)
+    profile['core_prepared_resources'] = []
+    profilePath = self.root / 'profile.json'
+    profilePath.write_text(json.dumps(profile))
     args = SimpleNamespace(source_root=source, assets_root=self.root / 'prepared',
-                           output=self.root / 'resource-preparation.json')
+                           output=self.root / 'resource-preparation.json', profile=profilePath)
     result = prepareAssets(args)
     self.assertEqual(before, {path.relative_to(source).as_posix(): fileHash(path)
                               for path in source.rglob('*') if path.is_file()})
@@ -307,7 +312,18 @@ class ModularBuildTests(unittest.TestCase):
       'static/models/dinov2-small/revision/model.bin'})
     with self.assertRaisesRegex(BuildConfigError, 'isolated directory'):
       prepareAssets(SimpleNamespace(source_root=source, assets_root=source / 'dirty',
-                                    output=args.output))
+                                    output=args.output, profile=profilePath))
+
+  def test_prepared_core_resource_requires_size_git_blob_and_sha256(self):
+    path = self.root / 'font.fixture'
+    data = b'explicit source validation fixture, not a real font'
+    path.write_bytes(data)
+    declared = {'size': len(data), 'sha256': hashlib.sha256(data).hexdigest(),
+                'git_blob_sha1': hashlib.sha1(b'blob ' + str(len(data)).encode() + b'\0' + data).hexdigest()}
+    verifyPreparedCoreResource(path, declared)
+    for field, changed in (('size', len(data) + 1), ('sha256', '0' * 64), ('git_blob_sha1', '0' * 40)):
+      with self.subTest(field=field), self.assertRaisesRegex(BuildConfigError, 'differs'):
+        verifyPreparedCoreResource(path, dict(declared, **{field: changed}))
 
   def test_core_runtime_inventory_checks_native_extensions_and_metadata(self):
     root, document, _ = self.makeCore()

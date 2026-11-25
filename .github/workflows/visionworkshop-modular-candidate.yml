@@ -44,7 +44,7 @@ jobs:
       - name: Validate exact application source input
         shell: pwsh
         env:
-          APP_SOURCE_REF: ${{ inputs.app_ref || 'c07785a66d18851cd6a3a0fd737f50e91579be0f' }}
+          APP_SOURCE_REF: ${{ inputs.app_ref || '12487c202daf8b4d51db7f54ef0dd6b2919a7c85' }}
         run: |
           if ($env:APP_SOURCE_REF -notmatch '^[a-f0-9]{40}$') {
             throw 'An exact reviewed application commit is required before this candidate can build'
@@ -110,7 +110,8 @@ jobs:
         shell: pwsh
         run: |
           & $env:BUILD_PYTHON -m pip install pyinstaller==6.18.0 pyinstaller-hooks-contrib==2026.0 `
-            Pillow==12.0.0 PyYAML==6.0.3 pytest==8.4.2 --report reports/compiler-install.json
+            Pillow==12.0.0 PyYAML==6.0.3 pytest==8.4.2 requests==2.32.5 numpy==2.0.2 `
+            --report reports/compiler-install.json
           if ($LASTEXITCODE -ne 0) { throw 'Compiler/test installation failed' }
           & $env:BUILD_PYTHON -m pip check
           if ($LASTEXITCODE -ne 0) { throw 'Compiler/test dependencies conflict' }
@@ -129,7 +130,9 @@ jobs:
           & $env:BUILD_PYTHON -m unittest discover -s tests -p test_module_runtime.py -v
           if ($LASTEXITCODE -ne 0) { throw 'Windows offline ZIP/transaction/lease checks failed' }
           & $env:BUILD_PYTHON -m pytest -p no:cacheprovider tests/test_module_repair.py `
-            tests/test_module_runtime_check_annotation.py -q --junitxml ../reports/module-repair-annotation-source.xml
+            tests/test_module_runtime_check_annotation.py tests/test_offline_fonts.py `
+            tests/test_module_runtime_check_resources.py `
+            -q --junitxml ../reports/module-repair-annotation-source.xml
           if ($LASTEXITCODE -ne 0) { throw 'Repair and annotation guard checks failed or did not collect tests' }
           & $env:BUILD_PYTHON -m pytest -p no:cacheprovider tests/test_cnn_onnx_entry.py::test_export_worker_requires_actual_run_permission -q
           if ($LASTEXITCODE -ne 0) { throw 'Protocol-3 fixed worker authorization checks failed' }
@@ -181,7 +184,22 @@ jobs:
             --source-root source --assets-root modular-assets --output reports/resource-preparation.json
           if ($LASTEXITCODE -ne 0) { throw 'Offline model resource preparation failed' }
 
+      - name: Verify the real prepared font through the vendor cache aliases
+        shell: pwsh
+        run: |
+          $env:VISIONWORKSHOP_TEST_FONT_DIR = Join-Path $env:GITHUB_WORKSPACE 'modular-assets/static/fonts'
+          Push-Location source
+          & $env:BUILD_PYTHON -m pytest -p no:cacheprovider `
+            tests/test_offline_fonts.py::test_supplied_official_otf_loads_unchanged_through_both_vendor_aliases `
+            -q --junitxml ../reports/offline-fonts-native.xml
+          if ($LASTEXITCODE -ne 0) { throw 'The official font did not load through its exact vendor cache aliases' }
+          & $env:BUILD_PYTHON -c "import xml.etree.ElementTree as E; r=E.parse('../reports/offline-fonts-native.xml').getroot(); assert len(r.findall('.//testcase')) == 1 and not any(r.findall('.//' + name) for name in ('skipped','failure','error'))"
+          if ($LASTEXITCODE -ne 0) { throw 'The real official font check did not execute successfully' }
+          Pop-Location
+          Remove-Item Env:VISIONWORKSHOP_TEST_FONT_DIR
+
       - name: Construct real Core and independent module ZIPs
+        id: build-candidate
         shell: pwsh
         run: |
           & $env:BUILD_PYTHON packager/scripts/build_vision_train_modular.py build `
@@ -202,18 +220,137 @@ jobs:
             2>&1 | Tee-Object reports/modular-acceptance.log
           if ($LASTEXITCODE -ne 0) { throw 'Real modular product acceptance failed' }
 
-      - name: Upload reviewable candidate ZIPs and evidence
+      - name: Upload candidate evidence independently
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
-          name: visionworkshop-modular-candidate-${{ github.run_id }}-${{ github.run_attempt }}
+          name: visionworkshop-modular-evidence-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             reports/**
             modular-input/**
             modular-candidate/reports/**
-            modular-candidate/archives/*.zip
             modular-acceptance/reports/**
             modular-acceptance/isolated-user/AppData/Local/VisionWorkshop/logs/**
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
+      - name: Upload Core candidate independently
+        if: ${{ !cancelled() && steps.build-candidate.outcome == 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: visionworkshop-core-candidate-${{ github.run_id }}-${{ github.run_attempt }}
+          path: modular-candidate/archives/VisionWorkshop-Core-*.zip
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
+      - name: Upload runtime.torch offline candidate
+        if: ${{ !cancelled() && steps.build-candidate.outcome == 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: visionworkshop-module-runtime.torch-${{ github.run_id }}-${{ github.run_attempt }}
+          path: modular-candidate/archives/runtime.torch-*.zip
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
+      - name: Upload runtime.ort offline candidate
+        if: ${{ !cancelled() && steps.build-candidate.outcome == 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: visionworkshop-module-runtime.ort-${{ github.run_id }}-${{ github.run_attempt }}
+          path: modular-candidate/archives/runtime.ort-*.zip
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
+      - name: Upload runtime.science offline candidate
+        if: ${{ !cancelled() && steps.build-candidate.outcome == 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: visionworkshop-module-runtime.science-${{ github.run_id }}-${{ github.run_attempt }}
+          path: modular-candidate/archives/runtime.science-*.zip
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
+      - name: Upload runtime.vision offline candidate
+        if: ${{ !cancelled() && steps.build-candidate.outcome == 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: visionworkshop-module-runtime.vision-${{ github.run_id }}-${{ github.run_attempt }}
+          path: modular-candidate/archives/runtime.vision-*.zip
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
+      - name: Upload feature.yolo offline candidate
+        if: ${{ !cancelled() && steps.build-candidate.outcome == 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: visionworkshop-module-feature.yolo-${{ github.run_id }}-${{ github.run_attempt }}
+          path: modular-candidate/archives/feature.yolo-*.zip
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
+      - name: Upload feature.patchcore offline candidate
+        if: ${{ !cancelled() && steps.build-candidate.outcome == 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: visionworkshop-module-feature.patchcore-${{ github.run_id }}-${{ github.run_attempt }}
+          path: modular-candidate/archives/feature.patchcore-*.zip
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
+      - name: Upload resource.yolo offline candidate
+        if: ${{ !cancelled() && steps.build-candidate.outcome == 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: visionworkshop-module-resource.yolo-${{ github.run_id }}-${{ github.run_attempt }}
+          path: modular-candidate/archives/resource.yolo-*.zip
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
+      - name: Upload resource.patchcore-cnn offline candidate
+        if: ${{ !cancelled() && steps.build-candidate.outcome == 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: visionworkshop-module-resource.patchcore-cnn-${{ github.run_id }}-${{ github.run_attempt }}
+          path: modular-candidate/archives/resource.patchcore-cnn-*.zip
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
+      - name: Upload resource.image-simplification offline candidate
+        if: ${{ !cancelled() && steps.build-candidate.outcome == 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: visionworkshop-module-resource.image-simplification-${{ github.run_id }}-${{ github.run_attempt }}
+          path: modular-candidate/archives/resource.image-simplification-*.zip
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
+      - name: Upload resource.edgesam offline candidate
+        if: ${{ !cancelled() && steps.build-candidate.outcome == 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: visionworkshop-module-resource.edgesam-${{ github.run_id }}-${{ github.run_attempt }}
+          path: modular-candidate/archives/resource.edgesam-*.zip
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
+      - name: Upload resource.patchcore-dino offline candidate
+        if: ${{ !cancelled() && steps.build-candidate.outcome == 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: visionworkshop-module-resource.patchcore-dino-${{ github.run_id }}-${{ github.run_attempt }}
+          path: modular-candidate/archives/resource.patchcore-dino-*.zip
           if-no-files-found: error
           compression-level: 0
           retention-days: 7
