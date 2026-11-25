@@ -180,7 +180,7 @@ No operation publishes anything.
 
 A Core-only source fix can reuse a completed candidate's module archives by
 explicitly supplying `reuse_run_id` and `reuse_run_attempt`. The current request
-selects application `f1557cb1a8ca57314e617bea9f340eaa3a2e3f90` and the original
+selects application `fa92b08720726ccf984fdf90d03dc4071a1adf68` and the original
 module ZIPs from run `45616400076`, attempt 1. That source run failed its first
 EXE CLI check; its build was `BUILT`. Reuse preserves that failure status and
 does not transfer native qualification to the new candidate.
@@ -332,6 +332,20 @@ failure/report bindings are retained in
 `docs/evidence/visionworkshop-modular-candidate-45616400076.json`.
 The subsequent app/driver corrections are source fixes awaiting a new complete
 Windows matrix; the original failure is retained even when its ZIPs are reused.
+
+[Run 45633041291](https://github.com/jsdfhasuh/python_build_scripts/actions/runs/45633041291)
+at builder `a63aa98ed1c55ee65cff59fcdcd96a04bf95ff2a`, app
+`f1557cb1a8ca57314e617bea9f340eaa3a2e3f90`, passed 34 builder, 17 real-ZIP reuse
+and 37 shared-contract checks on Windows. The source CLI regression for success
+and failure with cp1252 redirected output also passed. Two new stream tests then
+failed because their complete-string assertions expected LF while the actual
+Windows TextIOWrapper correctly emitted CRLF. The candidate stopped at this
+source gate before downloading reusable artifacts, freezing Core or invoking
+the product EXE. Evidence artifact `15032501325` is 238,312 bytes, with API SHA-256
+`e703bf063a5cc06d2da2aa88159c603bab6490f45168b8589367a17cd3a8fc87`.
+App `fa92b08720726ccf984fdf90d03dc4071a1adf68` updates those three exact string
+expectations to `os.linesep`; production encoding behavior is unchanged. The
+explicit candidate request continues to select the original `45616400076` ZIPs.
 
 ## Initial Windows gate result
 

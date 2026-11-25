@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "scope": "Windows source preflight only; reusable artifacts, Core freeze and product EXE were not reached",
+  "run": {
+    "id": 45633041291,
+    "job_id": 139271055832,
+    "url": "https://github.com/jsdfhasuh/python_build_scripts/actions/runs/45633041291",
+    "builder_sha": "a63aa98ed1c55ee65cff59fcdcd96a04bf95ff2a",
+    "app_sha": "f1557cb1a8ca57314e617bea9f340eaa3a2e3f90",
+    "conclusion": "failure"
+  },
+  "artifact": {
+    "id": 15032501325,
+    "name": "visionworkshop-modular-evidence-45633041291-1",
+    "bytes": 238312,
+    "api_sha256": "e703bf063a5cc06d2da2aa88159c603bab6490f45168b8589367a17cd3a8fc87",
+    "downloaded_sha256_verified": false
+  },
+  "completed_windows_gates": {
+    "builder_tests": 34,
+    "real_zip_reuse_tests": 17,
+    "shared_contract_tests": 37,
+    "cp1252_redirected_cli_success_and_failure": "PASS"
+  },
+  "failed_gate": {
+    "runtime_tests_run": 20,
+    "failures": [
+      "test_launch_sets_encoding_before_cli_dispatch",
+      "test_p4_stream_configuration_preserves_utf8_worker_io_and_absent_streams"
+    ],
+    "reason": "Complete-string assertions expected LF instead of Windows TextIOWrapper CRLF; the Chinese text itself was correct",
+    "fix_app_sha": "fa92b08720726ccf984fdf90d03dc4071a1adf68",
+    "fix_scope": "Three exact expected-string assertions use os.linesep; production code unchanged"
+  },
+  "source_module_run_still_selected": 45616400076,
+  "not_run": [
+    "Actual source module artifact download and reuse against new Windows staging",
+    "New Core freeze and compression",
+    "Every actual product EXE and native case",
+    "Physical GPU execution"
+  ]
+}
