@@ -59,7 +59,10 @@ The `rfc3987_syntax` grammar data is collected for frozen `nbformat`/Kaggle conv
 The target-only analysis hook delegates to the upstream Torch hook and collects its
 submodules as inspectable `.py` files without duplicate PYZ copies. The small Torch package
 initializer remains in PYZ, preserving the existing frozen-runtime admission gate.
-Runtime hooks are unchanged; do not remove CUDA DLLs or model files manually from a build.
+The Windows DINO worker runtime hook explicitly preloads the bundled runtime-root
+`msvcp140.dll` before Qt initialization. This narrow load-order fix keeps the DINO branch
+free of Torch Python imports and the four existing Torch native preloads; other entrypoints
+retain their existing behavior. Do not remove CUDA DLLs or model files manually from a build.
 
 `zip_lzma_dictionary_mib` selects 64, 128 or 256 MiB; the default for other targets remains
 64 MiB. Vision Train selects 256 MiB with Unicode ZIP/LZMA and the existing single-thread
@@ -144,6 +147,14 @@ worker 进程；安装包不再包含第二套 `dino_runtime` Python 环境。wo
 Torch，但自身不得导入训练模块。冻结检查要求 `python312.dll`、ONNX Runtime 原生绑定、
 worker 模块及依赖元数据齐全，并拒绝误带旧的 `dino_runtime` 目录。
 
+Windows 冻结入口为 `--dino-onnx-worker` 时，自定义 runtime hook 在 Qt 相关初始化前，
+通过绝对路径和 `winmode=0x1100` 预载冻结运行时根目录（本布局为 `app/_internal`）
+已有的 `msvcp140.dll`，防止 Qt 目录中的旧同名运行库先占据加载结果。该分支仍不导入
+Torch Python，也不执行原有四项 Torch native 预载；缺失或加载错误沿用既有 debug 日志
+规则，不自动改用 Qt/System32 副本，不替换 DLL、依赖版本或安装身份记录。
+复用原包的 A/B 已证实加载顺序影响 ORT 初始化；正式 hook 修复后的冻结验收仍待新构建，
+不能把原生 DLL 加载通过当成 DINO worker 或模型推理已通过。
+
 P4 DINO 核心的 Transformers、Hub、tokenizers 版本由 CI runtime profile 统一约束，
 其模型模块和版本元数据显式进入冻结包。编译前会构造不下载权重的 encoder，验证 CPU
 特征形状；这不改变应用已有的 P4 开发入口边界，也不代表完成真实模型或 GPU 验收。
@@ -162,6 +173,14 @@ EXE 导出完整 ONNX、比较分数/异常图/阈值判断，并在新冻结进
 后者的 `--fixture-python` 可指定隔离的 CP312 夹具解释器；实际导出与 ORT 推理均由
 冻结 EXE 执行。人工 memory bank 和图片验证软件通路，不代表训练、业务模型或 GPU
 验收。诊断报告不改写原构建摘要，也不免除原有发布大小限制。
+
+历史 `673273a` 产物已通过真实冻结 CNN 人工 CKPT 数值与最终图重载，DINO worker 则在
+ORT 原生绑定初始化时失败。launcher 观察到创建窗口阶段，但 GUI 正常退出未观察到，
+使用了隔离进程清理。该完整 ZIP 为 2,715,519,943 字节，仍不可发布；相对旧包的压缩
+增量主要来自 Torch，模型目录中的 13 个文件（包含许可证和说明）压缩负载没有增长。
+构建身份、逐样本误差、DLL A/B 对照、真实压缩字节比较和正式修复后的待测边界统一记录在
+[CP312 生产构建验证](evidence/visionworkshop-cp312-production-validation.md)，后续结果按新的
+构建身份追加，业务模型、训练和 GPU 等未执行项保持明确标记。
 
 外部仓库：`python -m unittest discover -s tests -v`。
 应用仓库：`python scripts/verify_update_windows.py` 干净编译测试应用与真实更新器，执行连续更新及
