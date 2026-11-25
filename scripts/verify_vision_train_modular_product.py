@@ -90,36 +90,39 @@ def verifyDefaultCliOutput(executable, initial, reports, environment, identity):
   command = [str(executable), '--offline-modules', 'status']
   started = time.monotonic()
   record = {'name': name, 'status': 'FAIL', 'command': command, 'timeout_seconds': 300,
-            'default_result_file': str(output), 'result_existed_before': False}
-  with (reports / (name + '.stdout.txt')).open('w', encoding='utf-8') as stdout, \
-       (reports / (name + '.stderr.txt')).open('w', encoding='utf-8') as stderr:
-    process = subprocess.Popen(command, cwd=reports.parent / 'empty-cwd', env=environment,
-                               stdout=stdout, stderr=stderr)
-    record['pid'] = process.pid
-    try:
-      code = process.wait(timeout=300)
-      record['exit_code'] = code
-      if code != 0:
-        raise RuntimeError('Windowed CLI without --output exited with ' + str(code))
-      result = json.loads(output.read_text(encoding='utf-8-sig'))
-      if (result.get('ok') is not True or result.get('result') != initial['result']
-          or Path(result.get('result_file', '')).resolve() != output.resolve()
-          or activeIdentity(result, identity['core_sha256']) != identity):
-        raise RuntimeError('Windowed CLI default JSON does not identify the initial empty selection')
-      copy = reports / (name + '.json')
-      copy.write_bytes(output.read_bytes())
-      record.update(status='PASS', report=copy.name, report_sha256=fileHash(copy),
-                    runtime_identity=identity,
-                    scope='Actual windowed EXE without --output, waited by process handle')
-      return record
-    except subprocess.TimeoutExpired:
-      record['status'] = 'TIMEOUT'
-      terminateTree(process, reports)
-      raise
-    finally:
-      record['elapsed_seconds'] = round(time.monotonic() - started, 3)
-      writeReport(reports / (name + '.process.json'), record)
-      terminateTree(process, reports)
+            'default_result_file': str(output), 'result_existed_before': False,
+            'standard_handles': 'NULL', 'detached_process': True}
+  # Redirected files create real Python streams and exercise the stdout-only CLI instead.
+  startup = subprocess.STARTUPINFO()
+  startup.dwFlags |= subprocess.STARTF_USESTDHANDLES
+  startup.hStdInput = startup.hStdOutput = startup.hStdError = 0
+  process = subprocess.Popen(command, cwd=reports.parent / 'empty-cwd', env=environment,
+                             startupinfo=startup, creationflags=subprocess.DETACHED_PROCESS)
+  record['pid'] = process.pid
+  try:
+    code = process.wait(timeout=300)
+    record['exit_code'] = code
+    if code != 0:
+      raise RuntimeError('Windowed CLI without --output exited with ' + str(code))
+    result = json.loads(output.read_text(encoding='utf-8-sig'))
+    if (result.get('ok') is not True or result.get('result') != initial['result']
+        or Path(result.get('result_file', '')).resolve() != output.resolve()
+        or activeIdentity(result, identity['core_sha256']) != identity):
+      raise RuntimeError('Windowed CLI default JSON does not identify the initial empty selection')
+    copy = reports / (name + '.json')
+    copy.write_bytes(output.read_bytes())
+    record.update(status='PASS', report=copy.name, report_sha256=fileHash(copy),
+                  runtime_identity=identity,
+                  scope='Actual windowed EXE with null standard handles, waited by process handle')
+    return record
+  except subprocess.TimeoutExpired:
+    record['status'] = 'TIMEOUT'
+    terminateTree(process, reports)
+    raise
+  finally:
+    record['elapsed_seconds'] = round(time.monotonic() - started, 3)
+    writeReport(reports / (name + '.process.json'), record)
+    terminateTree(process, reports)
 
 
 def coreInventory(root: Path) -> dict:
@@ -451,6 +454,9 @@ def main(argv=None) -> int:
 
     environment = cleanEnvironment(output)
     summary.update(core_sha256=coreDigest, build=core['build'],
+                    module_builds=build.get('module_builds', {
+                      name: core['build'] for name in archives}),
+                    module_reuse=build.get('module_reuse', {'enabled': False}),
                     executable=str(executable), executable_sha256=fileHash(executable))
     initial, _ = cli(executable, ['status'], reports, 'empty-status', environment)
     identity = activeIdentity(initial, coreDigest)

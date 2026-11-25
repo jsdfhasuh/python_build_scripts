@@ -1,0 +1,399 @@
+{
+  "schema_version": 1,
+  "scope": "Real product Core and eleven module ZIPs built and round-trip verified; first actual EXE CLI failed while printing Chinese JSON, before every native case",
+  "run": {
+    "id": 45616400076,
+    "attempt": 1,
+    "job_id": 139212800496,
+    "url": "https://github.com/jsdfhasuh/python_build_scripts/actions/runs/45616400076",
+    "builder_sha": "f9703a9c6a0c0370a10eed0afadd39e677770547",
+    "app_sha": "c8c0fbe98a055620ddc5488be6835cf216b4800e",
+    "conclusion": "failure"
+  },
+  "build": {
+    "status": "BUILT",
+    "elapsed_seconds": 3964.5,
+    "core_sha256": "68bd245e8406b7a9dc2decef653c2d8c556c05aabf702b4b4ae2d5d066e873ae",
+    "dependency_lock_sha256": "765b59a43a50ebc1714dccac2cc1f8c12e543031d5673beb6f34cc3e704c0829",
+    "core_expanded_bytes": 627674298,
+    "all_archive_bytes": 2791206650,
+    "core_archive": {
+      "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-candidate\\archives\\VisionWorkshop-Core-0.0.0.zip",
+      "bytes": 180416446,
+      "sha256": "ac6e5927c6f705f85d3238f1fbba01eb40b7bfb60f3eea0f69e5d3c7affcd722",
+      "compression": "zip/lzma",
+      "dictionary_max_mib": 256,
+      "file_count": 11318,
+      "expanded_bytes": 627674298,
+      "compressed_payload_bytes": 177753056,
+      "verified": true
+    },
+    "module_archives": [
+      {
+        "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-candidate\\archives\\runtime.science-0.0.0.zip",
+        "bytes": 35208316,
+        "sha256": "8494ced6261bf8997c6a5c42384725b268159476c42f3ab9d8711dba45089d16",
+        "compression": "zip/lzma",
+        "dictionary_max_mib": 256,
+        "file_count": 2131,
+        "expanded_bytes": 130405229,
+        "compressed_payload_bytes": 34750360,
+        "verified": true,
+        "module_id": "runtime.science",
+        "manifest_sha256": "87911701cff46d14376e545229381eff5af1a38b88dbc4b19c6ff6ab5dc13855"
+      },
+      {
+        "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-candidate\\archives\\runtime.torch-0.0.0.zip",
+        "bytes": 1865186577,
+        "sha256": "ccbcd7b49974b8eaa8f8dfdb1bcc67d310cde85317142ffbcc8df6fa42cd9fd4",
+        "compression": "zip/lzma",
+        "dictionary_max_mib": 256,
+        "file_count": 12052,
+        "expanded_bytes": 4557557572,
+        "compressed_payload_bytes": 1862334467,
+        "verified": true,
+        "module_id": "runtime.torch",
+        "manifest_sha256": "8cb722deabd819a764fd332bb56a0805c363d164fb8f4c7b10fc2c92b4341f4c"
+      },
+      {
+        "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-candidate\\archives\\runtime.vision-0.0.0.zip",
+        "bytes": 14281587,
+        "sha256": "9be478fb6d95250961d6f98bbdc53d93a0e3b5e7f05e1e38089e7784ed21455d",
+        "compression": "zip/lzma",
+        "dictionary_max_mib": 256,
+        "file_count": 2347,
+        "expanded_bytes": 65140191,
+        "compressed_payload_bytes": 13732569,
+        "verified": true,
+        "module_id": "runtime.vision",
+        "manifest_sha256": "07d73074fd4202494e86570cf8a358f30e598a8508d8f016c96474c642dbde81"
+      },
+      {
+        "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-candidate\\archives\\feature.patchcore-0.0.0.zip",
+        "bytes": 76634413,
+        "sha256": "0e236cb6bdf7ccc928cf871e2c8488ca2ba4fcefe4da0ff1ad0b29615d64fdfa",
+        "compression": "zip/lzma",
+        "dictionary_max_mib": 256,
+        "file_count": 8474,
+        "expanded_bytes": 273384734,
+        "compressed_payload_bytes": 74825635,
+        "verified": true,
+        "module_id": "feature.patchcore",
+        "manifest_sha256": "96f531cb3873d30d17855483b0069a90f93a16ce71799192e5aa81eadc343cd1"
+      },
+      {
+        "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-candidate\\archives\\feature.yolo-0.0.0.zip",
+        "bytes": 28828485,
+        "sha256": "2d40614b38a2c9b18bbbe8b9b201bee4d93f0f0d6d6b942783cc07f19a4e62d1",
+        "compression": "zip/lzma",
+        "dictionary_max_mib": 256,
+        "file_count": 552,
+        "expanded_bytes": 168331914,
+        "compressed_payload_bytes": 28715069,
+        "verified": true,
+        "module_id": "feature.yolo",
+        "manifest_sha256": "933595223bf8f0e072b8c9ddbcfa7d35f381ad56abbc7d681fcab30e59e997f2"
+      },
+      {
+        "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-candidate\\archives\\resource.edgesam-0.0.0.zip",
+        "bytes": 35560937,
+        "sha256": "fc8f55a868dc640adea28d1a18f7be0416c069e2a5a2870db82b701daac4b553",
+        "compression": "zip/lzma",
+        "dictionary_max_mib": 256,
+        "file_count": 3,
+        "expanded_bytes": 40678572,
+        "compressed_payload_bytes": 35560449,
+        "verified": true,
+        "module_id": "resource.edgesam",
+        "manifest_sha256": "742cdb3ec4cec487a805db0b9b66b75aed8d0fddc2f64b3aee379d0755dac70f"
+      },
+      {
+        "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-candidate\\archives\\resource.image-simplification-0.0.0.zip",
+        "bytes": 80567081,
+        "sha256": "9b67dc8479ca06c38436cddcc026c3f765f9b7820840456bb2da66916a4bb5bb",
+        "compression": "zip/lzma",
+        "dictionary_max_mib": 256,
+        "file_count": 4,
+        "expanded_bytes": 88254627,
+        "compressed_payload_bytes": 80566317,
+        "verified": true,
+        "module_id": "resource.image-simplification",
+        "manifest_sha256": "6a7d0a927c72a75261bfb1dcad54090ebaa0950a178bfdf0e5ad809a635d41ad"
+      },
+      {
+        "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-candidate\\archives\\resource.patchcore-cnn-0.0.0.zip",
+        "bytes": 248193522,
+        "sha256": "aa4dc32200bfaf150e390d0a7cd9bd2631c62602b55af60f53c34156e249c826",
+        "compression": "zip/lzma",
+        "dictionary_max_mib": 256,
+        "file_count": 5,
+        "expanded_bytes": 275888591,
+        "compressed_payload_bytes": 248192578,
+        "verified": true,
+        "module_id": "resource.patchcore-cnn",
+        "manifest_sha256": "a9ceb9acd6ddd12f2ce5e0876179a316b2154e366dd7cca7349a147c2a88d371"
+      },
+      {
+        "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-candidate\\archives\\resource.patchcore-dino-0.0.0.zip",
+        "bytes": 80604327,
+        "sha256": "a78b17be815feeaad97af591979d215be703ecb09ad0e816ebdf5a48d13244ab",
+        "compression": "zip/lzma",
+        "dictionary_max_mib": 256,
+        "file_count": 3,
+        "expanded_bytes": 88251569,
+        "compressed_payload_bytes": 80603651,
+        "verified": true,
+        "module_id": "resource.patchcore-dino",
+        "manifest_sha256": "d79047e821fbcb86fb359e2a3f8d4ae0c94ca5de8396a32154130e462ac2c065"
+      },
+      {
+        "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-candidate\\archives\\resource.yolo-0.0.0.zip",
+        "bytes": 32296740,
+        "sha256": "0ef95729c6bf5bf294f7ff629292e51ac4345a612c48203d691bee932c1c758e",
+        "compression": "zip/lzma",
+        "dictionary_max_mib": 256,
+        "file_count": 5,
+        "expanded_bytes": 36728889,
+        "compressed_payload_bytes": 32295982,
+        "verified": true,
+        "module_id": "resource.yolo",
+        "manifest_sha256": "880da3e1bca7af9badfbb8976cf2f44aa9c724ac7117bc8fea4f95f7c8001fa2"
+      },
+      {
+        "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-candidate\\archives\\runtime.ort-0.0.0.zip",
+        "bytes": 113428219,
+        "sha256": "cb52bcffd03aefac8fd7aa3ce7b8ce80ac9509ed4f87c776b218c0439d903d5a",
+        "compression": "zip/lzma",
+        "dictionary_max_mib": 256,
+        "file_count": 7124,
+        "expanded_bytes": 439011782,
+        "compressed_payload_bytes": 111362835,
+        "verified": true,
+        "module_id": "runtime.ort",
+        "manifest_sha256": "0e195f8718ea5c1f42401e99845f018a5f8e4022b4eb9cf1f237a5f4a26ec52a"
+      }
+    ]
+  },
+  "artifacts": [
+    {
+      "id": 15030131564,
+      "name": "visionworkshop-module-feature.yolo-45616400076-1",
+      "bytes": 28828643,
+      "sha256": "4f2c67e52fe452b1a0b63f243639f3e846a96c856a055af23215fbcaf454f556",
+      "expires_at": "2026-12-02T13:54:44Z"
+    },
+    {
+      "id": 15030086584,
+      "name": "visionworkshop-module-feature.patchcore-45616400076-1",
+      "bytes": 76634581,
+      "sha256": "575e3a537bf0a7b7a2ee026ac725e6e3d55b6c27031e76a2bfb57ca4bba099fc",
+      "expires_at": "2026-12-02T13:54:46Z"
+    },
+    {
+      "id": 15030026608,
+      "name": "visionworkshop-module-runtime.torch-45616400076-1",
+      "bytes": 1865186737,
+      "sha256": "4a2fb07b102df13eb5cddb881a88887c3fe20e9ebc1a476a31e9a0048c1d3a17",
+      "expires_at": "2026-12-02T13:54:19Z"
+    },
+    {
+      "id": 15030016689,
+      "name": "visionworkshop-module-runtime.vision-45616400076-1",
+      "bytes": 14281749,
+      "sha256": "12da526e0774d6954b59e522c65e0c5a9cd6e3b5a751b30184ce1ff5f60c17f4",
+      "expires_at": "2026-12-02T13:54:42Z"
+    },
+    {
+      "id": 15029996683,
+      "name": "visionworkshop-module-resource.edgesam-45616400076-1",
+      "bytes": 35561103,
+      "sha256": "4189832f2263c43b39cbdcc32230a52886818ee70e93c9b9248f847062cab9b7",
+      "expires_at": "2026-12-02T13:54:55Z"
+    },
+    {
+      "id": 15029936813,
+      "name": "visionworkshop-module-resource.image-simplification-45616400076-1",
+      "bytes": 80567273,
+      "sha256": "d7dbcb2e9280b87a060f930786c408eb65ea703b0e1c40348921b62f7252cdeb",
+      "expires_at": "2026-12-02T13:54:53Z"
+    },
+    {
+      "id": 15029901741,
+      "name": "visionworkshop-module-runtime.ort-45616400076-1",
+      "bytes": 113428375,
+      "sha256": "19a0a8ce5e3e54f85f810902b48e7ffd9ca2858204a6626bc3b3d345ba3272cd",
+      "expires_at": "2026-12-02T13:54:36Z"
+    },
+    {
+      "id": 15029837201,
+      "name": "visionworkshop-module-resource.patchcore-dino-45616400076-1",
+      "bytes": 80604507,
+      "sha256": "07b6ef8e9b97ec605ecc3df39b5048589188ab065b8c18a2f577b3384d9ebfdc",
+      "expires_at": "2026-12-02T13:54:57Z"
+    },
+    {
+      "id": 15029762071,
+      "name": "visionworkshop-module-runtime.science-45616400076-1",
+      "bytes": 35208480,
+      "sha256": "0b74077c0bf221ebf22d162435e9e08db4276a60171d04caf6e1edc0b4fcf167",
+      "expires_at": "2026-12-02T13:54:40Z"
+    },
+    {
+      "id": 15029622286,
+      "name": "visionworkshop-module-resource.patchcore-cnn-45616400076-1",
+      "bytes": 248193700,
+      "sha256": "9be29bb39827aea340247aafaa35215596f7372a92ffe0cae3186d7d56e4c60f",
+      "expires_at": "2026-12-02T13:54:50Z"
+    },
+    {
+      "id": 15029507429,
+      "name": "visionworkshop-module-resource.yolo-45616400076-1",
+      "bytes": 32296900,
+      "sha256": "1df7c9fe08173865da90fdc47511d35f809da26e24a4b6cba182d9e670f4be53",
+      "expires_at": "2026-12-02T13:54:48Z"
+    },
+    {
+      "id": 15028579256,
+      "name": "visionworkshop-core-candidate-45616400076-1",
+      "bytes": 180416618,
+      "sha256": "e5ce07b39dee0ead1f550ecd45cf13b1a64607951b887b20305ebc61a9a1b95e",
+      "expires_at": "2026-12-02T13:54:16Z"
+    },
+    {
+      "id": 15028274168,
+      "name": "visionworkshop-modular-evidence-45616400076-1",
+      "bytes": 46050507,
+      "sha256": "409bf843e05c7d408ee32f136ac3e8505997157ef245275764ca595e425ae877",
+      "expires_at": "2026-12-02T13:54:14Z"
+    }
+  ],
+  "evidence_artifact_downloaded_and_outer_sha256_verified": true,
+  "actual_dependency_requires": {
+    "runtime.torch": [],
+    "runtime.ort": [],
+    "runtime.science": [],
+    "runtime.vision": [
+      "runtime.torch"
+    ],
+    "feature.yolo": [
+      "runtime.science",
+      "runtime.torch"
+    ],
+    "feature.patchcore": [
+      "runtime.science",
+      "runtime.torch",
+      "runtime.vision"
+    ],
+    "resource.yolo": [],
+    "resource.patchcore-cnn": [],
+    "resource.image-simplification": [],
+    "resource.edgesam": [],
+    "resource.patchcore-dino": []
+  },
+  "actual_exe_result": {
+    "status": "FAIL",
+    "native_cases_completed": 0,
+    "error": "empty-status exited with 1",
+    "pid": 7508,
+    "exit_code": 1,
+    "executable_sha256": "55f43c9afe339ecb70187e91d4045d9ccc01f203d4407915795d996536596b38",
+    "core_inventory_before": {
+      "inventory_sha256": "f9e81f8ea0b8a8dd0adb7e23174eeb3a5607b42738c0c6e5d5fa93cdbdb576f0",
+      "file_count": 11318,
+      "report": "core-inventory-before.json",
+      "report_sha256": "b25699b2f1e96ece49c0e5ec417631cb842db4cde2827f3dfca457f1d696ab29"
+    },
+    "core_integrity_checkpoints_completed": 0,
+    "detail": "empty-status JSON file was written with ok=true/generation=0; cp1252 stdout printing ensure_ascii=False then raised UnicodeEncodeError and exited 1"
+  },
+  "prepared_official_font_pillow_test": {
+    "passed": 1,
+    "skipped": 0,
+    "scope": "Prepared font and original-byte aliases in Windows preparation Python; not the product EXE font path"
+  },
+  "compatibility_findings": [
+    {
+      "status": "explicit-provider",
+      "source": "feature.yolo",
+      "requirement": "opencv-python>=4.6.0",
+      "selected_distribution": "opencv-contrib-python-headless",
+      "selected_version": "4.11.0.86",
+      "alias_metadata_version": null
+    },
+    {
+      "status": "explicit-provider",
+      "source": "anomalib",
+      "requirement": "opencv-python-headless>=4.5.3.56",
+      "selected_distribution": "opencv-contrib-python-headless",
+      "selected_version": "4.11.0.86",
+      "alias_metadata_version": "4.11.0.86"
+    },
+    {
+      "status": "observed/unqualified",
+      "source": "feature.yolo",
+      "requirement": "torch>=1.8.0,<2.10,!=2.4.0; sys_platform == 'win32'",
+      "selected_distribution": "torch",
+      "selected_version": "2.10.0+cu128",
+      "release_gate": "Unresolved vendor compatibility declaration"
+    },
+    {
+      "status": "observed/unqualified",
+      "source": "feature.yolo",
+      "requirement": "torch>=1.8.0,<2.10",
+      "selected_distribution": "torch",
+      "selected_version": "2.10.0+cu128",
+      "release_gate": "Unresolved vendor compatibility declaration"
+    }
+  ],
+  "not_run": [
+    "Every product EXE native, GUI annotation, module lifecycle, repair, update, resource and worker case",
+    "Physical GPU execution",
+    "CPU-only runtime package construction",
+    "Production DINO ONNX worker and original numerical contract",
+    "Core-upgrade registry migration",
+    "Physical disconnected-machine acceptance",
+    "Business-model and power-loss qualification"
+  ],
+  "report_bindings": {
+    "modular-candidate/reports/modular-build-summary.json": {
+      "bytes": 2704752,
+      "sha256": "11e849a240b6d12084b79eff1f626f4393f1d357e626ed1ffa49af79d19fb715"
+    },
+    "modular-candidate/reports/module-manifests.json": {
+      "bytes": 6974619,
+      "sha256": "80a35694001f2e4d1cbecdc17c2c52b4f7d2bc1f435ae9a2b5c3e262dde5aa16"
+    },
+    "modular-candidate/reports/core-files.json": {
+      "bytes": 2191171,
+      "sha256": "7efdbd6c69927a79f23465f0014b8614a59703567c8f7c7da1a21bca51267fb8"
+    },
+    "modular-acceptance/reports/modular-product-summary.json": {
+      "bytes": 2017,
+      "sha256": "27ae1e93b6b47a767c9fcf4be643d945c73dbbe055ec67e3f78f3ea55c46e8b9"
+    },
+    "modular-acceptance/reports/empty-status.json": {
+      "bytes": 2925,
+      "sha256": "edea6af8f9a6478a7696e467d3a5c909553937f579198a074e884a7b5a9f95e2"
+    },
+    "modular-acceptance/reports/empty-status.process.json": {
+      "bytes": 437,
+      "sha256": "29d91046ad066995b13a48abb4ff8023e272dde374ff1108c2285c9ed2afee2f"
+    },
+    "reports/offline-fonts-native.xml": {
+      "bytes": 389,
+      "sha256": "1a09f9152afe2d7191666a3e5ee4844dbe7afc3b5831843c671d01f6b7ddb20f"
+    },
+    "modular-acceptance/isolated-user/AppData/Local/VisionWorkshop/logs/modular-bootstrap-20261125T135414-7508.json": {
+      "bytes": 1269,
+      "sha256": "8418f0b484eb8589ba2836bab5278e036a7509b6dc457842a978c333ff77874c"
+    },
+    "modular-candidate/reports/core-crt-source.json": {
+      "bytes": 2411078,
+      "sha256": "60a891b2e428dfce017392b4b70efbd4337726511ba6f9d904c2123c92d27250"
+    },
+    "modular-candidate/reports/auxiliary-payload-compatibility.json": {
+      "bytes": 2656,
+      "sha256": "62eda83bb54e32a214201ec06b2cc74635b7be9b9c738f9622b308b24ee398a0"
+    }
+  }
+}

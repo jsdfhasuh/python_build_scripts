@@ -2,8 +2,8 @@
 
 This opt-in builder creates a real product Core and independent offline module
 ZIPs. It does not change the protocol-3 portable publisher, other target configs,
-or create a Release. The first candidate must pass the independent Windows
-workflow before its product behavior or actual compressed size is reported.
+or create a Release. Actual sizes come from verified Windows build artifacts;
+product behavior requires the separate real EXE matrix to pass.
 
 ## Prerequisite and scope
 
@@ -145,7 +145,13 @@ full `pip check` including this source vendor passed. The preparation-environmen
 The independent workflow is
 `.github/workflows/visionworkshop-modular-candidate.yml`. It pins an exact app
 commit, checks out both fixed vendors and LFS resources, and creates separate
-compiler and dependency preparation environments. The CLI steps are:
+compiler and dependency preparation environments. Start it by workflow dispatch,
+or by changing the explicit three-field request in
+`ci/visionworkshop-modular-candidate.json` on the candidate branch. Ordinary code
+and documentation pushes do not start another heavy candidate; the independent
+portable regression still runs on pushes. The request file binds an exact app
+commit and an optional source run/attempt. Dispatch uses its own inputs and leaves
+reuse disabled by default. The CLI steps are:
 
 ```powershell
 python scripts/build_vision_train_modular.py prepare --output modular-input
@@ -170,6 +176,39 @@ downloads before construction, and records the provenance of reused inputs.
 `build` requires Windows, fresh output paths and the reviewed separate environments.
 No operation publishes anything.
 
+### Optional byte-preserving module ZIP reuse
+
+A Core-only source fix can reuse a completed candidate's module archives by
+explicitly supplying `reuse_run_id` and `reuse_run_attempt`. The current request
+selects application `f1557cb1a8ca57314e617bea9f340eaa3a2e3f90` and the original
+module ZIPs from run `45616400076`, attempt 1. That source run failed its first
+EXE CLI check; its build was `BUILT`. Reuse preserves that failure status and
+does not transfer native qualification to the new candidate.
+
+The scoped Actions read token is available only to the downloader. It requires
+the exact completed run/attempt, source commit, unique nonexpired artifact names
+and API SHA-256 digests. It verifies each outer artifact, original inner ZIP and
+source build report. Evidence is bounded at 128 MiB; each inner ZIP must be a
+positive integer size no larger than 2 GiB minus one byte before its artifact is
+downloaded. Module outer artifacts have a further fixed 1 MiB container allowance.
+An earlier attempt of a subsequently rerun source is deliberately refused.
+
+Construction still reproduces the complete new dependency/model staging. Every
+original `module.json` field except its retained build identity must match the
+new manifest, including version, schema, ABI, dependency lock, catalog ownership,
+Core compatibility range and full payload inventory. Every original ZIP member
+must match the new staged path, size and SHA-256. Extra or duplicate entries,
+links, altered bytes, unreviewed compression properties and any mismatch fail;
+there is no silent fallback or manifest rewrite. The copied output ZIP and
+manifest retain their original bytes and identities.
+
+`module-reuse-validation.json` and the build/product summaries record the source
+run, artifact and original module build separately from the new Core build.
+Core is always frozen, compressed and verified again, and the full real EXE
+matrix runs again. This optimization does not implement an installed Core
+upgrade or registry migration. The default CLI remains a full construction when
+`--reuse-root` is absent.
+
 ## Candidate acceptance and reports
 
 The Windows workflow first runs the shared module contract and actual Windows
@@ -181,7 +220,8 @@ the actual compressed per-file size against the shared download limit.
 The acceptance driver runs that EXE from a Chinese and space-containing install
 path with isolated user directories and an empty current directory. It checks:
 
-- A separate windowed CLI invocation without `--output`: its new
+- A separate detached windowed CLI invocation with null standard handles and
+  without `--output`: its new
   `%LOCALAPPDATA%/VisionWorkshop/offline-modules/last-result.json` must contain the
   initial empty selection and identify that result file. The driver waits for
   the actual process handle and copies the exact JSON into acceptance evidence.
@@ -249,6 +289,49 @@ This builder does not implement a Core-upgrade transaction or migration of an
 installed registry to a new Core identity. A stable dependency lock makes old
 module manifests compatible where declared; it does not itself perform that
 registry migration.
+
+## Actual ZIP build and first product process
+
+[Run 45616400076](https://github.com/jsdfhasuh/python_build_scripts/actions/runs/45616400076)
+at builder `f9703a9c6a0c0370a10eed0afadd39e677770547`, app
+`c8c0fbe98a055620ddc5488be6835cf216b4800e`, completed the actual Core freeze,
+official CRT source checks and all twelve ZIP/LZMA round-trip checks in 3,964.5
+seconds. Every ZIP is below the individual 2 GiB minus one byte limit.
+
+| Original candidate ZIP | Compressed bytes |
+| --- | ---: |
+| Core | 180,416,446 |
+| `runtime.torch` | 1,865,186,577 |
+| `runtime.ort` | 113,428,219 |
+| `runtime.science` | 35,208,316 |
+| `runtime.vision` | 14,281,587 |
+| `feature.yolo` | 28,828,485 |
+| `feature.patchcore` | 76,634,413 |
+| `resource.yolo` | 32,296,740 |
+| `resource.patchcore-cnn` | 248,193,522 |
+| `resource.image-simplification` | 80,567,081 |
+| `resource.edgesam` | 35,560,937 |
+| `resource.patchcore-dino` | 80,604,327 |
+| **All archives together** | **2,791,206,650** |
+
+The 180.42 MB Core is a real artifact, not the earlier arithmetic remainder.
+Installing every optional module still requires the complete 2.79 GB compressed
+set. These sizes do not establish that the product is usable: the first EXE
+`--offline-modules status --output ...` wrote an `ok: true` empty-selection JSON,
+then failed while also printing Chinese JSON to its actual cp1252 stdout.
+`UnicodeEncodeError` caused exit 1 before any native/GUI/module-lifecycle case.
+The product summary remains `FAIL`, with zero completed cases or Core-unchanged
+checkpoints. The prepared-font Pillow check passed separately in the Windows
+preparation Python; it is not an EXE font-path result.
+
+All thirteen artifacts were uploaded independently. Evidence artifact
+`15028274168` is 46,050,507 bytes, with verified outer SHA-256
+`409bf843e05c7d408ee32f136ac3e8505997157ef245275764ca595e425ae877`.
+The original archive sizes, hashes, all artifact IDs, exact dependency graph and
+failure/report bindings are retained in
+`docs/evidence/visionworkshop-modular-candidate-45616400076.json`.
+The subsequent app/driver corrections are source fixes awaiting a new complete
+Windows matrix; the original failure is retained even when its ZIPs are reused.
 
 ## Initial Windows gate result
 

@@ -34,6 +34,9 @@ from vision_train_modular_archive import compressPackage
 from vision_train_modular_crt import loadRuntimeProfile
 from vision_train_modular_crt import prepareRuntime
 from vision_train_modular_crt import qualifyVendorCrt
+from vision_train_modular_reuse import readReuseSource
+from vision_train_modular_reuse import reuseArchive
+from vision_train_modular_reuse import validateReuseCore
 from vision_train_module_inventory import buildDependencyLock
 from vision_train_module_inventory import inventoryPayload
 from vision_train_module_inventory import importRoot
@@ -738,6 +741,13 @@ def buildCandidate(args) -> dict:
     contract.validate_core(metadata)
     writeCanonical(core / contract.CORE_FILE, metadata, encoder=contract.canonical_json,
                     maximumBytes=contract.MAX_METADATA)
+    archives = output / 'archives'
+    archives.mkdir()
+    reuse = (readReuseSource(args.reuse_root.resolve(), contract, set(metadata['catalog']))
+             if args.reuse_root else None)
+    if reuse:
+      validateReuseCore(reuse, metadata)
+    reusedArchives, reuseReports = {}, []
     manifests = {}
     for name, declaration in metadata['catalog'].items():
       root = modules / name
@@ -754,11 +764,22 @@ def buildCandidate(args) -> dict:
         'files': files, 'expanded_size': sum(record['size'] for record in files),
       }
       contract.validate_manifest(manifest, metadata)
-      writeCanonical(root / contract.MANIFEST_FILE, manifest, encoder=contract.canonical_json,
-                      maximumBytes=contract.MAX_METADATA)
+      if reuse:
+        destination = archives / (name + '-' + args.core_version + '.zip')
+        manifest, reusedArchives[name], evidence, originalBytes = reuseArchive(
+          reuse, name, root / 'payload', manifest, metadata, destination, contract)
+        (root / contract.MANIFEST_FILE).write_bytes(originalBytes)
+        reuseReports.append(evidence)
+      else:
+        writeCanonical(root / contract.MANIFEST_FILE, manifest, encoder=contract.canonical_json,
+                        maximumBytes=contract.MAX_METADATA)
       manifests[name] = manifest
     contract.validate_module_set(metadata, manifests)
     loader.writeReport(reports / 'module-manifests.json', manifests)
+    loader.writeReport(reports / 'module-reuse-validation.json', {
+      'enabled': reuse is not None, 'files': reuseReports,
+      'source_receipt': reuse['receipt'] if reuse else None,
+      'scope': 'Original ZIP verification; the new Core and full EXE matrix are independent'})
     buildFrozenCore(args.build_python.resolve(), buildInfo, core, metadata, output, reports,
                      Path(branding['icon_source']), crtRoot, crtProfile)
     records = fileRecords(core)
@@ -774,14 +795,13 @@ def buildCandidate(args) -> dict:
       'status': 'PASS', 'scope': 'All Core DLLs, including frozen _internal, against every module owner',
       'files': nativeInventory})
     loader.writeReport(reports / 'core-files.json', {'files': records})
-    archives = output / 'archives'
-    archives.mkdir()
     result['core_archive'] = compressPackage(core, archives / ('VisionWorkshop-Core-' + args.core_version + '.zip'),
                                              prefix='VisionWorkshop', maximumBytes=contract.MAX_ARCHIVE_BYTES)
     result['module_archives'] = []
     for name in contract.dependency_order(manifests):
-      artifact = compressPackage(modules / name, archives / (name + '-' + args.core_version + '.zip'),
-                                  maximumBytes=contract.MAX_ARCHIVE_BYTES)
+      artifact = (reusedArchives[name] if name in reusedArchives else
+                  compressPackage(modules / name, archives / (name + '-' + args.core_version + '.zip'),
+                                    maximumBytes=contract.MAX_ARCHIVE_BYTES))
       result['module_archives'].append(dict(artifact, module_id=name,
                                             manifest_sha256=contract.manifest_digest(manifests[name])))
     result.update(status='BUILT', core=metadata, core_sha256=contract.manifest_digest(metadata),
@@ -792,6 +812,8 @@ def buildCandidate(args) -> dict:
                   profile_sha256=fileHash(args.profile),
                   readline_compatibility=readline,
                   auxiliary_payload_compatibility=auxiliary,
+                  module_reuse={'enabled': reuse is not None, 'files': reuseReports},
+                  module_builds={name: manifest['build'] for name, manifest in manifests.items()},
                   packager=packagerState, branding=branding)
     return result
   except Exception as error:
@@ -814,6 +836,8 @@ def parseArgs(argv=None):
   parser.add_argument('--install-report', type=Path, action='append', default=[])
   parser.add_argument('--torch-install-report', type=Path)
   parser.add_argument('--crt-root', type=Path)
+  parser.add_argument('--reuse-root', type=Path,
+                      help='Optional exact completed-run artifacts; absent means build every module ZIP')
   parser.add_argument('--core-version', default='0.0.0')
   parser.add_argument('--max-core-version', default='0.0.1')
   parser.add_argument('--build-id', default=time.strftime('%Y%m%dT%H%M%SZ', time.gmtime()))

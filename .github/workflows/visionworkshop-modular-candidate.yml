@@ -5,31 +5,27 @@ on:
     branches:
       - test/visionworkshop-modular-loader
     paths:
-      - '.github/workflows/visionworkshop-modular-candidate.yml'
-      - 'ci/visionworkshop-modular.json'
-      - 'ci/visionworkshop-msvc-runtime.json'
-      - 'profiles/visionworkshop.json'
-      - 'assets/branding.json'
-      - 'assets/icons/visionworkshop.ico'
-      - 'ci/vision-train-modular-probe-constraints.txt'
-      - 'build_config.py'
-      - 'build_records.py'
-      - 'vision_train_module_inventory.py'
-      - 'vision_train_modular_*.py'
-      - 'scripts/build_vision_train_modular.py'
-      - 'scripts/modular_product_launcher.py'
-      - 'scripts/verify_vision_train_modular_product.py'
-      - 'scripts/verify_vision_train_modules.py'
-      - 'tests/test_vision_train_modular_build.py'
+      - 'ci/visionworkshop-modular-candidate.json'
   workflow_dispatch:
     inputs:
       app_ref:
         description: Exact application commit containing the shared protocol-4 contract and checks
         type: string
         required: true
+      reuse_run_id:
+        description: Optional completed candidate run whose exact module ZIPs will be fully reverified
+        type: string
+        required: false
+        default: ''
+      reuse_run_attempt:
+        description: Exact attempt of the optional reusable source run
+        type: string
+        required: false
+        default: '1'
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   windows-modular-candidate:
@@ -42,21 +38,47 @@ jobs:
       PYTHONIOENCODING: utf-8
       QT_QPA_PLATFORM: offscreen
     steps:
-      - name: Validate exact application source input
-        shell: pwsh
-        env:
-          APP_SOURCE_REF: ${{ inputs.app_ref || 'c8c0fbe98a055620ddc5488be6835cf216b4800e' }}
-        run: |
-          if ($env:APP_SOURCE_REF -notmatch '^[a-f0-9]{40}$') {
-            throw 'An exact reviewed application commit is required before this candidate can build'
-          }
-          "APP_SOURCE_REF=$env:APP_SOURCE_REF" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
-
       - name: Checkout modular builder
         uses: actions/checkout@v7
         with:
           path: packager
           persist-credentials: false
+
+      - name: Validate exact application source input
+        shell: pwsh
+        env:
+          CANDIDATE_EVENT: ${{ github.event_name }}
+          APP_SOURCE_INPUT: ${{ inputs.app_ref }}
+          REUSE_RUN_INPUT: ${{ inputs.reuse_run_id }}
+          REUSE_ATTEMPT_INPUT: ${{ inputs.reuse_run_attempt }}
+        run: |
+          if ($env:CANDIDATE_EVENT -eq 'push') {
+            $candidate = Get-Content packager/ci/visionworkshop-modular-candidate.json -Raw | ConvertFrom-Json
+            if ((($candidate.PSObject.Properties.Name | Sort-Object) -join ',') -ne 'app_ref,reuse_run_attempt,reuse_run_id') {
+              throw 'The explicit candidate request must contain exactly its three reviewed input fields'
+            }
+            foreach ($field in @('app_ref', 'reuse_run_id', 'reuse_run_attempt')) {
+              if ($candidate.$field -isnot [string]) { throw 'Candidate request fields must be strings' }
+            }
+            $env:APP_SOURCE_REF = $candidate.app_ref
+            $env:REUSE_RUN_ID = $candidate.reuse_run_id
+            $env:REUSE_RUN_ATTEMPT = $candidate.reuse_run_attempt
+          } elseif ($env:CANDIDATE_EVENT -eq 'workflow_dispatch') {
+            $env:APP_SOURCE_REF = $env:APP_SOURCE_INPUT
+            $env:REUSE_RUN_ID = $env:REUSE_RUN_INPUT
+            $env:REUSE_RUN_ATTEMPT = $env:REUSE_ATTEMPT_INPUT
+          } else {
+            throw 'Only explicit candidate requests or workflow dispatch may start this build'
+          }
+          if ($env:APP_SOURCE_REF -notmatch '^[a-f0-9]{40}$') {
+            throw 'An exact reviewed application commit is required before this candidate can build'
+          }
+          if (($env:REUSE_RUN_ID -and $env:REUSE_RUN_ID -notmatch '^[1-9][0-9]*$') -or $env:REUSE_RUN_ATTEMPT -notmatch '^[1-9][0-9]*$') {
+            throw 'Optional reuse requires positive exact run and attempt numbers'
+          }
+          "APP_SOURCE_REF=$env:APP_SOURCE_REF" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+          "REUSE_RUN_ID=$env:REUSE_RUN_ID" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+          "REUSE_RUN_ATTEMPT=$env:REUSE_RUN_ATTEMPT" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Checkout exact application and its fixed vendors
         uses: actions/checkout@v7
@@ -124,6 +146,8 @@ jobs:
           Push-Location packager
           & $env:BUILD_PYTHON -m unittest discover -s tests -p test_vision_train_modular_build.py -v
           if ($LASTEXITCODE -ne 0) { throw 'Modular builder unit checks failed' }
+          & $env:BUILD_PYTHON -m unittest discover -s tests -p test_vision_train_modular_reuse.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'Exact module ZIP reuse checks failed' }
           Pop-Location
           Push-Location source
           & $env:BUILD_PYTHON -m unittest discover -s tests -p test_module_contract.py -v
@@ -197,16 +221,29 @@ jobs:
           Pop-Location
           Remove-Item Env:VISIONWORKSHOP_TEST_FONT_DIR
 
+      - name: Download and bind optional completed-run module artifacts
+        if: ${{ env.REUSE_RUN_ID != '' }}
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          & $env:BUILD_PYTHON packager/scripts/prepare_vision_train_module_reuse.py `
+            --run-id $env:REUSE_RUN_ID --attempt $env:REUSE_RUN_ATTEMPT --output modular-reuse
+          if ($LASTEXITCODE -ne 0) { throw 'Completed source artifacts failed provenance or byte verification' }
+
       - name: Construct real Core and independent module ZIPs
         id: build-candidate
         shell: pwsh
         run: |
+          $reuseArgs = @()
+          if ($env:REUSE_RUN_ID) { $reuseArgs = @('--reuse-root', 'modular-reuse') }
           & $env:BUILD_PYTHON packager/scripts/build_vision_train_modular.py build `
             --source-root source --assets-root modular-assets --output modular-candidate `
             --build-python $env:BUILD_PYTHON --runtime-python $env:RUNTIME_PYTHON `
             --install-report reports/runtime-install.json --install-report reports/provider-install.json `
             --torch-install-report reports/runtime-install.json --crt-root modular-crt `
             --build-id "candidate-${{ github.run_id }}-${{ github.run_attempt }}" `
+            @reuseArgs `
             2>&1 | Tee-Object reports/modular-build.log
           if ($LASTEXITCODE -ne 0) { throw 'Modular candidate construction failed' }
 
@@ -227,6 +264,7 @@ jobs:
           path: |
             reports/**
             modular-input/**
+            modular-reuse/*.json
             modular-crt/reports/**
             modular-candidate/reports/**
             modular-acceptance/reports/**
