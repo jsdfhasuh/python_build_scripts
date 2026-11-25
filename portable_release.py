@@ -532,8 +532,10 @@ def runRelease(args: argparse.Namespace) -> dict:
       if dictionaryMiB != 64:
         options['dictionaryMiB'] = dictionaryMiB
       compression = compressArchive(appDir, temporary, **options)
-    if not ioPath(temporary).is_file() or not 0 < ioPath(temporary).stat().st_size <= MAX_ASSET_BYTES:
-      raise BuildConfigError('ZIP is missing, empty or exceeds the existing release size limit')
+    archiveBytes = ioPath(temporary).stat().st_size if ioPath(temporary).is_file() else 0
+    if not 0 < archiveBytes <= MAX_ASSET_BYTES:
+      raise BuildConfigError('ZIP is missing, empty or exceeds the existing release size limit: '
+                             f'{archiveBytes} bytes; maximum {MAX_ASSET_BYTES} bytes')
     verifiedArchive = verifyArchive(temporary, resolved.programName, record['files'])
     # Publishing performs this full input/artifact recheck once, immediately before upload.
     if not args.publish:

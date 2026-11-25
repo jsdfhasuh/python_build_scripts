@@ -139,11 +139,14 @@ Pillow 的包元数据；完整运行时包检查要求 DINO 文件和这些元�
 请使用包含此脚本的应用源码版本。预览、notes-only、显式记录重归档不运行准备脚本。
 重归档仍按原构建记录校验输入和产物，不补写旧包中的权重。
 
-独立 DINO 运行时目录 `dino_runtime` 由准备脚本生成，不进入 Git。
-配置通过 `generated_data_paths: ["dino_runtime"]` 显式声明该生成资源。
-品牌构建和便携发布的 dry-run 允许声明中与 `add_data` 源路径完全匹配的目录暂时缺失，
-但仍检查准备脚本、源码目录边界及其他普通资源；预览不会执行准备脚本或创建占位目录。
-正式构建先准备资源，再严格检查所有 `add_data` 源路径，检查通过后才生成输入快照并编译。
+当前 DINO ONNX worker 与桌面应用共用 CPython 3.12 主运行时，由同一主 EXE 启动独立
+worker 进程；安装包不再包含第二套 `dino_runtime` Python 环境。worker 允许主环境安装
+Torch，但自身不得导入训练模块。冻结检查要求 `python312.dll`、ONNX Runtime 原生绑定、
+worker 模块及依赖元数据齐全，并拒绝误带旧的 `dino_runtime` 目录。
+
+P4 DINO 核心的 Transformers、Hub、tokenizers 版本由 CI runtime profile 统一约束，
+其模型模块和版本元数据显式进入冻结包。编译前会构造不下载权重的 encoder，验证 CPU
+特征形状；这不改变应用已有的 P4 开发入口边界，也不代表完成真实模型或 GPU 验收。
 
 外部仓库：`python -m unittest discover -s tests -v`。
 应用仓库：`python scripts/verify_update_windows.py` 干净编译测试应用与真实更新器，执行连续更新及

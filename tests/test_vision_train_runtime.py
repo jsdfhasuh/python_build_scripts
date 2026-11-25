@@ -25,32 +25,39 @@ class PlatformTests(unittest.TestCase):
 class RequirementsTests(unittest.TestCase):
   def test_ci_overrides_are_resolved_together_without_changing_unrelated_pins(self):
     result = runtime.makeRequirements(
-      '# source\ntorch==2.5.1\nnumpy<=1.26.4\nplatformdirs==4.5.1\nkaggle\n',
+      '# source\ntorch==2.5.1\nnumpy<=1.26.4\nplatformdirs==4.5.1\nkaggle\n'
+      'huggingface_hub==1.3.3\ntokenizers==0.22.2\n',
       ['torchvision==0.20.1', 'kagglesdk==0.1.31', 'onnxruntime-gpu==1.23.2'],
       runtime.loadProfile())
     for text in ('numpy==2.0.2', 'torch==2.10.0+cu128', 'torchvision==0.25.0+cu128',
                  'torchaudio==2.10.0+cu128', 'sympy==1.14.0', 'lapx==0.5.9.post1',
                  'kaggle==2.2.4', 'kagglesdk==0.1.37', 'platformdirs==4.10.0',
-                 'onnxruntime-gpu==1.23.2'): 
+                 'onnxruntime-gpu==1.23.2', 'onnxruntime==1.23.2',
+                 'opencv-python-headless==4.11.0.86', 'transformers==4.46.3',
+                 'huggingface-hub==0.26.5', 'tokenizers==0.20.3'):
       self.assertIn(text, result)
     self.assertNotIn('torch==2.5.1', result)
     self.assertNotIn('kagglesdk==0.1.31', result)
+    self.assertNotIn('huggingface_hub==1.3.3', result)
+    self.assertNotIn('tokenizers==0.22.2', result)
     self.assertEqual(result.count('kaggle==2.2.4'), 1)
 
 
   def test_runtime_excludes_remove_qt_designer_tools_but_keep_qt_runtime(self):
     config = json.loads((runtime.ROOT / 'configs/emo-vision-train.json').read_text(encoding='utf-8'))
     result = runtime.makeRequirements(
-      'PyQt5==5.15.9\\nPyQt5-Qt5==5.15.2\\nPyQt5_sip==12.18.0\\n'
-      'PyQtWebEngine==5.15.7\\nPyQtWebEngine-Qt5==5.15.2\\n'
-      'pyqt5-tools==5.15.9.3.3\\nqt5-tools==5.15.2.1.3\\n'
-      'qt5-applications==5.15.2.2.3\\n',
-      [], runtime.loadProfile(), config.get('runtime_excludes', []))
+      'PyQt5==5.15.9\nPyQt5-Qt5==5.15.2\nPyQt5_sip==12.18.0\n'
+      'PyQtWebEngine==5.15.7\nPyQtWebEngine-Qt5==5.15.2\n'
+      'pyqt5_tools==5.15.9.3.3\nqt5-tools==5.15.2.1.3\n'
+      'qt5-applications==5.15.2.2.3\n',
+      ['PyQt5.plugins==5.15.9.2.3'], runtime.loadProfile(), config['runtime_excludes'])
     for name in ('PyQt5==5.15.9', 'PyQt5-Qt5==5.15.2', 'PyQt5_sip==12.18.0',
                  'PyQtWebEngine==5.15.7', 'PyQtWebEngine-Qt5==5.15.2'):
       self.assertIn(name, result)
-    for name in ('pyqt5-tools', 'pyqt5-plugins', 'qt5-tools', 'qt5-applications'):
-      self.assertFalse(any(line.lower().startswith(name + '==') for line in result), name)
+    from packaging.requirements import Requirement
+    from packaging.utils import canonicalize_name
+    names = {canonicalize_name(Requirement(line).name) for line in result}
+    self.assertTrue(names.isdisjoint(config['runtime_excludes']))
 
   def test_unrecognized_pip_directives_fail_instead_of_reading_wrong_relative_files(self):
     for text in ('-r other.txt', '--index-url https://example.invalid', './local-wheel.whl'):
@@ -68,7 +75,8 @@ class RequirementsTests(unittest.TestCase):
     with tempfile.TemporaryDirectory() as directory:
       root = Path(directory)
       path = root / 'requirements.txt'
-      path.write_text('torch==2.5.1\n', encoding='utf-8')
+      sourceText = 'torch==2.5.1\npyqt5-tools==5.15.9.3.3\nPyQt5==5.15.9\n'
+      path.write_text(sourceText, encoding='utf-8')
       commands = []
       def record(command):
         commands.append(command)
@@ -76,6 +84,8 @@ class RequirementsTests(unittest.TestCase):
           text = Path(command[command.index('-r') + 1]).read_text(encoding='utf-8')
           self.assertIn('kagglesdk==0.1.37', text)
           self.assertNotIn('kagglesdk==0.1.31', text)
+          self.assertNotIn('pyqt5-tools', text)
+          self.assertIn('PyQt5==5.15.9', text)
       with patch.object(runtime, 'checkPlatform'), patch.object(runtime, 'runCommand', record):
         runtime.installRuntime(root)
       self.assertIn('--index-url', commands[0])
@@ -86,7 +96,7 @@ class RequirementsTests(unittest.TestCase):
       self.assertIn('--force-reinstall', commands[2])
       self.assertIn('onnxruntime-gpu==1.23.2', commands[2])
       self.assertEqual(commands[3][-1], 'check')
-      self.assertEqual(path.read_text(), 'torch==2.5.1\n')
+      self.assertEqual(path.read_text(), sourceText)
 
   def test_install_failure_stops_before_next_step(self):
     with tempfile.TemporaryDirectory() as directory:
@@ -133,6 +143,9 @@ class EnvironmentTests(unittest.TestCase):
       code = run.call_args.args[0][-1]
       self.assertIn('from anomalib.models import Patchcore', code)
       self.assertIn('ApiGetSubmissionLimitsRequest', code)
+      self.assertIn('create_encoder()', code)
+      self.assertIn('DinoFeatures(encoder)', code)
+      self.assertEqual(run.call_args.kwargs['cwd'], Path('source'))
       self.assertNotIn('cuda.is_available', code)
 
 
@@ -150,9 +163,14 @@ class PackageTests(unittest.TestCase):
       self.write('torch/lib/' + name)
     for name in self.profile['models']:
       self.write('static/models/' + name)
-    for name in set(runtime.IMAGE_SIMPLIFICATION_DISTRIBUTIONS + runtime.DINO_MAIN_METADATA):
+    pins = (self.profile['torch_packages'] + self.profile['packages']
+            + list(self.profile['overrides'].values()))
+    versions = dict(text.split('==', 1) for text in pins)
+    for name in set(runtime.IMAGE_SIMPLIFICATION_DISTRIBUTIONS + runtime.DINO_MAIN_METADATA
+                    + runtime.PATCHCORE_DINO_METADATA):
+      version = versions.get(name, '1.0')
       self.write(f'{name.lower()}-1.0.dist-info/METADATA',
-                 f'Metadata-Version: 2.1\nName: {name}\nVersion: 1.0\n')
+                 f'Metadata-Version: 2.1\nName: {name}\nVersion: {version}\n')
     for name in runtime.KAGGLE_SOURCE_FILES:
       self.write(name)
     for name in ('python312.dll', 'onnxruntime/capi/onnxruntime_pybind11_state.pyd',
@@ -300,6 +318,17 @@ class PackageTests(unittest.TestCase):
   def test_main_runtime_requires_metadata(self):
     (self.internal / 'psutil-1.0.dist-info/METADATA').unlink()
     with self.assertRaisesRegex(BuildConfigError, 'DINO main-runtime metadata: psutil'):
+      runtime.validatePackage(self.app, 'VisionWorkshop')
+
+  def test_patchcore_dino_requires_bundled_transformers_metadata(self):
+    (self.internal / 'transformers-1.0.dist-info/METADATA').unlink()
+    with self.assertRaisesRegex(BuildConfigError, 'transformers expected 4.46.3, found None'):
+      runtime.validatePackage(self.app, 'VisionWorkshop')
+
+  def test_patchcore_dino_rejects_incompatible_tokenizers_metadata(self):
+    self.write('tokenizers-1.0.dist-info/METADATA',
+               'Metadata-Version: 2.1\nName: tokenizers\nVersion: 0.22.2\n')
+    with self.assertRaisesRegex(BuildConfigError, 'tokenizers expected 0.20.3, found 0.22.2'):
       runtime.validatePackage(self.app, 'VisionWorkshop')
 
   def test_missing_cudnn_component_is_fatal(self):
