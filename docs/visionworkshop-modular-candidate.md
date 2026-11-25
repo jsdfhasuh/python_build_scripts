@@ -182,3 +182,24 @@ This builder does not implement a Core-upgrade transaction or migration of an
 installed registry to a new Core identity. A stable dependency lock makes old
 module manifests compatible where declared; it does not itself perform that
 registry migration.
+
+## Initial Windows gate result
+
+[Run 45597748141](https://github.com/jsdfhasuh/python_build_scripts/actions/runs/45597748141)
+at builder `2e1678b6def0cf519f3a3344d82e2059e16b8035` passed all 30 builder checks,
+10 shared-contract checks and 13 actual Windows transaction checks. It stopped
+before dependency preparation because the repair test used an unqualified
+`test_module_runtime` import which failed with the complete `tests` package.
+Application `c07785a66d18851cd6a3a0fd737f50e91579be0f` changes the three affected
+test/helper imports to package-qualified names; it does not change production
+behavior or assertions. Artifact `15014710476` preserves the failure evidence.
+This run produced no candidate product ZIP and no product EXE acceptance result.
+
+The simultaneous B2 path-filter regression
+[45597747875](https://github.com/jsdfhasuh/python_build_scripts/actions/runs/45597747875)
+also stopped at its test harness. Its existing broad `test_*modul*.py` pattern
+selected the new product branding test, while the diagnostic compiler correctly
+has no Pillow. The B2 workflow now selects its exact 17-test probe file; the full
+product builder tests still run in the dedicated candidate and portable suites.
+No loader assertion or dependency was removed to obtain a pass. B2 artifact
+`15014386635` preserves that separate gate failure.

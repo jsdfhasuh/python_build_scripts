@@ -44,7 +44,7 @@ jobs:
       - name: Validate exact application source input
         shell: pwsh
         env:
-          APP_SOURCE_REF: ${{ inputs.app_ref || 'c10cf36bcb7dc37f376dfe3a765d0e0146f047ff' }}
+          APP_SOURCE_REF: ${{ inputs.app_ref || 'c07785a66d18851cd6a3a0fd737f50e91579be0f' }}
         run: |
           if ($env:APP_SOURCE_REF -notmatch '^[a-f0-9]{40}$') {
             throw 'An exact reviewed application commit is required before this candidate can build'
