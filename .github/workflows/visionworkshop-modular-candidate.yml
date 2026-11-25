@@ -25,10 +25,12 @@ on:
 
 permissions:
   contents: read
-  actions: read
 
 jobs:
   windows-modular-candidate:
+    permissions:
+      contents: read
+      actions: read
     runs-on: windows-latest
     timeout-minutes: 150
     env:

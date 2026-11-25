@@ -72,8 +72,24 @@ class WorkflowSafetyTests(unittest.TestCase):
           if ((path.name == 'release-windows.yml' and jobName == 'build') or
               (path.name == 'release-emo-master.yml' and jobName in ('package', 'release'))):
             self.assertEqual(job['permissions'], {'contents': 'write'})
+          elif (path.name == 'visionworkshop-modular-candidate.yml'
+                and jobName == 'windows-modular-candidate'):
+            self.assertEqual(job['permissions'], {'contents': 'read', 'actions': 'read'})
           else:
             self.assertEqual(job.get('permissions', data['permissions']), {'contents': 'read'})
+
+  def test_candidate_reuse_read_token_is_scoped_to_explicit_artifact_download(self) -> None:
+    data, events = loadWorkflow('visionworkshop-modular-candidate.yml')
+    job = data['jobs']['windows-modular-candidate']
+    self.assertNotIn('GH_TOKEN', data.get('env', {}))
+    self.assertNotIn('GH_TOKEN', job.get('env', {}))
+    downloads = [step for step in getSteps(data) if 'GH_TOKEN' in step.get('env', {})]
+    self.assertEqual(len(downloads), 1)
+    self.assertEqual(downloads[0]['env']['GH_TOKEN'], '${{ github.token }}')
+    self.assertEqual(downloads[0]['if'], "${{ env.REUSE_RUN_ID != '' }}")
+    self.assertIn('packager/scripts/prepare_vision_train_module_reuse.py', downloads[0]['run'])
+    self.assertEqual(events['workflow_dispatch']['inputs']['reuse_run_id']['default'], '')
+    self.assertEqual(events['push']['paths'], ['ci/visionworkshop-modular-candidate.json'])
 
   def test_release_checkouts_use_explicit_refs_without_persisting_tokens(self) -> None:
     for name in PRODUCTION:
