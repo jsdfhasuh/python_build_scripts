@@ -1,0 +1,372 @@
+{
+  "schema_version": 1,
+  "kind": "Read-only Git object and shared-path audit; no product execution",
+  "baseline_plan_commit": "50ebccf9a0f0d1b9afa4e530f6ea3bdc9d6e78ee",
+  "baseline_tree": "4321a3546ffe86ea5198cdaa6c249e22e6cf1698",
+  "prior_runtime_branch": "6d4278aa0adddcd45994e64f1bf673886b2037d8",
+  "candidate_commit": "d3ace70e41a41b4334a9e44d2dbec0d4907f077d",
+  "candidate_tree": "1b90d0281b334a28a09aa5b60c7b5f4646327699",
+  "trees_complete": true,
+  "selected_existing_paths": [
+    {
+      "path": ".github/workflows/.gitattributes",
+      "before": "81855769f552ce7d70bd55d255b5d4c8f9a75346",
+      "after": "81855769f552ce7d70bd55d255b5d4c8f9a75346",
+      "unchanged": true
+    },
+    {
+      "path": ".github/workflows/diagnose-baseline-startup.yml",
+      "before": "b106da49fbb5731a3947e6bafe70918ecb04d2b7",
+      "after": "b106da49fbb5731a3947e6bafe70918ecb04d2b7",
+      "unchanged": true
+    },
+    {
+      "path": ".github/workflows/diagnose-updater-fixtures.yml",
+      "before": "329fe47e8f5b227c32435b0953d34e26adc5e42e",
+      "after": "329fe47e8f5b227c32435b0953d34e26adc5e42e",
+      "unchanged": true
+    },
+    {
+      "path": ".github/workflows/published-update-retest.yml",
+      "before": "4b467858ad07d82d0581ef713bc01ca69cbb6e81",
+      "after": "4b467858ad07d82d0581ef713bc01ca69cbb6e81",
+      "unchanged": true
+    },
+    {
+      "path": ".github/workflows/release-emo-master.yml",
+      "before": "f0d159ae827407ea11a7db753727bf89d0ce9492",
+      "after": "f0d159ae827407ea11a7db753727bf89d0ce9492",
+      "unchanged": true
+    },
+    {
+      "path": ".github/workflows/release-windows.yml",
+      "before": "a45bfc958de468d22357434eb6ad2819466908b1",
+      "after": "a45bfc958de468d22357434eb6ad2819466908b1",
+      "unchanged": true
+    },
+    {
+      "path": ".github/workflows/visionworkshop-portable.yml",
+      "before": "75fe90c9a9a9760ce5b6523aa34270eb7226dacd",
+      "after": "ca3a7a2a2c82b84db9877e0d39cbb67bb42fe748",
+      "unchanged": false
+    },
+    {
+      "path": ".github/workflows/visionworkshop-tests.yml",
+      "before": "d39f689e3afb768810f9e4b6837da74c4c28541c",
+      "after": "ff526d71c5aa4922287298b7b1fd9ca04bd84baf",
+      "unchanged": false
+    },
+    {
+      "path": "build.py",
+      "before": "c7a2c908c260ea0b926c2ebea568ae1a79667b63",
+      "after": "c7a2c908c260ea0b926c2ebea568ae1a79667b63",
+      "unchanged": true
+    },
+    {
+      "path": "configs/emo-master-runtime.json",
+      "before": "3b949a2d60643d2750e69a806f5e5dfe279ca84c",
+      "after": "3b949a2d60643d2750e69a806f5e5dfe279ca84c",
+      "unchanged": true
+    },
+    {
+      "path": "configs/emo-master.json",
+      "before": "a93dcf4ef1c9d540621a5ad54d3ebac29c2ec7d3",
+      "after": "a93dcf4ef1c9d540621a5ad54d3ebac29c2ec7d3",
+      "unchanged": true
+    },
+    {
+      "path": "configs/emo-vision-train.json",
+      "before": "42d6f414a634bec2d168f41a555b29c4b1eb4e45",
+      "after": "2c4ed029bcc39c02717037f145eb6f9140f7afe0",
+      "unchanged": false
+    },
+    {
+      "path": "portable_release.py",
+      "before": "a8a9d92005fd95d6fa93ee80afdcd264b4c9ff8a",
+      "after": "da89db3cdeaa884bdb7f5c373e0a73d56365daf5",
+      "unchanged": false
+    }
+  ],
+  "modular_pr_diff": {
+    "changed_files": [
+      {
+        "path": ".github/workflows/visionworkshop-modular-candidate.yml",
+        "status": "added",
+        "additions": 434,
+        "deletions": 0
+      },
+      {
+        "path": ".github/workflows/visionworkshop-modular-loader-probe.yml",
+        "status": "added",
+        "additions": 180,
+        "deletions": 0
+      },
+      {
+        "path": "ci/vision-train-modular-probe-constraints.txt",
+        "status": "added",
+        "additions": 221,
+        "deletions": 0
+      },
+      {
+        "path": "ci/visionworkshop-modular-candidate.json",
+        "status": "added",
+        "additions": 5,
+        "deletions": 0
+      },
+      {
+        "path": "ci/visionworkshop-modular.json",
+        "status": "added",
+        "additions": 100,
+        "deletions": 0
+      },
+      {
+        "path": "ci/visionworkshop-msvc-runtime.json",
+        "status": "added",
+        "additions": 166,
+        "deletions": 0
+      },
+      {
+        "path": "docs/evidence/visionworkshop-modular-candidate-45603279133.json",
+        "status": "added",
+        "additions": 153,
+        "deletions": 0
+      },
+      {
+        "path": "docs/evidence/visionworkshop-modular-candidate-45611806903.json",
+        "status": "added",
+        "additions": 210,
+        "deletions": 0
+      },
+      {
+        "path": "docs/evidence/visionworkshop-modular-candidate-45616400076.json",
+        "status": "added",
+        "additions": 399,
+        "deletions": 0
+      },
+      {
+        "path": "docs/evidence/visionworkshop-modular-candidate-45633041291.json",
+        "status": "added",
+        "additions": 42,
+        "deletions": 0
+      },
+      {
+        "path": "docs/evidence/visionworkshop-modular-candidate-45634156750.json",
+        "status": "added",
+        "additions": 699,
+        "deletions": 0
+      },
+      {
+        "path": "docs/evidence/visionworkshop-modular-candidate-45643325579.json",
+        "status": "added",
+        "additions": 1911,
+        "deletions": 0
+      },
+      {
+        "path": "docs/evidence/visionworkshop-modular-candidate-45652987042.json",
+        "status": "added",
+        "additions": 393,
+        "deletions": 0
+      },
+      {
+        "path": "docs/evidence/visionworkshop-modular-index-source-tests.json",
+        "status": "added",
+        "additions": 50,
+        "deletions": 0
+      },
+      {
+        "path": "docs/evidence/visionworkshop-modular-loader-45585355615.json",
+        "status": "added",
+        "additions": 932,
+        "deletions": 0
+      },
+      {
+        "path": "docs/evidence/visionworkshop-modular-loader.md",
+        "status": "added",
+        "additions": 207,
+        "deletions": 0
+      },
+      {
+        "path": "docs/evidence/visionworkshop-modular-receipt-source-tests.json",
+        "status": "added",
+        "additions": 16,
+        "deletions": 0
+      },
+      {
+        "path": "docs/evidence/visionworkshop-modular-size-audit-45616400076.json",
+        "status": "added",
+        "additions": 42971,
+        "deletions": 0
+      },
+      {
+        "path": "docs/evidence/visionworkshop-modular-size-audit-45616400076.md",
+        "status": "added",
+        "additions": 198,
+        "deletions": 0
+      },
+      {
+        "path": "docs/evidence/visionworkshop-torchvision-python-owner-20261125.json",
+        "status": "added",
+        "additions": 210,
+        "deletions": 0
+      },
+      {
+        "path": "docs/visionworkshop-modular-candidate.md",
+        "status": "added",
+        "additions": 608,
+        "deletions": 0
+      },
+      {
+        "path": "scripts/build_vision_train_modular.py",
+        "status": "added",
+        "additions": 13,
+        "deletions": 0
+      },
+      {
+        "path": "scripts/modular_probe_core.py",
+        "status": "added",
+        "additions": 624,
+        "deletions": 0
+      },
+      {
+        "path": "scripts/modular_product_launcher.py",
+        "status": "added",
+        "additions": 178,
+        "deletions": 0
+      },
+      {
+        "path": "scripts/prepare_vision_train_module_reuse.py",
+        "status": "added",
+        "additions": 27,
+        "deletions": 0
+      },
+      {
+        "path": "scripts/verify_vision_train_modular_product.py",
+        "status": "added",
+        "additions": 571,
+        "deletions": 0
+      },
+      {
+        "path": "scripts/verify_vision_train_modules.py",
+        "status": "added",
+        "additions": 882,
+        "deletions": 0
+      },
+      {
+        "path": "scripts/verify_windows_qt_fonts.py",
+        "status": "added",
+        "additions": 304,
+        "deletions": 0
+      },
+      {
+        "path": "tests/test_vision_train_modular_build.py",
+        "status": "added",
+        "additions": 623,
+        "deletions": 0
+      },
+      {
+        "path": "tests/test_vision_train_modular_index.py",
+        "status": "added",
+        "additions": 263,
+        "deletions": 0
+      },
+      {
+        "path": "tests/test_vision_train_modular_receipts.py",
+        "status": "added",
+        "additions": 305,
+        "deletions": 0
+      },
+      {
+        "path": "tests/test_vision_train_modular_reuse.py",
+        "status": "added",
+        "additions": 315,
+        "deletions": 0
+      },
+      {
+        "path": "tests/test_vision_train_modules.py",
+        "status": "added",
+        "additions": 354,
+        "deletions": 0
+      },
+      {
+        "path": "tests/test_windows_qt_fonts.py",
+        "status": "added",
+        "additions": 153,
+        "deletions": 0
+      },
+      {
+        "path": "tests/test_workflow_safety.py",
+        "status": "modified",
+        "additions": 16,
+        "deletions": 0
+      },
+      {
+        "path": "vision_train_modular_archive.py",
+        "status": "added",
+        "additions": 86,
+        "deletions": 0
+      },
+      {
+        "path": "vision_train_modular_build.py",
+        "status": "added",
+        "additions": 874,
+        "deletions": 0
+      },
+      {
+        "path": "vision_train_modular_crt.py",
+        "status": "added",
+        "additions": 205,
+        "deletions": 0
+      },
+      {
+        "path": "vision_train_modular_index.py",
+        "status": "added",
+        "additions": 196,
+        "deletions": 0
+      },
+      {
+        "path": "vision_train_modular_receipts.py",
+        "status": "added",
+        "additions": 226,
+        "deletions": 0
+      },
+      {
+        "path": "vision_train_modular_reuse.py",
+        "status": "added",
+        "additions": 354,
+        "deletions": 0
+      },
+      {
+        "path": "vision_train_module_inventory.py",
+        "status": "added",
+        "additions": 337,
+        "deletions": 0
+      }
+    ],
+    "modified_existing": [
+      "tests/test_workflow_safety.py"
+    ]
+  },
+  "prior_shared_differences": [
+    {
+      "path": ".github/workflows/visionworkshop-tests.yml",
+      "patch": "@@ -33,7 +33,7 @@ jobs:\n           persist-credentials: false\n       - uses: actions/setup-python@v6\n         with:\n-          python-version: '3.11'\n+          python-version: '3.12'\n       - name: Install test-only tools\n         run: python -m pip install Pillow PyYAML pyinstaller==6.22.2 pefile\n       - name: Unit and integration tests"
+    },
+    {
+      "path": "portable_release.py",
+      "patch": "@@ -145,6 +145,23 @@ def verifyArchive(path: Path, programName: str, expectedFiles: dict) -> Verified\n   return VerifiedArchive(programName, objectHash(expectedFiles), after[0], after[1])\n \n \n+def collectArchiveSizes(path: Path) -> dict:\n+  with zipfile.ZipFile(ioPath(path)) as archive:\n+    members = [\n+      {'path': member.filename, 'size': member.file_size,\n+       'compressed_size': member.compress_size, 'is_directory': member.is_dir()}\n+      for member in archive.infolist()\n+    ]\n+  return {\n+    'member_count': len(members),\n+    'file_count': sum(not member['is_directory'] for member in members),\n+    'directory_count': sum(member['is_directory'] for member in members),\n+    'total_size': sum(member['size'] for member in members),\n+    'total_compressed_size': sum(member['compressed_size'] for member in members),\n+    'members': members,\n+  }\n+\n+\n def verifyArchiveContents(\n   path: Path, programName: str, expectedFiles: dict, progress: ReleaseProgress,\n ) -> None:\n@@ -532,18 +549,48 @@ def runRelease(args: argparse.Namespace) -> dict:\n       if dictionaryMiB != 64:\n         options['dictionaryMiB'] = dictionaryMiB\n       compression = compressArchive(appDir, temporary, **options)\n-    if not ioPath(temporary).is_file() or not 0 < ioPath(temporary).stat().st_size <= MAX_ASSET_BYTES:\n-      raise BuildConfigError('ZIP is missing, empty or exceeds the existing release size limit')\n+    archiveBytes = ioPath(temporary).stat().st_size if ioPath(temporary).is_file() else 0\n+    oversized = archiveBytes > MAX_ASSET_BYTES\n+    sizeError = ('ZIP is missing, empty or exceeds the existing release size limit: '\n+                 f'{archiveBytes} bytes; maximum {MAX_ASSET_BYTES} bytes')\n+    if archiveBytes <= 0 or (oversized and args.publish):\n+      raise BuildConfigError(sizeError)\n     verifiedArchive = verifyArchive(temporary, resolved.programName, record['files'])\n     # Publishing performs this full input/artifact recheck once, immediately before upload.\n     if not args.publish:\n       with ReleaseProgress('复查源码、工具和构建目录'):\n         verifyRecord(context.workRoot / 'build-record.json', resolved, sourceRoot,\n                      requireReusable=bool(args.skip_build))\n+      memberSizes = collectArchiveSizes(temporary) if oversized else None\n       if hashArchive(temporary, '保存前复查 ZIP 指纹') != (\n         verifiedArchive.sha256, verifiedArchive.size,\n       ):\n         raise BuildConfigError('ZIP changed before finalization')\n+      if oversized:\n+        diagnostics = output / 'diagnostics'\n+        ioPath(diagnostics).mkdir()\n+        diagnostic = {\n+          'schema_version': 1, 'status': 'blocked-size',\n+          'published': False, 'publishable': False,\n+          'target': resolved.target, 'program_name': resolved.programName,\n+          'release_tag': args.release_tag, 'build_id': context.buildId,\n+          'asset_name': assetName, 'asset_sha256': verifiedArchive.sha256,\n+          'asset_size': verifiedArchive.size, 'maximum_asset_size': MAX_ASSET_BYTES,\n+          'source_commit': source.get('commit'),\n+          'packager_commit': record['inputs']['packager'].get('commit'),\n+          'files_sha256': record['files_sha256'], 'archive_compression': compression,\n+          'archive_lzma_dictionary_mib': dictionaryMiB if compression == 'zip/lzma' else None,\n+          'runtime_validation': runtimeCheck, 'update_protocol': record.get('update_protocol'),\n+        }\n+        ioPath(temporary).rename(ioPath(diagnostics / assetName))\n+        writeJsonNew(diagnostics / 'archive-members.json', {\n+          'schema_version': 1, 'asset_name': assetName,\n+          'asset_sha256': verifiedArchive.sha256, 'asset_size': verifiedArchive.size,\n+          **memberSizes,\n+        })\n+        writeJsonNew(diagnostics / 'oversize-archive.json', diagnostic)\n+        print(f'Verified oversized ZIP retained for diagnostics only: {diagnostics / assetName}')\n+        raise BuildConfigError(sizeError)\n     ioPath(temporary).rename(ioPath(assetPath))\n   finally:\n     ioPath(temporary).unlink(missing_ok=True)"
+    },
+    {
+      "path": "pyi_rth_torch_dll.py",
+      "patch": "@@ -43,6 +43,18 @@ def _log(msg):\n     import ctypes\n     # DINO uses ORT and loads CUDA DLLs explicitly; it does not need Torch's CPU stack.\n     dino_worker = len(sys.argv) > 1 and sys.argv[1] == '--dino-onnx-worker'\n+    if dino_worker:\n+      # Bind the bundled MSVCP before PyQt5's runtime hook imports its older CRT.\n+      crtPath = os.path.abspath(os.path.join(base, 'msvcp140.dll'))\n+      if os.path.isfile(crtPath):\n+        try:\n+          # LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_DEFAULT_DIRS.\n+          ctypes.CDLL(crtPath, winmode=0x1100)\n+          _log('DINO CRT preload ok: ' + crtPath)\n+        except OSError as error:\n+          _log('DINO CRT preload fail: ' + crtPath + ' err=' + str(error))\n+      else:\n+        _log('DINO CRT preload missing: ' + crtPath)\n     torch_lib_dirs = [] if dino_worker else [\n         d for d in seen if d.endswith(os.path.join('torch', 'lib')) and os.path.isdir(d)]\n     for d in torch_lib_dirs:"
+    }
+  ],
+  "findings": [
+    "EmoMaster configuration/runtime and release-emo-master/release-windows workflows are byte-identical to the original plan baseline; shared build.py is also unchanged.",
+    "PR6 changes add VisionWorkshop modular implementation/evidence/tests and only extend the existing workflow-safety test file; PR6 does not edit shared release/runtime entrypoints.",
+    "PR4 changed portable_release.py: non-publish oversized ZIP attempts still fail, but now retain validated diagnostic output for any target. This is a real cross-target diagnostic behavior change, not an assertion that every shared path is byte-identical.",
+    "PR4 changed pyi_rth_torch_dll.py for the --dino-onnx-worker path and changed visionworkshop-tests.yml test Python from 3.11 to 3.12; original B1.9 must not be silently marked complete.",
+    "This audit does not execute EmoMaster or replace protocol-3 published update retest."
+  ],
+  "b0_8": "PARTIAL: baseline recorded; no broad no-impact runtime claim",
+  "b1_9": "OPEN"
+}

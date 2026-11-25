@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "diagnostic_attempt": 1,
+  "source_run_id": 45659615499,
+  "source_run_attempt": 1,
+  "source_head_sha": "d3ace70e41a41b4334a9e44d2dbec0d4907f077d",
+  "source_app_sha": "591f8bef7b2292caf50f4848e3047518e490742c",
+  "core_sha256": "9b508d684ec2d594cbd2b162063fd6dc45b9982553f9276ef2bb8010b27064ad",
+  "core_archive": {
+    "name": "VisionWorkshop-Core-0.0.0.zip",
+    "bytes": 180443076,
+    "sha256": "14e62ed16acb684c1ed09573c24ec7b52482dd0d867dbf52df254275d9c7c0d9"
+  },
+  "artifacts": {
+    "evidence": {
+      "id": 15046836955,
+      "name": "visionworkshop-modular-evidence-45659615499-1",
+      "bytes": 73474221,
+      "sha256": "eed972a2d2a487445335d09722fb62bdaa926efd75ba1db5ad911864829ebf81"
+    },
+    "core": {
+      "id": 15045973042,
+      "name": "visionworkshop-core-candidate-45659615499-1",
+      "bytes": 180443248,
+      "sha256": "fefae3ffd2e7b4b6e096079521c4f98e73a4a1aaadc9a7d69c21ce4f034420aa"
+    }
+  },
+  "normal_gui_comparison": true
+}

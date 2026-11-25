@@ -1,0 +1,79 @@
+name: VisionWorkshop immutable Core exit diagnostic
+
+on:
+  push:
+    branches:
+      - test/visionworkshop-modular-loader
+    paths:
+      - 'ci/visionworkshop-core-diagnostic.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-core-exit-diagnostic:
+    permissions:
+      contents: read
+      actions: read
+    runs-on: windows-latest
+    timeout-minutes: 20
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      PYTHONNOUSERSITE: '1'
+      PYTHONUTF8: '1'
+      PYTHONIOENCODING: utf-8
+    steps:
+      - name: Checkout diagnostic driver only
+        uses: actions/checkout@v7
+        with:
+          path: packager
+          persist-credentials: false
+
+      - name: Set up the diagnostic controller
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12.10'
+
+      - name: Check source and event-correlation guards
+        shell: pwsh
+        working-directory: packager
+        run: |
+          python -B -m unittest discover -s tests -p test_vision_train_core_diagnostic.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'Core diagnostic guard checks failed' }
+
+      - name: Download the exact original Core and evidence
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python -B packager/scripts/diagnose_vision_train_core.py prepare --request packager/ci/visionworkshop-core-diagnostic.json --output diagnostic-source
+          if ($LASTEXITCODE -ne 0) { throw 'Original Core source binding failed' }
+
+      - name: Repeat original Core exit and read matching Windows events
+        shell: pwsh
+        run: |
+          python -B packager/scripts/diagnose_vision_train_core.py run --source diagnostic-source --request packager/ci/visionworkshop-core-diagnostic.json --output core-exit-diagnostic
+          if ($LASTEXITCODE -ne 0) { throw 'Original Core exit diagnostic did not pass' }
+
+      - name: Upload diagnostic reports without redistributing Core
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visionworkshop-core-exit-diagnostic-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            diagnostic-source/source-receipt.json
+            packager/ci/visionworkshop-core-diagnostic.json
+            core-exit-diagnostic/diagnostic-summary.json
+            core-exit-diagnostic/*/reports/**
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Record limited diagnostic scope
+        if: always()
+        shell: pwsh
+        run: |
+          @'
+          Original immutable Core diagnostic only. The exact source candidate and its original failure remain identified in the request and reports.
+          No rebuilding, module downloads, Release, or complete candidate qualification occurs here. A nonzero product exit always remains a failure.
+          '@ | Out-File $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append

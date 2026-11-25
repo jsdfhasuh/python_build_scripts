@@ -72,8 +72,10 @@ class WorkflowSafetyTests(unittest.TestCase):
           if ((path.name == 'release-windows.yml' and jobName == 'build') or
               (path.name == 'release-emo-master.yml' and jobName in ('package', 'release'))):
             self.assertEqual(job['permissions'], {'contents': 'write'})
-          elif (path.name == 'visionworkshop-modular-candidate.yml'
-                and jobName == 'windows-modular-candidate'):
+          elif ((path.name == 'visionworkshop-modular-candidate.yml'
+                 and jobName == 'windows-modular-candidate') or
+                (path.name == 'visionworkshop-core-diagnostic.yml'
+                 and jobName == 'windows-core-exit-diagnostic')):
             self.assertEqual(job['permissions'], {'contents': 'read', 'actions': 'read'})
           else:
             self.assertEqual(job.get('permissions', data['permissions']), {'contents': 'read'})
@@ -90,6 +92,22 @@ class WorkflowSafetyTests(unittest.TestCase):
     self.assertIn('packager/scripts/prepare_vision_train_module_reuse.py', downloads[0]['run'])
     self.assertEqual(events['workflow_dispatch']['inputs']['reuse_run_id']['default'], '')
     self.assertEqual(events['push']['paths'], ['ci/visionworkshop-modular-candidate.json'])
+
+  def test_core_exit_diagnostic_only_downloads_reviewed_core_without_rebuilding(self) -> None:
+    data, events = loadWorkflow('visionworkshop-core-diagnostic.yml')
+    job = data['jobs']['windows-core-exit-diagnostic']
+    self.assertEqual(events['push']['paths'], ['ci/visionworkshop-core-diagnostic.json'])
+    self.assertEqual(events['push']['branches'], ['test/visionworkshop-modular-loader'])
+    self.assertNotIn('GH_TOKEN', data.get('env', {}))
+    self.assertNotIn('GH_TOKEN', job.get('env', {}))
+    tokens = [step for step in getSteps(data) if 'GH_TOKEN' in step.get('env', {})]
+    self.assertEqual(len(tokens), 1)
+    self.assertEqual(tokens[0]['env']['GH_TOKEN'], '${{ github.token }}')
+    self.assertIn('diagnose_vision_train_core.py prepare', tokens[0]['run'])
+    text = (WORKFLOWS / 'visionworkshop-core-diagnostic.yml').read_text(encoding='utf-8')
+    for forbidden in ('build_vision_train_modular.py', 'pip install', 'submodules:', 'source_ref'):
+      self.assertNotIn(forbidden, text)
+    self.assertIn('diagnose_vision_train_core.py run', text)
 
   def test_release_checkouts_use_explicit_refs_without_persisting_tokens(self) -> None:
     for name in PRODUCTION:

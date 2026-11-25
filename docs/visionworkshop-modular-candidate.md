@@ -87,13 +87,22 @@ The 12 focused source tests use real small LZMA ZIPs and cover new Core/original
 module builds, independent asset corruption, missing/duplicate modules,
 ABI/lock/Core-range/dependency conflicts, source-build substitution, unsafe or
 colliding asset paths, canonical/size/type boundaries and false qualification
-claims. At this implementation checkpoint, no actual Windows candidate has yet
-generated this index. Build/native/Release qualifications remain distinct;
+claims. The source-only implementation checkpoint is retained in the test report
+below; actual Windows run `45659615499` subsequently generated this index and its
+product driver verified it before invoking the EXE. Build/native/Release
+qualifications remain distinct;
 the index records `NOT_QUALIFIED` for Release and points native execution to its
 separate report.
 The complete focused source check was 69 tests, zero failures/errors/skips;
 input hashes and the exact 12/10/35/12 group counts are recorded in
 `docs/evidence/visionworkshop-modular-index-source-tests.json`.
+
+That actual index is 14,561 bytes, SHA-256
+`dd97cbd92475136c4263a0c9677aa44c98958b601c71a9bc1041c0f471008aab`,
+delivered independently as artifact `15044844880`. It binds the new Core and all
+eleven byte-preserved original module ZIPs with their original build identities.
+Its successful construction and consumption do not override that run's failed
+Core process exit described below.
 
 ## Input and bootstrap integrity
 
@@ -537,6 +546,86 @@ bytes with downloaded SHA-256
 `d2fe73b974e7db48aee807a2ebf5342a75e10361626ff512ad84c6a5583ec0a6`.
 Original child/parent reports, JUnit results and PNG/report hashes are preserved
 in `docs/evidence/visionworkshop-modular-candidate-45652987042.json`.
+
+[Run 45659615499](https://github.com/jsdfhasuh/python_build_scripts/actions/runs/45659615499)
+at builder `d3ace70e41a41b4334a9e44d2dbec0d4907f077d`, app
+`591f8bef7b2292caf50f4848e3047518e490742c`, completed the new Core build,
+unchanged original module ZIP qualification and first actual independent index
+in 991.343 seconds. Core is 180,443,076 compressed bytes, SHA-256
+`14e62ed16acb684c1ed09573c24ec7b52482dd0d867dbf52df254275d9c7c0d9`;
+all twelve ZIPs total 2,791,233,280 bytes. The eleven module ZIPs, their individual
+canonical manifests and their original build identities remain identical to
+`45616400076`. The aggregate evidence report `module-manifests.json` has a
+different JSON key order; its parsed content is equal, not its raw report bytes.
+
+The early Qt probe observed the exact driver PID 8276, selected venv launcher
+PID 7672 and its base-Python child PID 3948, including native images, complete
+arguments, prefixes and nonce. This is now a measured single-child redirector
+chain. Both ASCII and Chinese drawing passed, with 1,783 and 1,684 changed
+pixels respectively and valid nonzero glyphs. The Windows source guard set had
+293 passes and one pre-assets font skip; the prepared official-font test then
+ran separately with one pass and no skips. All three legacy worker permission
+checks passed. The actual registered Defender signature probe also ran and
+passed, rather than being skipped.
+
+Both empty CLI forms exited zero. The actual Core process created the Windows
+GUI, exercised its missing-module controls, completed the native-file/unique
+Python audit and verified the registered Defender provider's offline signature.
+It wrote and printed its complete internal `PASS` JSON, including a completed
+window/worker cleanup record. However, its real process then exited with
+**3221225477 (`0xC0000005`)**. The driver correctly kept the Core case and overall
+product **FAIL**. There is no native stack or faulting-module record in this
+candidate evidence, so the exact cause is not established by the successful
+internal JSON. No annotation, module installation/update/repair/rollback,
+controlled DataLoader, optional-runtime/model or worker case was reached.
+
+The actual `core-window.png` and `core-yolo-local.png` now visibly contain their
+Chinese menus, buttons, titles and forms, resolving the earlier blank-text
+observation. This is a visual observation of those two Windows screenshots,
+not a successful process-exit or complete workflow result. Evidence artifact
+`15046836955` is 73,474,221 bytes with downloaded SHA-256
+`eed972a2d2a487445335d09722fb62bdaa926efd75ba1db5ad911864829ebf81`.
+The separate index artifact is also downloaded and verified. Exact archive,
+artifact, process, report and screenshot identities are retained in
+`docs/evidence/visionworkshop-modular-candidate-45659615499.json`.
+
+### Immutable Core exit diagnostic
+
+The independent `visionworkshop-core-diagnostic.yml` workflow is explicitly
+triggered by its reviewed `ci/visionworkshop-core-diagnostic.json` request, or
+manually, and does not rebuild or retag the original Core. It downloads only the
+specified Core artifact and its source evidence. API run/attempt/head,
+application/build identity, both outer artifact hashes, the inner Core ZIP,
+original full-file inventory and Core manifest must match before any code from
+that Core is imported. The read token is available only to the download step.
+
+One fresh Chinese/space path repeats the same `core` EXE check and preserves its
+real exit code. A second fresh extraction starts the same unmodified EXE without
+arguments, observes only its own visible enabled `VisionWorkshop` top-level
+window remaining stable for at least one second, posts `WM_CLOSE`, and waits for
+a normal exit. Timeout cleanup cannot be
+reported as a pass. Both installations are checked against the original Core
+inventory after exit; this comparison does not alter any original file.
+
+After each process, the diagnostic uses the Windows
+[read-only `wevtutil query-events` command](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/wevtutil)
+to collect bounded Application Error/Windows Error Reporting events.
+Unicode output preserves Chinese paths as original XML bytes. An Application
+Error must match its EventData target PID, complete EXE path and UTC
+window; the event writer's `System/Execution` PID is not the target PID. WER is
+associated only by the same valid nonzero GUID report ID as an exact matched
+error, together with
+the application name and time window. Missing events or collector errors are
+recorded explicitly; they do not erase a nonzero product exit. Original Core
+identity and the later diagnostic driver identity remain separate. This
+diagnostic has source guard coverage but has not yet run on Windows.
+
+The independent cross-product Git-object baseline is preserved in
+`docs/evidence/visionworkshop-modular-other-product-baseline-d3ace70.json`.
+EmoMaster configs/release workflows and shared `build.py` match the original
+plan baseline. Earlier PR4 changes to cross-target oversize diagnostics and the
+shared test interpreter are recorded separately; this is not a broad claim that
+every other product's runtime is unaffected.
 
 ## Initial Windows gate result
 

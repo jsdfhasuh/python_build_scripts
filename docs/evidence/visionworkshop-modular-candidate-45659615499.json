@@ -1,0 +1,2390 @@
+{
+  "schema_version": 1,
+  "status": "FAIL",
+  "build_status": "BUILT",
+  "product_acceptance": "FAIL",
+  "published": false,
+  "run": {
+    "id": 45659615499,
+    "attempt": 1,
+    "url": "https://github.com/jsdfhasuh/python_build_scripts/actions/runs/45659615499",
+    "builder_sha": "d3ace70e41a41b4334a9e44d2dbec0d4907f077d",
+    "app_sha": "591f8bef7b2292caf50f4848e3047518e490742c"
+  },
+  "scope": "Actual new frozen Core, byte-preserved original modules and independent index; the first GUI process crashes after writing its internal PASS report, so the product and Core process acceptance remain FAIL.",
+  "evidence_artifact": {
+    "id": 15046836955,
+    "name": "visionworkshop-modular-evidence-45659615499-1",
+    "size_in_bytes": 73474221,
+    "url": "https://api.github.com/repos/jsdfhasuh/python_build_scripts/actions/artifacts/15046836955",
+    "archive_download_url": "https://api.github.com/repos/jsdfhasuh/python_build_scripts/actions/artifacts/15046836955/zip",
+    "expired": false,
+    "created_at": "2026-11-25T17:24:34Z",
+    "expires_at": "2026-12-02T17:24:32Z",
+    "updated_at": "2026-11-25T17:24:34Z",
+    "digest": "sha256:eed972a2d2a487445335d09722fb62bdaa926efd75ba1db5ad911864829ebf81",
+    "workflow_run": {
+      "id": 45659615499,
+      "repository_id": 1284528638,
+      "head_repository_id": 1284528638,
+      "head_branch": "test/visionworkshop-modular-loader",
+      "head_sha": "d3ace70e41a41b4334a9e44d2dbec0d4907f077d"
+    }
+  },
+  "evidence_download": {
+    "bytes": 73474221,
+    "sha256": "eed972a2d2a487445335d09722fb62bdaa926efd75ba1db5ad911864829ebf81",
+    "verified": true
+  },
+  "artifacts": [
+    {
+      "id": 15046861994,
+      "name": "visionworkshop-module-runtime.ort-45659615499-1",
+      "size_in_bytes": 113428375,
+      "url": "https://api.github.com/repos/jsdfhasuh/python_build_scripts/actions/artifacts/15046861994",
+      "archive_download_url": "https://api.github.com/repos/jsdfhasuh/python_build_scripts/actions/artifacts/15046861994/zip",
+      "expired": false,
+      "created_at": "2026-11-25T17:24:57Z",
+      "expires_at": "2026-12-02T17:24:55Z",
+      "updated_at": "2026-11-25T17:24:57Z",
+      "digest": "sha256:4ea1ba19c54fd372d92cda020b479575d0aa53d35743dbe80b42cfcd0ff42c49",
+      "workflow_run": {
+        "id": 45659615499,
+        "repository_id": 1284528638,
+        "head_repository_id": 1284528638,
+        "head_branch": "test/visionworkshop-modular-loader",
+        "head_sha": "d3ace70e41a41b4334a9e44d2dbec0d4907f077d"
+      }
+    },
+    {
+      "id": 15046836955,
+      "name": "visionworkshop-modular-evidence-45659615499-1",
+      "size_in_bytes": 73474221,
+      "url": "https://api.github.com/repos/jsdfhasuh/python_build_scripts/actions/artifacts/15046836955",
+      "archive_download_url": "https://api.github.com/repos/jsdfhasuh/python_build_scripts/actions/artifacts/15046836955/zip",
+      "expired": false,
+      "created_at": "2026-11-25T17:24:34Z",
+      "expires_at": "2026-12-02T17:24:32Z",
+      "updated_at": "2026-11-25T17:24:34Z",
+      "digest": "sha256:eed972a2d2a487445335d09722fb62bdaa926efd75ba1db5ad911864829ebf81",
+      "workflow_run": {
+        "id": 45659615499,
+        "repository_id": 1284528638,
+        "head_repository_id": 1284528638,
+        "head_branch": "test/visionworkshop-modular-loader",
+        "head_sha": "d3ace70e41a41b4334a9e44d2dbec0d4907f077d"
+      }
+    },
+    {
+      "id": 15046652732,
+      "name": "visionworkshop-module-runtime.torch-45659615499-1",
+      "size_in_bytes": 1865186737,
+      "url": "https://api.github.com/repos/jsdfhasuh/python_build_scripts/actions/artifacts/15046652732",
+      "archive_download_url": "https://api.github.com/repos/jsdfhasuh/python_build_scripts/actions/artifacts/15046652732/zip",
+      "expired": false,
+      "created_at": "2026-11-25T17:24:54Z",
+      "expires_at": "2026-12-02T17:24:39Z",
+      "updated_at": "2026-11-25T17:24:54Z",
+      "digest": "sha256:11634d3b8a5a2d775d6862ea2d71a6199a99bb2c8cdd0852ece840790f818ebc",
+      "workflow_run": {
+        "id": 45659615499,
+        "repository_id": 1284528638,
+        "head_repository_id": 1284528638,
+        "head_branch": "test/visionworkshop-modular-loader",
+        "head_sha": "d3ace70e41a41b4334a9e44d2dbec0d4907f077d"
+      }
+    },
+    {
+      "id": 15046632749,
+      "name": "visionworkshop-module-resource.edgesam-45659615499-1",
+      "size_in_bytes": 35561103,
+      "url": "https://api.github.com/repos/jsdfhasuh/python_build_scripts/actions/artifacts/15046632749",
+      "archive_download_url": "https://api.github.com/repos/jsdfhasuh/python_build_scripts/actions/artifacts/15046632749/zip",
+      "expired": false,
+      "created_at": "2026-11-25T17:25:15Z",
+      "expires_at": "2026-12-02T17:25:14Z",
+      "updated_at": "2026-11-25T17:25:15Z",
+      "digest": "sha256:485460e2c7ba0c678da0efcaad8f175ab1c61bddd845a8d22b079520b55e095f",
+      "workflow_run": {
+        "id": 45659615499,
+        "repository_id": 1284528638,
+        "head_repository_id": 1284528638,
+        "head_branch": "test/visionworkshop-modular-loader",
+        "head_sha": "d3ace70e41a41b4334a9e44d2dbec0d4907f077d"
+      }
+    },
+    {
+      "id": 15046567612,
+      "name": "visionworkshop-module-runtime.vision-45659615499-1",
+      "size_in_bytes": 14281749,
+      "url": "https://api.github.com/repos/jsdfhasuh/python_build_scripts/actions/artifacts/15046567612",
+      "archive_download_url": "https://api.github.com/repos/jsdfhasuh/python_build_scripts/actions/artifacts/15046567612/zip",
+      "expired": false,
+      "created_at": "2026-11-25T17:25:01Z",
+      "expires_at": "2026-12-02T17:24:59Z",
+      "updated_at": "2026-11-25T17:25:01Z",
+      "digest": "sha256:275750eab6aa6253e14eb505ae3d9bf9053d7692899437ee44f9bc4f4723615a",
+      "workflow_run": {
+        "id": 45659615499,
+        "repository_id": 1284528638,
+        "head_repository_id": 1284528638,
+        "head_branch": "test/visionworkshop-modular-loader",
+        "head_sha": "d3ace70e41a41b4334a9e44d2dbec0d4907f077d"
+      }
+    },
+    {
+      "id": 15046402840,
+      "name": "visionworkshop-module-feature.yolo-45659615499-1",
+      "size_in_bytes": 28828643,
+      "url": "https://api.github.com/repos/jsdfhasuh/python_build_scripts/actions/artifacts/15046402840",
+      "archive_download_url": "https://api.github.com/repos/jsdfhasuh/python_build_scripts/actions/artifacts/15046402840/zip",
+      "expired": false,
+      "created_at": "2026-11-25T17:25:03Z",
+      "expires_at": "2026-12-02T17:25:01Z",
+      "updated_at": "2026-11-25T17:25:03Z",
+      "digest": "sha256:7a1adde80ae14b45ee5ed03137029ec51c84efc305603dd6b458d26b287507bf",
+      "workflow_run": {
+        "id": 45659615499,
+        "repository_id": 1284528638,
+        "head_repository_id": 1284528638,
+        "head_branch": "test/visionworkshop-modular-loader",
+        "head_sha": "d3ace70e41a41b4334a9e44d2dbec0d4907f077d"
+      }
+    },
+    {
+      "id": 15046342856,
+      "name": "visionworkshop-module-resource.patchcore-dino-45659615499-1",
+      "size_in_bytes": 80604507,
+      "url": "https://api.github.com/repos/jsdfhasuh/python_build_scripts/actions/artifacts/15046342856",
+      "archive_download_url": "https://api.github.com/repos/jsdfhasuh/python_build_scripts/actions/artifacts/15046342856/zip",
+      "expired": false,
+      "created_at": "2026-11-25T17:25:18Z",
+      "expires_at": "2026-12-02T17:25:16Z",
+      "updated_at": "2026-11-25T17:25:18Z",
+      "digest": "sha256:2b6eff05901378b22352e230cfe2336ec78823727dd2733dfda68f8a08f1ff49",
+      "workflow_run": {
+        "id": 45659615499,
+        "repository_id": 1284528638,
+        "head_repository_id": 1284528638,
+        "head_branch": "test/visionworkshop-modular-loader",
+        "head_sha": "d3ace70e41a41b4334a9e44d2dbec0d4907f077d"
+      }
+    },
+    {
+      "id": 15046277920,
+      "name": "visionworkshop-module-runtime.science-45659615499-1",
+      "size_in_bytes": 35208480,
+      "url": "https://api.github.com/repos/jsdfhasuh/python_build_scripts/actions/artifacts/15046277920",
+      "archive_download_url": "https://api.github.com/repos/jsdfhasuh/python_build_scripts/actions/artifacts/15046277920/zip",
+      "expired": false,
+      "created_at": "2026-11-25T17:24:59Z",
+      "expires_at": "2026-12-02T17:24:57Z",
+      "updated_at": "2026-11-25T17:24:59Z",
+      "digest": "sha256:77a6caf1b59d77a1e4cb8ae82be55ee4ed4e7cea038c804fae96c2694a3505ba",
+      "workflow_run": {
+        "id": 45659615499,
+        "repository_id": 1284528638,
+        "head_repository_id": 1284528638,
+        "head_branch": "test/visionworkshop-modular-loader",
+        "head_sha": "d3ace70e41a41b4334a9e44d2dbec0d4907f077d"
+      }
+    },
+    {
+      "id": 15045973119,
+      "name": "visionworkshop-module-feature.patchcore-45659615499-1",
+      "size_in_bytes": 76634581,
+      "url": "https://api.github.com/repos/jsdfhasuh/python_build_scripts/actions/artifacts/15045973119",
+      "archive_download_url": "https://api.github.com/repos/jsdfhasuh/python_build_scripts/actions/artifacts/15045973119/zip",
+      "expired": false,
+      "created_at": "2026-11-25T17:25:05Z",
+      "expires_at": "2026-12-02T17:25:03Z",
+      "updated_at": "2026-11-25T17:25:05Z",
+      "digest": "sha256:8b5b492c5fc57a695ac0be159fd1d65969e320ef805ff007cd41718c26b9ab35",
+      "workflow_run": {
+        "id": 45659615499,
+        "repository_id": 1284528638,
+        "head_repository_id": 1284528638,
+        "head_branch": "test/visionworkshop-modular-loader",
+        "head_sha": "d3ace70e41a41b4334a9e44d2dbec0d4907f077d"
+      }
+    },
+    {
+      "id": 15045973042,
+      "name": "visionworkshop-core-candidate-45659615499-1",
+      "size_in_bytes": 180443248,
+      "url": "https://api.github.com/repos/jsdfhasuh/python_build_scripts/actions/artifacts/15045973042",
+      "archive_download_url": "https://api.github.com/repos/jsdfhasuh/python_build_scripts/actions/artifacts/15045973042/zip",
+      "expired": false,
+      "created_at": "2026-11-25T17:24:38Z",
+      "expires_at": "2026-12-02T17:24:36Z",
+      "updated_at": "2026-11-25T17:24:38Z",
+      "digest": "sha256:fefae3ffd2e7b4b6e096079521c4f98e73a4a1aaadc9a7d69c21ce4f034420aa",
+      "workflow_run": {
+        "id": 45659615499,
+        "repository_id": 1284528638,
+        "head_repository_id": 1284528638,
+        "head_branch": "test/visionworkshop-modular-loader",
+        "head_sha": "d3ace70e41a41b4334a9e44d2dbec0d4907f077d"
+      }
+    },
+    {
+      "id": 15045898296,
+      "name": "visionworkshop-module-resource.image-simplification-45659615499-1",
+      "size_in_bytes": 80567273,
+      "url": "https://api.github.com/repos/jsdfhasuh/python_build_scripts/actions/artifacts/15045898296",
+      "archive_download_url": "https://api.github.com/repos/jsdfhasuh/python_build_scripts/actions/artifacts/15045898296/zip",
+      "expired": false,
+      "created_at": "2026-11-25T17:25:13Z",
+      "expires_at": "2026-12-02T17:25:11Z",
+      "updated_at": "2026-11-25T17:25:13Z",
+      "digest": "sha256:5306f50857a86e92bbebc97f5939b52322c7f561d52665730c91fc9fcd3da204",
+      "workflow_run": {
+        "id": 45659615499,
+        "repository_id": 1284528638,
+        "head_repository_id": 1284528638,
+        "head_branch": "test/visionworkshop-modular-loader",
+        "head_sha": "d3ace70e41a41b4334a9e44d2dbec0d4907f077d"
+      }
+    },
+    {
+      "id": 15045788475,
+      "name": "visionworkshop-module-resource.patchcore-cnn-45659615499-1",
+      "size_in_bytes": 248193700,
+      "url": "https://api.github.com/repos/jsdfhasuh/python_build_scripts/actions/artifacts/15045788475",
+      "archive_download_url": "https://api.github.com/repos/jsdfhasuh/python_build_scripts/actions/artifacts/15045788475/zip",
+      "expired": false,
+      "created_at": "2026-11-25T17:25:11Z",
+      "expires_at": "2026-12-02T17:25:07Z",
+      "updated_at": "2026-11-25T17:25:11Z",
+      "digest": "sha256:a4423a0b0b6fa8925a7c56c358a5e60d669a6762105ca210ebe241987d9ff565",
+      "workflow_run": {
+        "id": 45659615499,
+        "repository_id": 1284528638,
+        "head_repository_id": 1284528638,
+        "head_branch": "test/visionworkshop-modular-loader",
+        "head_sha": "d3ace70e41a41b4334a9e44d2dbec0d4907f077d"
+      }
+    },
+    {
+      "id": 15044844880,
+      "name": "visionworkshop-module-index-45659615499-1",
+      "size_in_bytes": 14709,
+      "url": "https://api.github.com/repos/jsdfhasuh/python_build_scripts/actions/artifacts/15044844880",
+      "archive_download_url": "https://api.github.com/repos/jsdfhasuh/python_build_scripts/actions/artifacts/15044844880/zip",
+      "expired": false,
+      "created_at": "2026-11-25T17:24:35Z",
+      "expires_at": "2026-12-02T17:24:34Z",
+      "updated_at": "2026-11-25T17:24:35Z",
+      "digest": "sha256:09cba823fdb0fb6ed5a685ddd5e665eb3efb238b680ad1a8dca0217e1910dc3f",
+      "workflow_run": {
+        "id": 45659615499,
+        "repository_id": 1284528638,
+        "head_repository_id": 1284528638,
+        "head_branch": "test/visionworkshop-modular-loader",
+        "head_sha": "d3ace70e41a41b4334a9e44d2dbec0d4907f077d"
+      }
+    },
+    {
+      "id": 15044809726,
+      "name": "visionworkshop-module-resource.yolo-45659615499-1",
+      "size_in_bytes": 32296900,
+      "url": "https://api.github.com/repos/jsdfhasuh/python_build_scripts/actions/artifacts/15044809726",
+      "archive_download_url": "https://api.github.com/repos/jsdfhasuh/python_build_scripts/actions/artifacts/15044809726/zip",
+      "expired": false,
+      "created_at": "2026-11-25T17:25:07Z",
+      "expires_at": "2026-12-02T17:25:06Z",
+      "updated_at": "2026-11-25T17:25:07Z",
+      "digest": "sha256:d4e064a1a709741fc1a759ea24b9f6e7964b3028d6a3e86bdaf786840a6c8e2a",
+      "workflow_run": {
+        "id": 45659615499,
+        "repository_id": 1284528638,
+        "head_repository_id": 1284528638,
+        "head_branch": "test/visionworkshop-modular-loader",
+        "head_sha": "d3ace70e41a41b4334a9e44d2dbec0d4907f077d"
+      }
+    }
+  ],
+  "build": {
+    "summary_reference": {
+      "path": "modular-candidate/reports/modular-build-summary.json",
+      "bytes": 2831947,
+      "sha256": "69ca135db97b5f8e1f8b6d4cf9a7990bdf0ec7f3c2bb75a06539a71bf0cabffc"
+    },
+    "status": "BUILT",
+    "elapsed_seconds": 991.343,
+    "core_sha256": "9b508d684ec2d594cbd2b162063fd6dc45b9982553f9276ef2bb8010b27064ad",
+    "core_archive": {
+      "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-candidate\\archives\\VisionWorkshop-Core-0.0.0.zip",
+      "bytes": 180443076,
+      "sha256": "14e62ed16acb684c1ed09573c24ec7b52482dd0d867dbf52df254275d9c7c0d9",
+      "compression": "zip/lzma",
+      "dictionary_max_mib": 256,
+      "file_count": 11322,
+      "expanded_bytes": 627769495,
+      "compressed_payload_bytes": 177778904,
+      "verified": true
+    },
+    "module_archives": [
+      {
+        "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-candidate\\archives\\runtime.science-0.0.0.zip",
+        "bytes": 35208316,
+        "sha256": "8494ced6261bf8997c6a5c42384725b268159476c42f3ab9d8711dba45089d16",
+        "compression": "zip/lzma",
+        "dictionary_max_mib": 256,
+        "file_count": 2131,
+        "expanded_bytes": 130405229,
+        "compressed_payload_bytes": 34750360,
+        "verified": true,
+        "module_id": "runtime.science",
+        "manifest_sha256": "87911701cff46d14376e545229381eff5af1a38b88dbc4b19c6ff6ab5dc13855",
+        "original_build": {
+          "app_sha": "c8c0fbe98a055620ddc5488be6835cf216b4800e",
+          "build_id": "candidate-45616400076-1",
+          "packager_sha": "f9703a9c6a0c0370a10eed0afadd39e677770547"
+        },
+        "reuse": {
+          "status": "PASS",
+          "source_run": {
+            "id": 45616400076,
+            "run_attempt": 1,
+            "status": "completed",
+            "conclusion": "failure",
+            "head_sha": "f9703a9c6a0c0370a10eed0afadd39e677770547",
+            "html_url": "https://github.com/jsdfhasuh/python_build_scripts/actions/runs/45616400076"
+          },
+          "archive_bytes_unchanged": true,
+          "manifest_bytes_unchanged": true,
+          "source_product_acceptance": {
+            "status": "FAIL",
+            "gpu_hardware": "NOT_RUN",
+            "path": "source-product-summary.json",
+            "size": 2017,
+            "sha256": "27ae1e93b6b47a767c9fcf4be643d945c73dbbe055ec67e3f78f3ea55c46e8b9"
+          },
+          "fresh_staging_unchanged": true,
+          "fresh_payload_identical": true,
+          "non_record_payload_identical": true,
+          "retained_original_receipts": 0,
+          "changed_excluded_entry_hashes": 0
+        }
+      },
+      {
+        "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-candidate\\archives\\runtime.torch-0.0.0.zip",
+        "bytes": 1865186577,
+        "sha256": "ccbcd7b49974b8eaa8f8dfdb1bcc67d310cde85317142ffbcc8df6fa42cd9fd4",
+        "compression": "zip/lzma",
+        "dictionary_max_mib": 256,
+        "file_count": 12052,
+        "expanded_bytes": 4557557572,
+        "compressed_payload_bytes": 1862334467,
+        "verified": true,
+        "module_id": "runtime.torch",
+        "manifest_sha256": "8cb722deabd819a764fd332bb56a0805c363d164fb8f4c7b10fc2c92b4341f4c",
+        "original_build": {
+          "app_sha": "c8c0fbe98a055620ddc5488be6835cf216b4800e",
+          "build_id": "candidate-45616400076-1",
+          "packager_sha": "f9703a9c6a0c0370a10eed0afadd39e677770547"
+        },
+        "reuse": {
+          "status": "PASS",
+          "source_run": {
+            "id": 45616400076,
+            "run_attempt": 1,
+            "status": "completed",
+            "conclusion": "failure",
+            "head_sha": "f9703a9c6a0c0370a10eed0afadd39e677770547",
+            "html_url": "https://github.com/jsdfhasuh/python_build_scripts/actions/runs/45616400076"
+          },
+          "archive_bytes_unchanged": true,
+          "manifest_bytes_unchanged": true,
+          "source_product_acceptance": {
+            "status": "FAIL",
+            "gpu_hardware": "NOT_RUN",
+            "path": "source-product-summary.json",
+            "size": 2017,
+            "sha256": "27ae1e93b6b47a767c9fcf4be643d945c73dbbe055ec67e3f78f3ea55c46e8b9"
+          },
+          "fresh_staging_unchanged": true,
+          "fresh_payload_identical": false,
+          "non_record_payload_identical": true,
+          "retained_original_receipts": 1,
+          "changed_excluded_entry_hashes": 2
+        }
+      },
+      {
+        "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-candidate\\archives\\runtime.vision-0.0.0.zip",
+        "bytes": 14281587,
+        "sha256": "9be478fb6d95250961d6f98bbdc53d93a0e3b5e7f05e1e38089e7784ed21455d",
+        "compression": "zip/lzma",
+        "dictionary_max_mib": 256,
+        "file_count": 2347,
+        "expanded_bytes": 65140191,
+        "compressed_payload_bytes": 13732569,
+        "verified": true,
+        "module_id": "runtime.vision",
+        "manifest_sha256": "07d73074fd4202494e86570cf8a358f30e598a8508d8f016c96474c642dbde81",
+        "original_build": {
+          "app_sha": "c8c0fbe98a055620ddc5488be6835cf216b4800e",
+          "build_id": "candidate-45616400076-1",
+          "packager_sha": "f9703a9c6a0c0370a10eed0afadd39e677770547"
+        },
+        "reuse": {
+          "status": "PASS",
+          "source_run": {
+            "id": 45616400076,
+            "run_attempt": 1,
+            "status": "completed",
+            "conclusion": "failure",
+            "head_sha": "f9703a9c6a0c0370a10eed0afadd39e677770547",
+            "html_url": "https://github.com/jsdfhasuh/python_build_scripts/actions/runs/45616400076"
+          },
+          "archive_bytes_unchanged": true,
+          "manifest_bytes_unchanged": true,
+          "source_product_acceptance": {
+            "status": "FAIL",
+            "gpu_hardware": "NOT_RUN",
+            "path": "source-product-summary.json",
+            "size": 2017,
+            "sha256": "27ae1e93b6b47a767c9fcf4be643d945c73dbbe055ec67e3f78f3ea55c46e8b9"
+          },
+          "fresh_staging_unchanged": true,
+          "fresh_payload_identical": false,
+          "non_record_payload_identical": true,
+          "retained_original_receipts": 2,
+          "changed_excluded_entry_hashes": 2
+        }
+      },
+      {
+        "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-candidate\\archives\\feature.patchcore-0.0.0.zip",
+        "bytes": 76634413,
+        "sha256": "0e236cb6bdf7ccc928cf871e2c8488ca2ba4fcefe4da0ff1ad0b29615d64fdfa",
+        "compression": "zip/lzma",
+        "dictionary_max_mib": 256,
+        "file_count": 8474,
+        "expanded_bytes": 273384734,
+        "compressed_payload_bytes": 74825635,
+        "verified": true,
+        "module_id": "feature.patchcore",
+        "manifest_sha256": "96f531cb3873d30d17855483b0069a90f93a16ce71799192e5aa81eadc343cd1",
+        "original_build": {
+          "app_sha": "c8c0fbe98a055620ddc5488be6835cf216b4800e",
+          "build_id": "candidate-45616400076-1",
+          "packager_sha": "f9703a9c6a0c0370a10eed0afadd39e677770547"
+        },
+        "reuse": {
+          "status": "PASS",
+          "source_run": {
+            "id": 45616400076,
+            "run_attempt": 1,
+            "status": "completed",
+            "conclusion": "failure",
+            "head_sha": "f9703a9c6a0c0370a10eed0afadd39e677770547",
+            "html_url": "https://github.com/jsdfhasuh/python_build_scripts/actions/runs/45616400076"
+          },
+          "archive_bytes_unchanged": true,
+          "manifest_bytes_unchanged": true,
+          "source_product_acceptance": {
+            "status": "FAIL",
+            "gpu_hardware": "NOT_RUN",
+            "path": "source-product-summary.json",
+            "size": 2017,
+            "sha256": "27ae1e93b6b47a767c9fcf4be643d945c73dbbe055ec67e3f78f3ea55c46e8b9"
+          },
+          "fresh_staging_unchanged": true,
+          "fresh_payload_identical": false,
+          "non_record_payload_identical": true,
+          "retained_original_receipts": 7,
+          "changed_excluded_entry_hashes": 11
+        }
+      },
+      {
+        "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-candidate\\archives\\feature.yolo-0.0.0.zip",
+        "bytes": 28828485,
+        "sha256": "2d40614b38a2c9b18bbbe8b9b201bee4d93f0f0d6d6b942783cc07f19a4e62d1",
+        "compression": "zip/lzma",
+        "dictionary_max_mib": 256,
+        "file_count": 552,
+        "expanded_bytes": 168331914,
+        "compressed_payload_bytes": 28715069,
+        "verified": true,
+        "module_id": "feature.yolo",
+        "manifest_sha256": "933595223bf8f0e072b8c9ddbcfa7d35f381ad56abbc7d681fcab30e59e997f2",
+        "original_build": {
+          "app_sha": "c8c0fbe98a055620ddc5488be6835cf216b4800e",
+          "build_id": "candidate-45616400076-1",
+          "packager_sha": "f9703a9c6a0c0370a10eed0afadd39e677770547"
+        },
+        "reuse": {
+          "status": "PASS",
+          "source_run": {
+            "id": 45616400076,
+            "run_attempt": 1,
+            "status": "completed",
+            "conclusion": "failure",
+            "head_sha": "f9703a9c6a0c0370a10eed0afadd39e677770547",
+            "html_url": "https://github.com/jsdfhasuh/python_build_scripts/actions/runs/45616400076"
+          },
+          "archive_bytes_unchanged": true,
+          "manifest_bytes_unchanged": true,
+          "source_product_acceptance": {
+            "status": "FAIL",
+            "gpu_hardware": "NOT_RUN",
+            "path": "source-product-summary.json",
+            "size": 2017,
+            "sha256": "27ae1e93b6b47a767c9fcf4be643d945c73dbbe055ec67e3f78f3ea55c46e8b9"
+          },
+          "fresh_staging_unchanged": true,
+          "fresh_payload_identical": true,
+          "non_record_payload_identical": true,
+          "retained_original_receipts": 0,
+          "changed_excluded_entry_hashes": 0
+        }
+      },
+      {
+        "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-candidate\\archives\\resource.edgesam-0.0.0.zip",
+        "bytes": 35560937,
+        "sha256": "fc8f55a868dc640adea28d1a18f7be0416c069e2a5a2870db82b701daac4b553",
+        "compression": "zip/lzma",
+        "dictionary_max_mib": 256,
+        "file_count": 3,
+        "expanded_bytes": 40678572,
+        "compressed_payload_bytes": 35560449,
+        "verified": true,
+        "module_id": "resource.edgesam",
+        "manifest_sha256": "742cdb3ec4cec487a805db0b9b66b75aed8d0fddc2f64b3aee379d0755dac70f",
+        "original_build": {
+          "app_sha": "c8c0fbe98a055620ddc5488be6835cf216b4800e",
+          "build_id": "candidate-45616400076-1",
+          "packager_sha": "f9703a9c6a0c0370a10eed0afadd39e677770547"
+        },
+        "reuse": {
+          "status": "PASS",
+          "source_run": {
+            "id": 45616400076,
+            "run_attempt": 1,
+            "status": "completed",
+            "conclusion": "failure",
+            "head_sha": "f9703a9c6a0c0370a10eed0afadd39e677770547",
+            "html_url": "https://github.com/jsdfhasuh/python_build_scripts/actions/runs/45616400076"
+          },
+          "archive_bytes_unchanged": true,
+          "manifest_bytes_unchanged": true,
+          "source_product_acceptance": {
+            "status": "FAIL",
+            "gpu_hardware": "NOT_RUN",
+            "path": "source-product-summary.json",
+            "size": 2017,
+            "sha256": "27ae1e93b6b47a767c9fcf4be643d945c73dbbe055ec67e3f78f3ea55c46e8b9"
+          },
+          "fresh_staging_unchanged": true,
+          "fresh_payload_identical": true,
+          "non_record_payload_identical": true,
+          "retained_original_receipts": 0,
+          "changed_excluded_entry_hashes": 0
+        }
+      },
+      {
+        "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-candidate\\archives\\resource.image-simplification-0.0.0.zip",
+        "bytes": 80567081,
+        "sha256": "9b67dc8479ca06c38436cddcc026c3f765f9b7820840456bb2da66916a4bb5bb",
+        "compression": "zip/lzma",
+        "dictionary_max_mib": 256,
+        "file_count": 4,
+        "expanded_bytes": 88254627,
+        "compressed_payload_bytes": 80566317,
+        "verified": true,
+        "module_id": "resource.image-simplification",
+        "manifest_sha256": "6a7d0a927c72a75261bfb1dcad54090ebaa0950a178bfdf0e5ad809a635d41ad",
+        "original_build": {
+          "app_sha": "c8c0fbe98a055620ddc5488be6835cf216b4800e",
+          "build_id": "candidate-45616400076-1",
+          "packager_sha": "f9703a9c6a0c0370a10eed0afadd39e677770547"
+        },
+        "reuse": {
+          "status": "PASS",
+          "source_run": {
+            "id": 45616400076,
+            "run_attempt": 1,
+            "status": "completed",
+            "conclusion": "failure",
+            "head_sha": "f9703a9c6a0c0370a10eed0afadd39e677770547",
+            "html_url": "https://github.com/jsdfhasuh/python_build_scripts/actions/runs/45616400076"
+          },
+          "archive_bytes_unchanged": true,
+          "manifest_bytes_unchanged": true,
+          "source_product_acceptance": {
+            "status": "FAIL",
+            "gpu_hardware": "NOT_RUN",
+            "path": "source-product-summary.json",
+            "size": 2017,
+            "sha256": "27ae1e93b6b47a767c9fcf4be643d945c73dbbe055ec67e3f78f3ea55c46e8b9"
+          },
+          "fresh_staging_unchanged": true,
+          "fresh_payload_identical": true,
+          "non_record_payload_identical": true,
+          "retained_original_receipts": 0,
+          "changed_excluded_entry_hashes": 0
+        }
+      },
+      {
+        "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-candidate\\archives\\resource.patchcore-cnn-0.0.0.zip",
+        "bytes": 248193522,
+        "sha256": "aa4dc32200bfaf150e390d0a7cd9bd2631c62602b55af60f53c34156e249c826",
+        "compression": "zip/lzma",
+        "dictionary_max_mib": 256,
+        "file_count": 5,
+        "expanded_bytes": 275888591,
+        "compressed_payload_bytes": 248192578,
+        "verified": true,
+        "module_id": "resource.patchcore-cnn",
+        "manifest_sha256": "a9ceb9acd6ddd12f2ce5e0876179a316b2154e366dd7cca7349a147c2a88d371",
+        "original_build": {
+          "app_sha": "c8c0fbe98a055620ddc5488be6835cf216b4800e",
+          "build_id": "candidate-45616400076-1",
+          "packager_sha": "f9703a9c6a0c0370a10eed0afadd39e677770547"
+        },
+        "reuse": {
+          "status": "PASS",
+          "source_run": {
+            "id": 45616400076,
+            "run_attempt": 1,
+            "status": "completed",
+            "conclusion": "failure",
+            "head_sha": "f9703a9c6a0c0370a10eed0afadd39e677770547",
+            "html_url": "https://github.com/jsdfhasuh/python_build_scripts/actions/runs/45616400076"
+          },
+          "archive_bytes_unchanged": true,
+          "manifest_bytes_unchanged": true,
+          "source_product_acceptance": {
+            "status": "FAIL",
+            "gpu_hardware": "NOT_RUN",
+            "path": "source-product-summary.json",
+            "size": 2017,
+            "sha256": "27ae1e93b6b47a767c9fcf4be643d945c73dbbe055ec67e3f78f3ea55c46e8b9"
+          },
+          "fresh_staging_unchanged": true,
+          "fresh_payload_identical": true,
+          "non_record_payload_identical": true,
+          "retained_original_receipts": 0,
+          "changed_excluded_entry_hashes": 0
+        }
+      },
+      {
+        "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-candidate\\archives\\resource.patchcore-dino-0.0.0.zip",
+        "bytes": 80604327,
+        "sha256": "a78b17be815feeaad97af591979d215be703ecb09ad0e816ebdf5a48d13244ab",
+        "compression": "zip/lzma",
+        "dictionary_max_mib": 256,
+        "file_count": 3,
+        "expanded_bytes": 88251569,
+        "compressed_payload_bytes": 80603651,
+        "verified": true,
+        "module_id": "resource.patchcore-dino",
+        "manifest_sha256": "d79047e821fbcb86fb359e2a3f8d4ae0c94ca5de8396a32154130e462ac2c065",
+        "original_build": {
+          "app_sha": "c8c0fbe98a055620ddc5488be6835cf216b4800e",
+          "build_id": "candidate-45616400076-1",
+          "packager_sha": "f9703a9c6a0c0370a10eed0afadd39e677770547"
+        },
+        "reuse": {
+          "status": "PASS",
+          "source_run": {
+            "id": 45616400076,
+            "run_attempt": 1,
+            "status": "completed",
+            "conclusion": "failure",
+            "head_sha": "f9703a9c6a0c0370a10eed0afadd39e677770547",
+            "html_url": "https://github.com/jsdfhasuh/python_build_scripts/actions/runs/45616400076"
+          },
+          "archive_bytes_unchanged": true,
+          "manifest_bytes_unchanged": true,
+          "source_product_acceptance": {
+            "status": "FAIL",
+            "gpu_hardware": "NOT_RUN",
+            "path": "source-product-summary.json",
+            "size": 2017,
+            "sha256": "27ae1e93b6b47a767c9fcf4be643d945c73dbbe055ec67e3f78f3ea55c46e8b9"
+          },
+          "fresh_staging_unchanged": true,
+          "fresh_payload_identical": true,
+          "non_record_payload_identical": true,
+          "retained_original_receipts": 0,
+          "changed_excluded_entry_hashes": 0
+        }
+      },
+      {
+        "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-candidate\\archives\\resource.yolo-0.0.0.zip",
+        "bytes": 32296740,
+        "sha256": "0ef95729c6bf5bf294f7ff629292e51ac4345a612c48203d691bee932c1c758e",
+        "compression": "zip/lzma",
+        "dictionary_max_mib": 256,
+        "file_count": 5,
+        "expanded_bytes": 36728889,
+        "compressed_payload_bytes": 32295982,
+        "verified": true,
+        "module_id": "resource.yolo",
+        "manifest_sha256": "880da3e1bca7af9badfbb8976cf2f44aa9c724ac7117bc8fea4f95f7c8001fa2",
+        "original_build": {
+          "app_sha": "c8c0fbe98a055620ddc5488be6835cf216b4800e",
+          "build_id": "candidate-45616400076-1",
+          "packager_sha": "f9703a9c6a0c0370a10eed0afadd39e677770547"
+        },
+        "reuse": {
+          "status": "PASS",
+          "source_run": {
+            "id": 45616400076,
+            "run_attempt": 1,
+            "status": "completed",
+            "conclusion": "failure",
+            "head_sha": "f9703a9c6a0c0370a10eed0afadd39e677770547",
+            "html_url": "https://github.com/jsdfhasuh/python_build_scripts/actions/runs/45616400076"
+          },
+          "archive_bytes_unchanged": true,
+          "manifest_bytes_unchanged": true,
+          "source_product_acceptance": {
+            "status": "FAIL",
+            "gpu_hardware": "NOT_RUN",
+            "path": "source-product-summary.json",
+            "size": 2017,
+            "sha256": "27ae1e93b6b47a767c9fcf4be643d945c73dbbe055ec67e3f78f3ea55c46e8b9"
+          },
+          "fresh_staging_unchanged": true,
+          "fresh_payload_identical": true,
+          "non_record_payload_identical": true,
+          "retained_original_receipts": 0,
+          "changed_excluded_entry_hashes": 0
+        }
+      },
+      {
+        "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-candidate\\archives\\runtime.ort-0.0.0.zip",
+        "bytes": 113428219,
+        "sha256": "cb52bcffd03aefac8fd7aa3ce7b8ce80ac9509ed4f87c776b218c0439d903d5a",
+        "compression": "zip/lzma",
+        "dictionary_max_mib": 256,
+        "file_count": 7124,
+        "expanded_bytes": 439011782,
+        "compressed_payload_bytes": 111362835,
+        "verified": true,
+        "module_id": "runtime.ort",
+        "manifest_sha256": "0e195f8718ea5c1f42401e99845f018a5f8e4022b4eb9cf1f237a5f4a26ec52a",
+        "original_build": {
+          "app_sha": "c8c0fbe98a055620ddc5488be6835cf216b4800e",
+          "build_id": "candidate-45616400076-1",
+          "packager_sha": "f9703a9c6a0c0370a10eed0afadd39e677770547"
+        },
+        "reuse": {
+          "status": "PASS",
+          "source_run": {
+            "id": 45616400076,
+            "run_attempt": 1,
+            "status": "completed",
+            "conclusion": "failure",
+            "head_sha": "f9703a9c6a0c0370a10eed0afadd39e677770547",
+            "html_url": "https://github.com/jsdfhasuh/python_build_scripts/actions/runs/45616400076"
+          },
+          "archive_bytes_unchanged": true,
+          "manifest_bytes_unchanged": true,
+          "source_product_acceptance": {
+            "status": "FAIL",
+            "gpu_hardware": "NOT_RUN",
+            "path": "source-product-summary.json",
+            "size": 2017,
+            "sha256": "27ae1e93b6b47a767c9fcf4be643d945c73dbbe055ec67e3f78f3ea55c46e8b9"
+          },
+          "fresh_staging_unchanged": true,
+          "fresh_payload_identical": false,
+          "non_record_payload_identical": true,
+          "retained_original_receipts": 5,
+          "changed_excluded_entry_hashes": 7
+        }
+      }
+    ],
+    "all_archive_bytes": 2791233280,
+    "release_gate": "NOT_QUALIFIED",
+    "compatibility_findings": [
+      {
+        "status": "explicit-provider",
+        "source": "feature.yolo",
+        "requirement": "opencv-python>=4.6.0",
+        "selected_distribution": "opencv-contrib-python-headless",
+        "selected_version": "4.11.0.86",
+        "alias_metadata_version": null
+      },
+      {
+        "status": "explicit-provider",
+        "source": "anomalib",
+        "requirement": "opencv-python-headless>=4.5.3.56",
+        "selected_distribution": "opencv-contrib-python-headless",
+        "selected_version": "4.11.0.86",
+        "alias_metadata_version": "4.11.0.86"
+      },
+      {
+        "status": "observed/unqualified",
+        "source": "feature.yolo",
+        "requirement": "torch>=1.8.0,<2.10,!=2.4.0; sys_platform == 'win32'",
+        "selected_distribution": "torch",
+        "selected_version": "2.10.0+cu128",
+        "release_gate": "Unresolved vendor compatibility declaration"
+      },
+      {
+        "status": "observed/unqualified",
+        "source": "feature.yolo",
+        "requirement": "torch>=1.8.0,<2.10",
+        "selected_distribution": "torch",
+        "selected_version": "2.10.0+cu128",
+        "release_gate": "Unresolved vendor compatibility declaration"
+      }
+    ],
+    "dependency_lock_sha256": "765b59a43a50ebc1714dccac2cc1f8c12e543031d5673beb6f34cc3e704c0829",
+    "dependency_lock_location": "dependency_lock in the SHA-bound original build-summary report"
+  },
+  "module_index": {
+    "artifact": {
+      "id": 15044844880,
+      "name": "visionworkshop-module-index-45659615499-1",
+      "size_in_bytes": 14709,
+      "url": "https://api.github.com/repos/jsdfhasuh/python_build_scripts/actions/artifacts/15044844880",
+      "archive_download_url": "https://api.github.com/repos/jsdfhasuh/python_build_scripts/actions/artifacts/15044844880/zip",
+      "expired": false,
+      "created_at": "2026-11-25T17:24:35Z",
+      "expires_at": "2026-12-02T17:24:34Z",
+      "updated_at": "2026-11-25T17:24:35Z",
+      "digest": "sha256:09cba823fdb0fb6ed5a685ddd5e665eb3efb238b680ad1a8dca0217e1910dc3f",
+      "workflow_run": {
+        "id": 45659615499,
+        "repository_id": 1284528638,
+        "head_repository_id": 1284528638,
+        "head_branch": "test/visionworkshop-modular-loader",
+        "head_sha": "d3ace70e41a41b4334a9e44d2dbec0d4907f077d"
+      }
+    },
+    "independent_outer_download": {
+      "bytes": 14709,
+      "sha256": "09cba823fdb0fb6ed5a685ddd5e665eb3efb238b680ad1a8dca0217e1910dc3f",
+      "verified": true
+    },
+    "index": {
+      "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-candidate\\archives\\module-index.json",
+      "bytes": 14561,
+      "sha256": "dd97cbd92475136c4263a0c9677aa44c98958b601c71a9bc1041c0f471008aab",
+      "schema_version": 1,
+      "asset_count": 12,
+      "verified": true
+    },
+    "report_copy_byte_identical": true,
+    "document": {
+      "asset_count": 12,
+      "build": {
+        "app_sha": "591f8bef7b2292caf50f4848e3047518e490742c",
+        "build_id": "candidate-45659615499-1",
+        "packager_sha": "d3ace70e41a41b4334a9e44d2dbec0d4907f077d"
+      },
+      "compatibility_findings": [
+        {
+          "alias_metadata_version": null,
+          "requirement": "opencv-python>=4.6.0",
+          "selected_distribution": "opencv-contrib-python-headless",
+          "selected_version": "4.11.0.86",
+          "source": "feature.yolo",
+          "status": "explicit-provider"
+        },
+        {
+          "alias_metadata_version": "4.11.0.86",
+          "requirement": "opencv-python-headless>=4.5.3.56",
+          "selected_distribution": "opencv-contrib-python-headless",
+          "selected_version": "4.11.0.86",
+          "source": "anomalib",
+          "status": "explicit-provider"
+        },
+        {
+          "release_gate": "Unresolved vendor compatibility declaration",
+          "requirement": "torch>=1.8.0,<2.10,!=2.4.0; sys_platform == 'win32'",
+          "selected_distribution": "torch",
+          "selected_version": "2.10.0+cu128",
+          "source": "feature.yolo",
+          "status": "observed/unqualified"
+        },
+        {
+          "release_gate": "Unresolved vendor compatibility declaration",
+          "requirement": "torch>=1.8.0,<2.10",
+          "selected_distribution": "torch",
+          "selected_version": "2.10.0+cu128",
+          "source": "feature.yolo",
+          "status": "observed/unqualified"
+        }
+      ],
+      "core": {
+        "archive": {
+          "bytes": 180443076,
+          "compressed_payload_bytes": 177778904,
+          "compression": "zip/lzma",
+          "expanded_bytes": 627769495,
+          "file_count": 11322,
+          "name": "VisionWorkshop-Core-0.0.0.zip",
+          "sha256": "14e62ed16acb684c1ed09573c24ec7b52482dd0d867dbf52df254275d9c7c0d9"
+        },
+        "manifest_sha256": "9b508d684ec2d594cbd2b162063fd6dc45b9982553f9276ef2bb8010b27064ad",
+        "version": "0.0.0"
+      },
+      "dependency_lock_sha256": "765b59a43a50ebc1714dccac2cc1f8c12e543031d5673beb6f34cc3e704c0829",
+      "module_api": 1,
+      "modules": [
+        {
+          "archive": {
+            "bytes": 76634413,
+            "compressed_payload_bytes": 74825635,
+            "compression": "zip/lzma",
+            "expanded_bytes": 273384734,
+            "file_count": 8474,
+            "name": "feature.patchcore-0.0.0.zip",
+            "sha256": "0e236cb6bdf7ccc928cf871e2c8488ca2ba4fcefe4da0ff1ad0b29615d64fdfa"
+          },
+          "build": {
+            "app_sha": "c8c0fbe98a055620ddc5488be6835cf216b4800e",
+            "build_id": "candidate-45616400076-1",
+            "packager_sha": "f9703a9c6a0c0370a10eed0afadd39e677770547"
+          },
+          "core_versions": {
+            "max_exclusive": "0.0.1",
+            "min": "0.0.0"
+          },
+          "dependency_lock_sha256": "765b59a43a50ebc1714dccac2cc1f8c12e543031d5673beb6f34cc3e704c0829",
+          "distributions": {
+            "anomalib": "2.5.1",
+            "av": "18.0.0",
+            "docstring-parser": "0.18.0",
+            "einops": "0.8.2",
+            "freia": "0.2",
+            "imagecodecs": "2025.3.30",
+            "imageio": "2.37.2",
+            "joblib": "1.5.3",
+            "jsonargparse": "4.46.0",
+            "kornia": "0.8.3",
+            "kornia-rs": "0.2.0",
+            "lazy-loader": "0.4",
+            "lightning": "2.6.5",
+            "lightning-utilities": "0.15.3",
+            "narwhals": "2.29.0",
+            "omegaconf": "2.4.0",
+            "pandas": "2.3.3",
+            "pygments": "2.19.2",
+            "pytorch-lightning": "2.6.5",
+            "pytz": "2025.2",
+            "rich": "15.0.0",
+            "rich-argparse": "1.8.0",
+            "scikit-image": "0.26.0",
+            "scikit-learn": "1.9.1",
+            "threadpoolctl": "3.8.0",
+            "tifffile": "2026.1.14",
+            "torchmetrics": "1.9.0",
+            "typeshed-client": "2.15.0",
+            "tzdata": "2025.3"
+          },
+          "import_roots": [
+            "FrEIA",
+            "anomalib",
+            "av",
+            "docstring_parser",
+            "einops",
+            "imagecodecs",
+            "imageio",
+            "joblib",
+            "jsonargparse",
+            "jsonargparse_tests",
+            "kornia",
+            "kornia_rs",
+            "lazy_loader",
+            "lightning",
+            "lightning_fabric",
+            "lightning_utilities",
+            "narwhals",
+            "omegaconf",
+            "pandas",
+            "pygments",
+            "pytorch_lightning",
+            "pytz",
+            "rich",
+            "rich_argparse",
+            "skimage",
+            "sklearn",
+            "threadpoolctl",
+            "tifffile",
+            "torchmetrics",
+            "typeshed_client",
+            "tzdata"
+          ],
+          "kind": "feature",
+          "label": "PatchCore 算法",
+          "manifest_sha256": "96f531cb3873d30d17855483b0069a90f93a16ce71799192e5aa81eadc343cd1",
+          "module_id": "feature.patchcore",
+          "python": {
+            "abi": "cp312",
+            "platform": "win_amd64",
+            "version": "3.12.10"
+          },
+          "requires": [
+            "runtime.science",
+            "runtime.torch",
+            "runtime.vision"
+          ],
+          "resources": {},
+          "version": "0.0.0"
+        },
+        {
+          "archive": {
+            "bytes": 28828485,
+            "compressed_payload_bytes": 28715069,
+            "compression": "zip/lzma",
+            "expanded_bytes": 168331914,
+            "file_count": 552,
+            "name": "feature.yolo-0.0.0.zip",
+            "sha256": "2d40614b38a2c9b18bbbe8b9b201bee4d93f0f0d6d6b942783cc07f19a4e62d1"
+          },
+          "build": {
+            "app_sha": "c8c0fbe98a055620ddc5488be6835cf216b4800e",
+            "build_id": "candidate-45616400076-1",
+            "packager_sha": "f9703a9c6a0c0370a10eed0afadd39e677770547"
+          },
+          "core_versions": {
+            "max_exclusive": "0.0.1",
+            "min": "0.0.0"
+          },
+          "dependency_lock_sha256": "765b59a43a50ebc1714dccac2cc1f8c12e543031d5673beb6f34cc3e704c0829",
+          "distributions": {
+            "lapx": "0.5.9.post1",
+            "polars": "1.37.1",
+            "polars-runtime-32": "1.37.1",
+            "ultralytics": "8.4.7",
+            "ultralytics-thop": "2.0.18"
+          },
+          "import_roots": [
+            "_polars_runtime_32",
+            "lap",
+            "polars",
+            "thop",
+            "ultralytics"
+          ],
+          "kind": "feature",
+          "label": "YOLO 算法",
+          "manifest_sha256": "933595223bf8f0e072b8c9ddbcfa7d35f381ad56abbc7d681fcab30e59e997f2",
+          "module_id": "feature.yolo",
+          "python": {
+            "abi": "cp312",
+            "platform": "win_amd64",
+            "version": "3.12.10"
+          },
+          "requires": [
+            "runtime.science",
+            "runtime.torch"
+          ],
+          "resources": {},
+          "version": "0.0.0"
+        },
+        {
+          "archive": {
+            "bytes": 35560937,
+            "compressed_payload_bytes": 35560449,
+            "compression": "zip/lzma",
+            "expanded_bytes": 40678572,
+            "file_count": 3,
+            "name": "resource.edgesam-0.0.0.zip",
+            "sha256": "fc8f55a868dc640adea28d1a18f7be0416c069e2a5a2870db82b701daac4b553"
+          },
+          "build": {
+            "app_sha": "c8c0fbe98a055620ddc5488be6835cf216b4800e",
+            "build_id": "candidate-45616400076-1",
+            "packager_sha": "f9703a9c6a0c0370a10eed0afadd39e677770547"
+          },
+          "core_versions": {
+            "max_exclusive": "0.0.1",
+            "min": "0.0.0"
+          },
+          "dependency_lock_sha256": "765b59a43a50ebc1714dccac2cc1f8c12e543031d5673beb6f34cc3e704c0829",
+          "distributions": {},
+          "import_roots": [],
+          "kind": "resource",
+          "label": "EdgeSAM 标注模型",
+          "manifest_sha256": "742cdb3ec4cec487a805db0b9b66b75aed8d0fddc2f64b3aee379d0755dac70f",
+          "module_id": "resource.edgesam",
+          "python": {
+            "abi": "cp312",
+            "platform": "win_amd64",
+            "version": "3.12.10"
+          },
+          "requires": [],
+          "resources": {
+            "static/models/edge_sam_decoder.onnx": "resources/edge_sam_decoder.onnx",
+            "static/models/edge_sam_encoder.onnx": "resources/edge_sam_encoder.onnx"
+          },
+          "version": "0.0.0"
+        },
+        {
+          "archive": {
+            "bytes": 80567081,
+            "compressed_payload_bytes": 80566317,
+            "compression": "zip/lzma",
+            "expanded_bytes": 88254627,
+            "file_count": 4,
+            "name": "resource.image-simplification-0.0.0.zip",
+            "sha256": "9b67dc8479ca06c38436cddcc026c3f765f9b7820840456bb2da66916a4bb5bb"
+          },
+          "build": {
+            "app_sha": "c8c0fbe98a055620ddc5488be6835cf216b4800e",
+            "build_id": "candidate-45616400076-1",
+            "packager_sha": "f9703a9c6a0c0370a10eed0afadd39e677770547"
+          },
+          "core_versions": {
+            "max_exclusive": "0.0.1",
+            "min": "0.0.0"
+          },
+          "dependency_lock_sha256": "765b59a43a50ebc1714dccac2cc1f8c12e543031d5673beb6f34cc3e704c0829",
+          "distributions": {},
+          "import_roots": [],
+          "kind": "resource",
+          "label": "图片精简 DINOv2 资源",
+          "manifest_sha256": "6a7d0a927c72a75261bfb1dcad54090ebaa0950a178bfdf0e5ad809a635d41ad",
+          "module_id": "resource.image-simplification",
+          "python": {
+            "abi": "cp312",
+            "platform": "win_amd64",
+            "version": "3.12.10"
+          },
+          "requires": [],
+          "resources": {
+            "static/models/image_simplification": "resources/image_simplification"
+          },
+          "version": "0.0.0"
+        },
+        {
+          "archive": {
+            "bytes": 248193522,
+            "compressed_payload_bytes": 248192578,
+            "compression": "zip/lzma",
+            "expanded_bytes": 275888591,
+            "file_count": 5,
+            "name": "resource.patchcore-cnn-0.0.0.zip",
+            "sha256": "aa4dc32200bfaf150e390d0a7cd9bd2631c62602b55af60f53c34156e249c826"
+          },
+          "build": {
+            "app_sha": "c8c0fbe98a055620ddc5488be6835cf216b4800e",
+            "build_id": "candidate-45616400076-1",
+            "packager_sha": "f9703a9c6a0c0370a10eed0afadd39e677770547"
+          },
+          "core_versions": {
+            "max_exclusive": "0.0.1",
+            "min": "0.0.0"
+          },
+          "dependency_lock_sha256": "765b59a43a50ebc1714dccac2cc1f8c12e543031d5673beb6f34cc3e704c0829",
+          "distributions": {},
+          "import_roots": [],
+          "kind": "resource",
+          "label": "PatchCore CNN 预训练资源",
+          "manifest_sha256": "a9ceb9acd6ddd12f2ce5e0876179a316b2154e366dd7cca7349a147c2a88d371",
+          "module_id": "resource.patchcore-cnn",
+          "python": {
+            "abi": "cp312",
+            "platform": "win_amd64",
+            "version": "3.12.10"
+          },
+          "requires": [],
+          "resources": {
+            "static/models/patchcore_pretrained-LICENSE.txt": "resources/patchcore_pretrained-LICENSE.txt",
+            "static/models/patchcore_pretrained-MODEL_CARD.md": "resources/patchcore_pretrained-MODEL_CARD.md",
+            "static/models/patchcore_pretrained.json": "resources/patchcore_pretrained.json",
+            "static/models/patchcore_wide_resnet50_2.racm_in1k.safetensors": "resources/patchcore_wide_resnet50_2.racm_in1k.safetensors"
+          },
+          "version": "0.0.0"
+        },
+        {
+          "archive": {
+            "bytes": 80604327,
+            "compressed_payload_bytes": 80603651,
+            "compression": "zip/lzma",
+            "expanded_bytes": 88251569,
+            "file_count": 3,
+            "name": "resource.patchcore-dino-0.0.0.zip",
+            "sha256": "a78b17be815feeaad97af591979d215be703ecb09ad0e816ebdf5a48d13244ab"
+          },
+          "build": {
+            "app_sha": "c8c0fbe98a055620ddc5488be6835cf216b4800e",
+            "build_id": "candidate-45616400076-1",
+            "packager_sha": "f9703a9c6a0c0370a10eed0afadd39e677770547"
+          },
+          "core_versions": {
+            "max_exclusive": "0.0.1",
+            "min": "0.0.0"
+          },
+          "dependency_lock_sha256": "765b59a43a50ebc1714dccac2cc1f8c12e543031d5673beb6f34cc3e704c0829",
+          "distributions": {},
+          "import_roots": [],
+          "kind": "resource",
+          "label": "PatchCore DINO Small 资源",
+          "manifest_sha256": "d79047e821fbcb86fb359e2a3f8d4ae0c94ca5de8396a32154130e462ac2c065",
+          "module_id": "resource.patchcore-dino",
+          "python": {
+            "abi": "cp312",
+            "platform": "win_amd64",
+            "version": "3.12.10"
+          },
+          "requires": [],
+          "resources": {
+            "static/models/dinov2-small": "resources/dinov2-small"
+          },
+          "version": "0.0.0"
+        },
+        {
+          "archive": {
+            "bytes": 32296740,
+            "compressed_payload_bytes": 32295982,
+            "compression": "zip/lzma",
+            "expanded_bytes": 36728889,
+            "file_count": 5,
+            "name": "resource.yolo-0.0.0.zip",
+            "sha256": "0ef95729c6bf5bf294f7ff629292e51ac4345a612c48203d691bee932c1c758e"
+          },
+          "build": {
+            "app_sha": "c8c0fbe98a055620ddc5488be6835cf216b4800e",
+            "build_id": "candidate-45616400076-1",
+            "packager_sha": "f9703a9c6a0c0370a10eed0afadd39e677770547"
+          },
+          "core_versions": {
+            "max_exclusive": "0.0.1",
+            "min": "0.0.0"
+          },
+          "dependency_lock_sha256": "765b59a43a50ebc1714dccac2cc1f8c12e543031d5673beb6f34cc3e704c0829",
+          "distributions": {},
+          "import_roots": [],
+          "kind": "resource",
+          "label": "YOLO 预置模型",
+          "manifest_sha256": "880da3e1bca7af9badfbb8976cf2f44aa9c724ac7117bc8fea4f95f7c8001fa2",
+          "module_id": "resource.yolo",
+          "python": {
+            "abi": "cp312",
+            "platform": "win_amd64",
+            "version": "3.12.10"
+          },
+          "requires": [],
+          "resources": {
+            "static/models/yolo11n-pose.pt": "resources/yolo11n-pose.pt",
+            "static/models/yolo11n.pt": "resources/yolo11n.pt",
+            "static/models/yolo11s.pt": "resources/yolo11s.pt",
+            "static/models/yolo26n.pt": "resources/yolo26n.pt"
+          },
+          "version": "0.0.0"
+        },
+        {
+          "archive": {
+            "bytes": 113428219,
+            "compressed_payload_bytes": 111362835,
+            "compression": "zip/lzma",
+            "expanded_bytes": 439011782,
+            "file_count": 7124,
+            "name": "runtime.ort-0.0.0.zip",
+            "sha256": "cb52bcffd03aefac8fd7aa3ce7b8ce80ac9509ed4f87c776b218c0439d903d5a"
+          },
+          "build": {
+            "app_sha": "c8c0fbe98a055620ddc5488be6835cf216b4800e",
+            "build_id": "candidate-45616400076-1",
+            "packager_sha": "f9703a9c6a0c0370a10eed0afadd39e677770547"
+          },
+          "core_versions": {
+            "max_exclusive": "0.0.1",
+            "min": "0.0.0"
+          },
+          "dependency_lock_sha256": "765b59a43a50ebc1714dccac2cc1f8c12e543031d5673beb6f34cc3e704c0829",
+          "distributions": {
+            "coloredlogs": "15.0.1",
+            "flatbuffers": "25.12.19",
+            "humanfriendly": "10.0",
+            "ml-dtypes": "0.7.0",
+            "onnx": "1.16.0",
+            "onnxruntime-gpu": "1.23.2",
+            "onnxslim": "0.1.99",
+            "pyreadline3": "3.5.4"
+          },
+          "import_roots": [
+            "coloredlogs",
+            "flatbuffers",
+            "humanfriendly",
+            "ml_dtypes",
+            "onnx",
+            "onnxruntime",
+            "onnxslim",
+            "pyreadline3",
+            "readline"
+          ],
+          "kind": "runtime",
+          "label": "共享 ONNX Runtime",
+          "manifest_sha256": "0e195f8718ea5c1f42401e99845f018a5f8e4022b4eb9cf1f237a5f4a26ec52a",
+          "module_id": "runtime.ort",
+          "python": {
+            "abi": "cp312",
+            "platform": "win_amd64",
+            "version": "3.12.10"
+          },
+          "requires": [],
+          "resources": {},
+          "version": "0.0.0"
+        },
+        {
+          "archive": {
+            "bytes": 35208316,
+            "compressed_payload_bytes": 34750360,
+            "compression": "zip/lzma",
+            "expanded_bytes": 130405229,
+            "file_count": 2131,
+            "name": "runtime.science-0.0.0.zip",
+            "sha256": "8494ced6261bf8997c6a5c42384725b268159476c42f3ab9d8711dba45089d16"
+          },
+          "build": {
+            "app_sha": "c8c0fbe98a055620ddc5488be6835cf216b4800e",
+            "build_id": "candidate-45616400076-1",
+            "packager_sha": "f9703a9c6a0c0370a10eed0afadd39e677770547"
+          },
+          "core_versions": {
+            "max_exclusive": "0.0.1",
+            "min": "0.0.0"
+          },
+          "dependency_lock_sha256": "765b59a43a50ebc1714dccac2cc1f8c12e543031d5673beb6f34cc3e704c0829",
+          "distributions": {
+            "matplotlib": "3.10.8",
+            "scipy": "1.17.0"
+          },
+          "import_roots": [
+            "matplotlib",
+            "mpl_toolkits",
+            "pylab",
+            "scipy"
+          ],
+          "kind": "runtime",
+          "label": "共享科学计算库",
+          "manifest_sha256": "87911701cff46d14376e545229381eff5af1a38b88dbc4b19c6ff6ab5dc13855",
+          "module_id": "runtime.science",
+          "python": {
+            "abi": "cp312",
+            "platform": "win_amd64",
+            "version": "3.12.10"
+          },
+          "requires": [],
+          "resources": {},
+          "version": "0.0.0"
+        },
+        {
+          "archive": {
+            "bytes": 1865186577,
+            "compressed_payload_bytes": 1862334467,
+            "compression": "zip/lzma",
+            "expanded_bytes": 4557557572,
+            "file_count": 12052,
+            "name": "runtime.torch-0.0.0.zip",
+            "sha256": "ccbcd7b49974b8eaa8f8dfdb1bcc67d310cde85317142ffbcc8df6fa42cd9fd4"
+          },
+          "build": {
+            "app_sha": "c8c0fbe98a055620ddc5488be6835cf216b4800e",
+            "build_id": "candidate-45616400076-1",
+            "packager_sha": "f9703a9c6a0c0370a10eed0afadd39e677770547"
+          },
+          "core_versions": {
+            "max_exclusive": "0.0.1",
+            "min": "0.0.0"
+          },
+          "dependency_lock_sha256": "765b59a43a50ebc1714dccac2cc1f8c12e543031d5673beb6f34cc3e704c0829",
+          "distributions": {
+            "torch": "2.10.0+cu128",
+            "torchaudio": "2.10.0+cu128",
+            "torchvision": "0.25.0+cu128"
+          },
+          "import_roots": [
+            "functorch",
+            "torch",
+            "torchaudio",
+            "torchgen",
+            "torchvision"
+          ],
+          "kind": "runtime",
+          "label": "共享 Torch 2.10 / CUDA 12.8 运行库",
+          "manifest_sha256": "8cb722deabd819a764fd332bb56a0805c363d164fb8f4c7b10fc2c92b4341f4c",
+          "module_id": "runtime.torch",
+          "python": {
+            "abi": "cp312",
+            "platform": "win_amd64",
+            "version": "3.12.10"
+          },
+          "requires": [],
+          "resources": {},
+          "version": "0.0.0"
+        },
+        {
+          "archive": {
+            "bytes": 14281587,
+            "compressed_payload_bytes": 13732569,
+            "compression": "zip/lzma",
+            "expanded_bytes": 65140191,
+            "file_count": 2347,
+            "name": "runtime.vision-0.0.0.zip",
+            "sha256": "9be478fb6d95250961d6f98bbdc53d93a0e3b5e7f05e1e38089e7784ed21455d"
+          },
+          "build": {
+            "app_sha": "c8c0fbe98a055620ddc5488be6835cf216b4800e",
+            "build_id": "candidate-45616400076-1",
+            "packager_sha": "f9703a9c6a0c0370a10eed0afadd39e677770547"
+          },
+          "core_versions": {
+            "max_exclusive": "0.0.1",
+            "min": "0.0.0"
+          },
+          "dependency_lock_sha256": "765b59a43a50ebc1714dccac2cc1f8c12e543031d5673beb6f34cc3e704c0829",
+          "distributions": {
+            "huggingface-hub": "0.26.5",
+            "regex": "2026.11.24",
+            "safetensors": "0.8.0",
+            "timm": "1.0.27",
+            "tokenizers": "0.20.3",
+            "transformers": "4.46.3"
+          },
+          "import_roots": [
+            "huggingface_hub",
+            "regex",
+            "safetensors",
+            "timm",
+            "tokenizers",
+            "transformers"
+          ],
+          "kind": "runtime",
+          "label": "共享视觉模型运行库",
+          "manifest_sha256": "07d73074fd4202494e86570cf8a358f30e598a8508d8f016c96474c642dbde81",
+          "module_id": "runtime.vision",
+          "python": {
+            "abi": "cp312",
+            "platform": "win_amd64",
+            "version": "3.12.10"
+          },
+          "requires": [
+            "runtime.torch"
+          ],
+          "resources": {},
+          "version": "0.0.0"
+        }
+      ],
+      "protocol_version": 4,
+      "python": {
+        "abi": "cp312",
+        "platform": "win_amd64",
+        "version": "3.12.10"
+      },
+      "qualification": {
+        "native_execution": "SEPARATE_REPORT",
+        "release": "NOT_QUALIFIED",
+        "scope": "Archive identities and compatibility only; reused module builds remain original"
+      },
+      "schema_version": 1,
+      "total_archive_bytes": 2791233280,
+      "type": "visionworkshop-module-index"
+    },
+    "actual_product_verification": {
+      "reference": {
+        "path": "modular-acceptance/reports/module-index-verification.json",
+        "bytes": 624,
+        "sha256": "b1024296e596e61cd1d4f69b90dfabacbdcd5404db7f672769ba373255f95454"
+      },
+      "report": {
+        "status": "PASS",
+        "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-candidate\\archives\\module-index.json",
+        "bytes": 14561,
+        "sha256": "dd97cbd92475136c4263a0c9677aa44c98958b601c71a9bc1041c0f471008aab",
+        "asset_count": 12,
+        "core_sha256": "9b508d684ec2d594cbd2b162063fd6dc45b9982553f9276ef2bb8010b27064ad",
+        "build": {
+          "app_sha": "591f8bef7b2292caf50f4848e3047518e490742c",
+          "build_id": "candidate-45659615499-1",
+          "packager_sha": "d3ace70e41a41b4334a9e44d2dbec0d4907f077d"
+        },
+        "scope": "Index and complete ZIP size/SHA256, metadata and declared member inventory"
+      }
+    }
+  },
+  "windows_preparation": {
+    "font_probe": {
+      "reference": {
+        "path": "reports/qt-font-probe/qt-font-probe.json",
+        "bytes": 8828,
+        "sha256": "e30c48db02b4ee2e64652a7713137c5b01d86998cc274a8399be6be918b72e96"
+      },
+      "report": {
+        "application_font": "MS Shell Dlg 2,8.25,-1,5,50,0,0,0,0,0",
+        "chinese_visual_acceptance": "Probe glyphs and raster only; inspect the actual product screenshots separately",
+        "executable": "D:\\a\\_temp\\vw-p4-dependencies\\Scripts\\python.exe",
+        "font": {
+          "exact_match": true,
+          "family": "MS Shell Dlg 2",
+          "pixel_size": 24,
+          "style": ""
+        },
+        "font_families": [
+          "Arial",
+          "Arial Black",
+          "Bahnschrift",
+          "Bahnschrift Condensed",
+          "Bahnschrift Light",
+          "Bahnschrift Light Condensed",
+          "Bahnschrift Light SemiCondensed",
+          "Bahnschrift SemiBold",
+          "Bahnschrift SemiBold Condensed",
+          "Bahnschrift SemiBold SemiConden",
+          "Bahnschrift SemiCondensed",
+          "Bahnschrift SemiLight",
+          "Bahnschrift SemiLight Condensed",
+          "Bahnschrift SemiLight SemiConde",
+          "Calibri",
+          "Calibri Light",
+          "Cambria",
+          "Cambria Math",
+          "Candara",
+          "Candara Light",
+          "Cascadia Code",
+          "Cascadia Code ExtraLight",
+          "Cascadia Code Light",
+          "Cascadia Code SemiBold",
+          "Cascadia Code SemiLight",
+          "Cascadia Mono",
+          "Cascadia Mono ExtraLight",
+          "Cascadia Mono Light",
+          "Cascadia Mono SemiBold",
+          "Cascadia Mono SemiLight",
+          "Comic Sans MS",
+          "Consolas",
+          "Constantia",
+          "Corbel",
+          "Corbel Light",
+          "Courier",
+          "Courier New",
+          "Dotum",
+          "DotumChe",
+          "Ebrima",
+          "Fixedsys",
+          "Franklin Gothic Medium",
+          "Gabriola",
+          "Gadugi",
+          "Georgia",
+          "Gulim",
+          "GulimChe",
+          "Impact",
+          "Ink Free",
+          "Javanese Text",
+          "Leelawadee UI",
+          "Leelawadee UI Semilight",
+          "Lucida Console",
+          "Lucida Sans Unicode",
+          "MS Gothic",
+          "MS PGothic",
+          "MS Sans Serif",
+          "MS Serif",
+          "MS Shell Dlg 2",
+          "MS UI Gothic",
+          "MV Boli",
+          "Malgun Gothic",
+          "Malgun Gothic Semilight",
+          "Marlett",
+          "Microsoft Himalaya",
+          "Microsoft JhengHei",
+          "Microsoft JhengHei Light",
+          "Microsoft JhengHei UI",
+          "Microsoft JhengHei UI Light",
+          "Microsoft New Tai Lue",
+          "Microsoft PhagsPa",
+          "Microsoft Sans Serif",
+          "Microsoft Tai Le",
+          "Microsoft YaHei",
+          "Microsoft YaHei Light",
+          "Microsoft YaHei UI",
+          "Microsoft YaHei UI Light",
+          "Microsoft Yi Baiti",
+          "MingLiU",
+          "MingLiU-ExtB",
+          "MingLiU_HKSCS",
+          "MingLiU_HKSCS-ExtB",
+          "MingLiU_MSCS",
+          "MingLiU_MSCS-ExtB",
+          "Modern",
+          "Mongolian Baiti",
+          "Myanmar Text",
+          "NSimSun",
+          "Nirmala Text",
+          "Nirmala Text Semilight",
+          "Nirmala UI",
+          "Nirmala UI Semilight",
+          "PMingLiU",
+          "PMingLiU-ExtB",
+          "Palatino Linotype",
+          "Roman",
+          "Sans Serif Collection",
+          "Script",
+          "Segoe Fluent Icons",
+          "Segoe MDL2 Assets",
+          "Segoe Print",
+          "Segoe Script",
+          "Segoe UI",
+          "Segoe UI Black",
+          "Segoe UI Emoji",
+          "Segoe UI Historic",
+          "Segoe UI Light",
+          "Segoe UI Semibold",
+          "Segoe UI Semilight",
+          "Segoe UI Symbol",
+          "Segoe UI Variable Display",
+          "Segoe UI Variable Display Light",
+          "Segoe UI Variable Display Semib",
+          "Segoe UI Variable Display Semil",
+          "Segoe UI Variable Small",
+          "Segoe UI Variable Small Light",
+          "Segoe UI Variable Small Semibol",
+          "Segoe UI Variable Small Semilig",
+          "Segoe UI Variable Text",
+          "Segoe UI Variable Text Light",
+          "Segoe UI Variable Text Semibold",
+          "Segoe UI Variable Text Semiligh",
+          "SimSun",
+          "SimSun-ExtB",
+          "SimSun-ExtG",
+          "Sitka Banner",
+          "Sitka Banner Semibold",
+          "Sitka Display",
+          "Sitka Display Semibold",
+          "Sitka Heading",
+          "Sitka Heading Semibold",
+          "Sitka Small",
+          "Sitka Small Semibold",
+          "Sitka Subheading",
+          "Sitka Subheading Semibold",
+          "Sitka Text",
+          "Sitka Text Semibold",
+          "Small Fonts",
+          "Sylfaen",
+          "Symbol",
+          "System",
+          "Tahoma",
+          "Terminal",
+          "Times New Roman",
+          "Trebuchet MS",
+          "Verdana",
+          "Webdings",
+          "Wingdings",
+          "Yu Gothic",
+          "Yu Gothic Light",
+          "Yu Gothic Medium",
+          "Yu Gothic UI",
+          "Yu Gothic UI Light",
+          "Yu Gothic UI Semibold",
+          "Yu Gothic UI Semilight"
+        ],
+        "interpreter": {
+          "base_executable": "C:\\hostedtoolcache\\windows\\Python\\3.12.10\\x64\\python.exe",
+          "base_prefix": "C:\\hostedtoolcache\\windows\\Python\\3.12.10\\x64",
+          "executable": "D:\\a\\_temp\\vw-p4-dependencies\\Scripts\\python.exe",
+          "prefix": "D:\\a\\_temp\\vw-p4-dependencies"
+        },
+        "native_parent": {
+          "cmdline": [
+            "D:\\a\\_temp\\vw-p4-dependencies\\Scripts\\python.exe",
+            "D:\\a\\python_build_scripts\\python_build_scripts\\packager\\scripts\\verify_windows_qt_fonts.py",
+            "--child",
+            "--output",
+            "D:\\a\\python_build_scripts\\python_build_scripts\\reports\\qt-font-probe",
+            "--probe-nonce",
+            "55f63034c4ebea91f4869f02e014e500"
+          ],
+          "create_time": 1795626128.6655266,
+          "exe": "D:\\a\\_temp\\vw-p4-dependencies\\Scripts\\python.exe",
+          "pid": 7672,
+          "ppid": 8276
+        },
+        "native_process": {
+          "cmdline": [
+            "C:\\hostedtoolcache\\windows\\Python\\3.12.10\\x64\\python.exe",
+            "D:\\a\\python_build_scripts\\python_build_scripts\\packager\\scripts\\verify_windows_qt_fonts.py",
+            "--child",
+            "--output",
+            "D:\\a\\python_build_scripts\\python_build_scripts\\reports\\qt-font-probe",
+            "--probe-nonce",
+            "55f63034c4ebea91f4869f02e014e500"
+          ],
+          "create_time": 1795626128.6690524,
+          "exe": "C:\\hostedtoolcache\\windows\\Python\\3.12.10\\x64\\python.exe",
+          "pid": 3948,
+          "ppid": 7672
+        },
+        "nonce": "55f63034c4ebea91f4869f02e014e500",
+        "pid": 3948,
+        "platform_name": "windows",
+        "psutil_version": "7.2.1",
+        "pyqt_version": "5.15.9",
+        "python": "3.12.10 (tags/v3.12.10:0cc8128, Apr  8 2025, 12:21:36) [MSC v.1943 64 bit (AMD64)]",
+        "python_version": "3.12.10",
+        "qt_module": "D:\\a\\_temp\\vw-p4-dependencies\\Lib\\site-packages\\PyQt5\\QtCore.pyd",
+        "qt_version": "5.15.2",
+        "requested_platform": "windows",
+        "samples": {
+          "ascii": {
+            "glyph_runs": [
+              {
+                "family": "Tahoma",
+                "font_valid": true,
+                "indexes": [
+                  57,
+                  76,
+                  86,
+                  76,
+                  82,
+                  81,
+                  58,
+                  82,
+                  85,
+                  78,
+                  86,
+                  75,
+                  82,
+                  83,
+                  3,
+                  36,
+                  37,
+                  38,
+                  3,
+                  19,
+                  20,
+                  21,
+                  22
+                ]
+              }
+            ],
+            "image": "ascii.png",
+            "image_sha256": "ea0060941b278eb52112bfdbfa6bd92d9281c5369eb3733df6d7bc1fa0f807b2",
+            "pixels": {
+              "blank_rgba_sha256": "dc4d71ed3a427a299e960e324caa5909df33b87d6519849ea78d806a0c202b2e",
+              "bounds": [
+                16,
+                39,
+                291,
+                62
+              ],
+              "changed_pixels": 1783,
+              "height": 96,
+              "rendered_rgba_sha256": "6f7e0b932fb980e2c9a4867882586e5cd48b196b3c1f7e75c1222ee0a04ad691",
+              "stride": 2560,
+              "width": 640
+            },
+            "status": "PASS",
+            "text": "VisionWorkshop ABC 0123"
+          },
+          "chinese": {
+            "glyph_runs": [
+              {
+                "family": "SimSun",
+                "font_valid": true,
+                "indexes": [
+                  13551,
+                  3463,
+                  16861,
+                  13555
+                ]
+              },
+              {
+                "family": "MS UI Gothic",
+                "font_valid": true,
+                "indexes": [
+                  9913,
+                  7565,
+                  5561,
+                  3982
+                ]
+              }
+            ],
+            "image": "chinese.png",
+            "image_sha256": "bc46d22a9e312bd8d8c1492f74e2e719f30a7b3cfacb5106aa3f51c298f4264d",
+            "pixels": {
+              "blank_rgba_sha256": "dc4d71ed3a427a299e960e324caa5909df33b87d6519849ea78d806a0c202b2e",
+              "bounds": [
+                18,
+                38,
+                205,
+                59
+              ],
+              "changed_pixels": 1684,
+              "height": 96,
+              "rendered_rgba_sha256": "2de9dc4a12f08d5bfa6ad0d13b61c3bf312da59509fe4e30ff845be4373d968f",
+              "stride": 2560,
+              "width": 640
+            },
+            "status": "PASS",
+            "text": "离线模块训练平台"
+          }
+        },
+        "scope": "Prepared interpreter font rendering; frozen product visual acceptance NOT_RUN",
+        "script_argv": [
+          "D:\\a\\python_build_scripts\\python_build_scripts\\packager\\scripts\\verify_windows_qt_fonts.py",
+          "--child",
+          "--output",
+          "D:\\a\\python_build_scripts\\python_build_scripts\\reports\\qt-font-probe",
+          "--probe-nonce",
+          "55f63034c4ebea91f4869f02e014e500"
+        ],
+        "status": "PASS"
+      }
+    },
+    "process_chain": {
+      "reference": {
+        "path": "reports/qt-font-probe/qt-font-probe.process.json",
+        "bytes": 3339,
+        "sha256": "4e3047f328b80b2fecb207bcb85d242c16178fed5c3b182263b33bb7860c9a92"
+      },
+      "report": {
+        "command": [
+          "D:\\a\\_temp\\vw-p4-dependencies\\Scripts\\python.exe",
+          "D:\\a\\python_build_scripts\\python_build_scripts\\packager\\scripts\\verify_windows_qt_fonts.py",
+          "--child",
+          "--output",
+          "D:\\a\\python_build_scripts\\python_build_scripts\\reports\\qt-font-probe",
+          "--probe-nonce",
+          "55f63034c4ebea91f4869f02e014e500"
+        ],
+        "driver_base_executable": "C:\\hostedtoolcache\\windows\\Python\\3.12.10\\x64\\python.exe",
+        "driver_pid": 8276,
+        "elapsed_seconds": 3.343,
+        "exit_code": 0,
+        "nonce": "55f63034c4ebea91f4869f02e014e500",
+        "pid": 7672,
+        "process_identity": {
+          "interpreter": {
+            "base_executable": "C:\\hostedtoolcache\\windows\\Python\\3.12.10\\x64\\python.exe",
+            "base_prefix": "C:\\hostedtoolcache\\windows\\Python\\3.12.10\\x64",
+            "executable": "D:\\a\\_temp\\vw-p4-dependencies\\Scripts\\python.exe",
+            "prefix": "D:\\a\\_temp\\vw-p4-dependencies"
+          },
+          "interpreter_pid": 3948,
+          "launcher_pid": 7672,
+          "mode": "venv-redirector-single-child",
+          "native_parent": {
+            "cmdline": [
+              "D:\\a\\_temp\\vw-p4-dependencies\\Scripts\\python.exe",
+              "D:\\a\\python_build_scripts\\python_build_scripts\\packager\\scripts\\verify_windows_qt_fonts.py",
+              "--child",
+              "--output",
+              "D:\\a\\python_build_scripts\\python_build_scripts\\reports\\qt-font-probe",
+              "--probe-nonce",
+              "55f63034c4ebea91f4869f02e014e500"
+            ],
+            "create_time": 1795626128.6655266,
+            "exe": "D:\\a\\_temp\\vw-p4-dependencies\\Scripts\\python.exe",
+            "pid": 7672,
+            "ppid": 8276
+          },
+          "native_process": {
+            "cmdline": [
+              "C:\\hostedtoolcache\\windows\\Python\\3.12.10\\x64\\python.exe",
+              "D:\\a\\python_build_scripts\\python_build_scripts\\packager\\scripts\\verify_windows_qt_fonts.py",
+              "--child",
+              "--output",
+              "D:\\a\\python_build_scripts\\python_build_scripts\\reports\\qt-font-probe",
+              "--probe-nonce",
+              "55f63034c4ebea91f4869f02e014e500"
+            ],
+            "create_time": 1795626128.6690524,
+            "exe": "C:\\hostedtoolcache\\windows\\Python\\3.12.10\\x64\\python.exe",
+            "pid": 3948,
+            "ppid": 7672
+          },
+          "nonce": "55f63034c4ebea91f4869f02e014e500",
+          "status": "PASS"
+        },
+        "report": "qt-font-probe.json",
+        "report_sha256": "e30c48db02b4ee2e64652a7713137c5b01d86998cc274a8399be6be918b72e96",
+        "requested_platform": "windows",
+        "runtime": {
+          "base_executable": "C:\\hostedtoolcache\\windows\\Python\\3.12.10\\x64\\python.exe",
+          "base_prefix": "C:\\hostedtoolcache\\windows\\Python\\3.12.10\\x64",
+          "prefix": "D:\\a\\_temp\\vw-p4-dependencies",
+          "pyvenv_config": {
+            "bytes": 288,
+            "fields": {
+              "executable": "C:\\hostedtoolcache\\windows\\Python\\3.12.10\\x64\\python.exe",
+              "home": "C:\\hostedtoolcache\\windows\\Python\\3.12.10\\x64",
+              "include-system-site-packages": "false",
+              "version": "3.12.10"
+            },
+            "path": "D:\\a\\_temp\\vw-p4-dependencies\\pyvenv.cfg",
+            "sha256": "560c7b65c98cbd2b2e7b5c5bc004e460a7d24ae457190e41bfbef7e79ec90be6"
+          },
+          "selected_python": "D:\\a\\_temp\\vw-p4-dependencies\\Scripts\\python.exe",
+          "venv": true
+        },
+        "status": "PASS",
+        "timeout_seconds": 120
+      }
+    },
+    "junit": [
+      {
+        "reference": {
+          "path": "reports/module-repair-annotation-source.xml",
+          "bytes": 46442,
+          "sha256": "4690176ecd41dfb7240679d592064e075ec279ce9849ca9c4506cf4e5ad438d7"
+        },
+        "test_count": 294,
+        "passed": 293,
+        "skipped": [
+          {
+            "class": "tests.test_offline_fonts",
+            "name": "test_supplied_official_otf_loads_unchanged_through_both_vendor_aliases",
+            "message": "set VISIONWORKSHOP_TEST_FONT_DIR to the verified build font sources"
+          }
+        ],
+        "failed": 0,
+        "errors": 0,
+        "actual_windows_provider_probe": [
+          {
+            "classname": "tests.test_module_runtime_check_security",
+            "name": "test_actual_windows_registered_defender_signature_probe",
+            "time": "0.046"
+          }
+        ]
+      },
+      {
+        "reference": {
+          "path": "reports/offline-fonts-native.xml",
+          "bytes": 389,
+          "sha256": "ca027b716db3804cbd38bf139674738328dcf442a0296e99abcf6d619a520328"
+        },
+        "test_count": 1,
+        "passed": 1,
+        "skipped": [],
+        "failed": 0,
+        "errors": 0,
+        "actual_windows_provider_probe": []
+      }
+    ],
+    "unit_groups_from_job_log": {
+      "builder": 35,
+      "reuse": 17,
+      "receipts": 12,
+      "qt_fonts": 10,
+      "module_index": 12,
+      "app_contract": 37,
+      "app_runtime": 20,
+      "legacy_worker_permission_pytest": 3
+    }
+  },
+  "product": {
+    "summary_reference": {
+      "path": "modular-acceptance/reports/modular-product-summary.json",
+      "bytes": 67647,
+      "sha256": "13d21194bbf69fb89fda520d25aaa10bb4af70926e0ded70504f427d8f4b7a58"
+    },
+    "status": "FAIL",
+    "error": "core-without-modules exited with 3221225477",
+    "elapsed_seconds": 53.609,
+    "completed_cases": [
+      {
+        "name": "empty-status-default-output",
+        "status": "PASS",
+        "command": [
+          "D:\\a\\python_build_scripts\\python_build_scripts\\modular-acceptance\\中文 模块验收\\VisionWorkshop\\VisionWorkshop.exe",
+          "--offline-modules",
+          "status"
+        ],
+        "timeout_seconds": 300,
+        "default_result_file": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-acceptance\\isolated-user\\AppData\\Local\\VisionWorkshop\\offline-modules\\last-result.json",
+        "result_existed_before": false,
+        "standard_handles": "NULL",
+        "detached_process": true,
+        "pid": 7768,
+        "exit_code": 0,
+        "report": "empty-status-default-output.json",
+        "report_sha256": "cd0025bc3b8831efd7a1571413972d73e83efc0dceb1086d999a85fdbb2419bd",
+        "runtime_identity": {
+          "core_sha256": "9b508d684ec2d594cbd2b162063fd6dc45b9982553f9276ef2bb8010b27064ad",
+          "generation": 0,
+          "modules": {}
+        },
+        "scope": "Actual windowed EXE with null standard handles, waited by process handle",
+        "elapsed_seconds": 5.25
+      }
+    ],
+    "core_integrity_checks": [],
+    "explicit_cli_status": {
+      "reference": {
+        "path": "modular-acceptance/reports/empty-status.process.json",
+        "bytes": 525,
+        "sha256": "0e1832d1575422f764ad716b0b1923859383de32d3ac0bc6a9d214e41a2ea7a9"
+      },
+      "report": {
+        "status": "PASS",
+        "command": [
+          "D:\\a\\python_build_scripts\\python_build_scripts\\modular-acceptance\\中文 模块验收\\VisionWorkshop\\VisionWorkshop.exe",
+          "--offline-modules",
+          "status",
+          "--output",
+          "D:\\a\\python_build_scripts\\python_build_scripts\\modular-acceptance\\reports\\empty-status.json"
+        ],
+        "timeout_seconds": 900,
+        "pid": 3976,
+        "exit_code": 0,
+        "report_sha256": "edea6af8f9a6478a7696e467d3a5c909553937f579198a074e884a7b5a9f95e2",
+        "elapsed_seconds": 5.391
+      }
+    },
+    "default_cli_status": {
+      "reference": {
+        "path": "modular-acceptance/reports/empty-status-default-output.process.json",
+        "bytes": 1016,
+        "sha256": "d0c42f7c2ba504feaa52e10b095906c3d51b305148edf7d1403d0808d6bee6fa"
+      },
+      "report": {
+        "name": "empty-status-default-output",
+        "status": "PASS",
+        "command": [
+          "D:\\a\\python_build_scripts\\python_build_scripts\\modular-acceptance\\中文 模块验收\\VisionWorkshop\\VisionWorkshop.exe",
+          "--offline-modules",
+          "status"
+        ],
+        "timeout_seconds": 300,
+        "default_result_file": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-acceptance\\isolated-user\\AppData\\Local\\VisionWorkshop\\offline-modules\\last-result.json",
+        "result_existed_before": false,
+        "standard_handles": "NULL",
+        "detached_process": true,
+        "pid": 7768,
+        "exit_code": 0,
+        "report": "empty-status-default-output.json",
+        "report_sha256": "cd0025bc3b8831efd7a1571413972d73e83efc0dceb1086d999a85fdbb2419bd",
+        "runtime_identity": {
+          "core_sha256": "9b508d684ec2d594cbd2b162063fd6dc45b9982553f9276ef2bb8010b27064ad",
+          "generation": 0,
+          "modules": {}
+        },
+        "scope": "Actual windowed EXE with null standard handles, waited by process handle",
+        "elapsed_seconds": 5.25
+      }
+    },
+    "core_process": {
+      "reference": {
+        "path": "modular-acceptance/reports/core-without-modules.process.json",
+        "bytes": 473,
+        "sha256": "01ff841033a5973585b17b55882e1f643de86f58dc760e6aa80ce896b0f99646"
+      },
+      "report": {
+        "status": "FAIL",
+        "command": [
+          "D:\\a\\python_build_scripts\\python_build_scripts\\modular-acceptance\\中文 模块验收\\VisionWorkshop\\VisionWorkshop.exe",
+          "--modular-runtime-check",
+          "--case",
+          "core",
+          "--output",
+          "D:\\a\\python_build_scripts\\python_build_scripts\\modular-acceptance\\reports\\core-without-modules.json"
+        ],
+        "timeout_seconds": 300,
+        "pid": 208,
+        "exit_code": 3221225477,
+        "elapsed_seconds": 10.062
+      }
+    },
+    "core_internal_report": {
+      "reference": {
+        "path": "modular-acceptance/reports/core-without-modules.json",
+        "bytes": 37648,
+        "sha256": "77d867de8635bbbc7d3095f470c1645fabb94eb06be3a856751d7bc295293ee1"
+      },
+      "report": {
+        "case": "core",
+        "elapsed_seconds": 4.609,
+        "executable": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-acceptance\\中文 模块验收\\VisionWorkshop\\VisionWorkshop.exe",
+        "frozen": true,
+        "inert_pth": {
+          "reason": "The optional ORT/coloredlogs payload is not installed",
+          "status": "NOT_RUN"
+        },
+        "loaded_packages": {
+          "PyQt5": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-acceptance\\中文 模块验收\\VisionWorkshop\\site-packages\\PyQt5\\__init__.py",
+          "cv2": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-acceptance\\中文 模块验收\\VisionWorkshop\\site-packages\\cv2\\__init__.py",
+          "numpy": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-acceptance\\中文 模块验收\\VisionWorkshop\\site-packages\\numpy\\__init__.py"
+        },
+        "network_attempts": [],
+        "pid": 208,
+        "platform": "win32",
+        "python": "3.12.10",
+        "python_files": [
+          {
+            "bytes": 70376,
+            "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-acceptance\\中文 模块验收\\VisionWorkshop\\_internal\\python3.dll",
+            "sha256": "fb975a606e7fbf74f64260e3f60c3490b4f74a183c0926fd6ed1ac4c52ac7b1c"
+          },
+          {
+            "bytes": 6945272,
+            "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-acceptance\\中文 模块验收\\VisionWorkshop\\_internal\\python312.dll",
+            "sha256": "9a0e3435aaa680d868150f87ab3e388ad2eebc22f87e036155c7b4eda8cd2120"
+          }
+        ],
+        "result": {
+          "capabilities": {
+            "backend_class": "backend.unavailable_backend.UnavailableBackend",
+            "dataset": {
+              "dataset_id": "6664150abe6c3311079e9db09b2bb9958c1f309c6fb0ce41fe4ff4119ea20edf",
+              "identity_sha256": "83f6bad1464e910b9ce6a78ee7bf0f8c22523faa2e1cc707a3694762c23bff70",
+              "manifest_path": "datasets/yolo/detect/dataset_manifest.json",
+              "status": "ready"
+            },
+            "local": {
+              "begin_train": {
+                "class": "PyQt5.QtWidgets.QPushButton",
+                "enabled": false,
+                "object_name": "begin_train",
+                "text": "开始本地训练",
+                "tooltip": "当前不可用：本地 YOLO MODULE_MISSING: 所需离线模块不可用：YOLO 算法（feature.yolo）、共享 Torch 2.10 / CUDA 12.8 运行库（runtime.torch）。请导入匹配的离线模块包，关闭全部窗口和工作进程后重启。MODULE_MISSING: 请先导入离线模块：YOLO 算法、共享 Torch 2.10 / CUDA 12.8 运行库。",
+                "visible": true
+              },
+              "simplify_dataset": {
+                "class": "PyQt5.QtWidgets.QPushButton",
+                "enabled": false,
+                "object_name": "simplify_dataset",
+                "text": "精简数据集",
+                "tooltip": "MODULE_MISSING: 所需离线模块不可用：共享 Torch 2.10 / CUDA 12.8 运行库（runtime.torch）、共享视觉模型运行库（runtime.vision）、图片精简 DINOv2 资源（resource.image-simplification）。请导入匹配的离线模块包，关闭全部窗口和工作进程后重启。MODULE_MISSING: 请先导入离线模块：共享 Torch 2.10 / CUDA 12.8 运行库、共享视觉模型运行库、图片精简 DINOv2 资源",
+                "visible": false
+              },
+              "test_model": {
+                "class": "PyQt5.QtWidgets.QPushButton",
+                "enabled": false,
+                "object_name": "test_model",
+                "text": "测试当前图片",
+                "tooltip": "当前不可用：本地 YOLO MODULE_MISSING: 所需离线模块不可用：YOLO 算法（feature.yolo）、共享 Torch 2.10 / CUDA 12.8 运行库（runtime.torch）。请导入匹配的离线模块包，关闭全部窗口和工作进程后重启。MODULE_MISSING: 请先导入离线模块：YOLO 算法、共享 Torch 2.10 / CUDA 12.8 运行库。",
+                "visible": false
+              },
+              "training_readiness_status": {
+                "class": "PyQt5.QtWidgets.QLabel",
+                "enabled": true,
+                "object_name": "training_readiness_status",
+                "text": "本地训练：未就绪",
+                "tooltip": "本地训练暂不可用\n当前阻止原因：本地 YOLO MODULE_MISSING: 所需离线模块不可用：YOLO 算法（feature.yolo）、共享 Torch 2.10 / CUDA 12.8 运行库（runtime.torch）。请导入匹配的离线模块包，关闭全部窗口和工作进程后重启。MODULE_MISSING: 请先导入离线模块：YOLO 算法、共享 Torch 2.10 / CUDA 12.8 运行库\n处理后会自动更新就绪状态。",
+                "visible": true
+              }
+            },
+            "not_run": [
+              "remote submission",
+              "CNN model UI",
+              "DINO deployment model UI"
+            ],
+            "project": {
+              "backend": "yolo",
+              "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-acceptance\\reports\\core-without-modules-files\\project",
+              "project_id": "3f7c5f35-f9a2-4c85-87e0-596ee9397ab4",
+              "task": "detect"
+            },
+            "reasons": {
+              "kaggle_training": "",
+              "local_training": "本地 YOLO MODULE_MISSING: 所需离线模块不可用：YOLO 算法（feature.yolo）、共享 Torch 2.10 / CUDA 12.8 运行库（runtime.torch）。请导入匹配的离线模块包，关闭全部窗口和工作进程后重启。MODULE_MISSING: 请先导入离线模块：YOLO 算法、共享 Torch 2.10 / CUDA 12.8 运行库",
+              "model_test": "本地 YOLO MODULE_MISSING: 所需离线模块不可用：YOLO 算法（feature.yolo）、共享 Torch 2.10 / CUDA 12.8 运行库（runtime.torch）。请导入匹配的离线模块包，关闭全部窗口和工作进程后重启。MODULE_MISSING: 请先导入离线模块：YOLO 算法、共享 Torch 2.10 / CUDA 12.8 运行库"
+            },
+            "remote": {
+              "begin_kaggle_train": {
+                "class": "PyQt5.QtWidgets.QPushButton",
+                "enabled": true,
+                "object_name": "begin_kaggle_train",
+                "text": "开始 Kaggle 训练",
+                "tooltip": "提交一条新的 Kaggle 训练任务。继续已有任务请在任务列表中选择对应操作。",
+                "visible": true
+              },
+              "remote_start": {
+                "class": "PyQt5.QtWidgets.QPushButton",
+                "enabled": true,
+                "object_name": "remote_start_proxy",
+                "text": "开始 Kaggle 训练",
+                "tooltip": "提交一条新的 Kaggle 训练任务。继续已有任务请在任务列表中选择对应操作。",
+                "visible": true
+              },
+              "training_readiness_status": {
+                "class": "PyQt5.QtWidgets.QLabel",
+                "enabled": true,
+                "object_name": "training_readiness_status",
+                "text": "Kaggle训练：已就绪",
+                "tooltip": "Kaggle 训练基础条件已就绪：当前项目支持云端训练，训练数据检查已通过。\n点击“开始 Kaggle 训练”后仍会检查提交配置、凭据和网络等条件。",
+                "visible": true
+              }
+            },
+            "remote_target": "kaggle",
+            "scope": "actual YOLO and image-simplification missing-module controls; Kaggle UI readiness only",
+            "screenshots": {
+              "kaggle": true,
+              "local": true
+            },
+            "status": "PASS",
+            "workspace_class": "ui.workspace_view.WorkspaceView"
+          },
+          "cleanup": {
+            "errors": [],
+            "status": "PASS",
+            "window_closed": true,
+            "workers_stopped": true
+          },
+          "gui": {
+            "enabled": true,
+            "screenshot_saved": true,
+            "visible": true
+          },
+          "initial_optional_imports": [],
+          "optional_imports": [],
+          "qt_callback_errors": [],
+          "qt_font": "MS Shell Dlg 2,8.25,-1,5,50,0,0,0,0,0",
+          "qt_platform": "windows",
+          "scope": "actual Core home, YOLO and image-simplification controls; no training or remote submission",
+          "unexpected_dialogs": []
+        },
+        "runtime_identity": {
+          "core_sha256": "9b508d684ec2d594cbd2b162063fd6dc45b9982553f9276ef2bb8010b27064ad",
+          "generation": 0,
+          "modules": {}
+        },
+        "scope": "controlled product fixtures; no formal release or existing business-model qualification",
+        "status": "PASS",
+        "system_security_providers": [
+          {
+            "bytes": 682008,
+            "classification": "windows_defender_amsi",
+            "file_handle_closed": true,
+            "file_identity": {
+              "bytes": 682008,
+              "device": 10974387285115203278,
+              "inode": 281474976874593,
+              "mtime_ns": 1794863276903000000
+            },
+            "file_identity_unchanged": true,
+            "opened_path": "C:\\ProgramData\\Microsoft\\Windows Defender\\Platform\\4.18.26100.4-0\\MpOAV.dll",
+            "path": "C:\\ProgramData\\Microsoft\\Windows Defender\\Platform\\4.18.26100.4-0\\MpOAV.dll",
+            "platform_version": "4.18.26100.4-0",
+            "program_data": "C:\\ProgramData",
+            "registration": [
+              {
+                "clsid": "{2781761E-28E0-4109-99FE-B9D127C57AFE}",
+                "expanded_value": "\"C:\\ProgramData\\Microsoft\\Windows Defender\\Platform\\4.18.26100.4-0\\MpOav.dll\"",
+                "provider_key": "HKLM\\SOFTWARE\\Microsoft\\AMSI\\Providers\\{2781761E-28E0-4109-99FE-B9D127C57AFE}",
+                "raw_value": "\"%ProgramData%\\Microsoft\\Windows Defender\\Platform\\4.18.26100.4-0\\MpOav.dll\"",
+                "registry_view": 64,
+                "resolved_path": "C:\\ProgramData\\Microsoft\\Windows Defender\\Platform\\4.18.26100.4-0\\MpOAV.dll",
+                "server_key": "HKLM\\SOFTWARE\\Classes\\CLSID\\{2781761E-28E0-4109-99FE-B9D127C57AFE}\\InprocServer32",
+                "value_type": "REG_EXPAND_SZ"
+              }
+            ],
+            "sha256": "f4bf2fbdfef5fd081dfcc92cac458832040888c0c1c0e1905f38e0e3ca864c9b",
+            "signature": {
+              "action": "WINTRUST_ACTION_GENERIC_VERIFY_V2",
+              "cache_only": true,
+              "dwProvFlags": 4096,
+              "microsoft_root_policy": {
+                "api_success": true,
+                "chain_index": 0,
+                "element_index": 0,
+                "error": 0,
+                "error_hex": "0x00000000",
+                "flags": 0,
+                "policy": 7,
+                "test_roots_allowed": false
+              },
+              "online_revocation": "NOT_RUN",
+              "revocation_policy": "Existing OS trust/cache only; no claim of current online revocation status",
+              "signer_certificate_sha256": "086449bd2441f80597968ddf06e1667c5309c144d0558d2078ab983b5b4c7baa",
+              "signer_common_name": "Microsoft Windows",
+              "signer_error": 0,
+              "signer_organization": "Microsoft Corporation",
+              "state_close_status": 0,
+              "state_close_status_hex": "0x00000000",
+              "ui": "WTD_UI_NONE",
+              "winverifytrust_status": 0,
+              "winverifytrust_status_hex": "0x00000000"
+            },
+            "status": "PASS"
+          }
+        ]
+      },
+      "omitted_from_compact_copy": [
+        "loaded_libraries",
+        "native_files"
+      ],
+      "complete_lists_location": "The bound original report in the separately verified evidence artifact"
+    },
+    "core_lifecycle": {
+      "reference": {
+        "path": "modular-acceptance/reports/core-without-modules-files/core-lifecycle.json",
+        "bytes": 134,
+        "sha256": "ee7d7532ba00fc785d2b13acc69638107f80866b2c10856da9fb00e610d477cd"
+      },
+      "report": {
+        "cleanup": {
+          "errors": [],
+          "status": "PASS",
+          "window_closed": true,
+          "workers_stopped": true
+        },
+        "qt_callback_errors": [],
+        "unexpected_dialogs": []
+      }
+    },
+    "stderr": {
+      "path": "modular-acceptance/reports/core-without-modules.stderr.txt",
+      "bytes": 1964,
+      "sha256": "b03b8e3658e3296325ce738237eead019a8554498feb125f609708b6df4c9a5e"
+    },
+    "stdout": {
+      "path": "modular-acceptance/reports/core-without-modules.stdout.txt",
+      "bytes": 38396,
+      "sha256": "f94907d299d25ee17a671f7422d34447012fddd93441d8981241bd0dbb8c7a91"
+    },
+    "interpretation": {
+      "exit_code_hex": "0xC0000005",
+      "internal_report_status": "PASS before process exit",
+      "process_acceptance": "FAIL",
+      "faulting_native_module": "NOT_OBSERVED",
+      "native_stack": "NOT_COLLECTED",
+      "shutdown_phase_inference": "The complete internal PASS JSON was written before the observed native access-violation exit; no native stack is available to identify the cause."
+    },
+    "native_source_observations": {
+      "loaded_library_count": 140,
+      "hashed_native_file_count": 49,
+      "python_files": [
+        {
+          "bytes": 70376,
+          "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-acceptance\\中文 模块验收\\VisionWorkshop\\_internal\\python3.dll",
+          "sha256": "fb975a606e7fbf74f64260e3f60c3490b4f74a183c0926fd6ed1ac4c52ac7b1c"
+        },
+        {
+          "bytes": 6945272,
+          "path": "D:\\a\\python_build_scripts\\python_build_scripts\\modular-acceptance\\中文 模块验收\\VisionWorkshop\\_internal\\python312.dll",
+          "sha256": "9a0e3435aaa680d868150f87ab3e388ad2eebc22f87e036155c7b4eda8cd2120"
+        }
+      ],
+      "compute_frameworks_loaded": [],
+      "system_security_provider_count": 1
+    }
+  },
+  "frozen_visual_observation": {
+    "status": "OBSERVED_TEXT_IN_SELECTED_SCREENSHOTS",
+    "scope": "The two actual Windows GUI screenshots show Chinese menus, buttons, labels and forms; this does not override the failed process exit or qualify unexecuted annotation/model workflows.",
+    "images": [
+      {
+        "path": "modular-acceptance/reports/core-without-modules-files/core-window.png",
+        "bytes": 14658,
+        "sha256": "9f9fcfc24f592dd36f6dde6514d9c23aab2f8188c076b5c4b4702d90da2ddda2"
+      },
+      {
+        "path": "modular-acceptance/reports/core-without-modules-files/core-yolo-local.png",
+        "bytes": 40510,
+        "sha256": "674ca57984787d395a7a63b24c7c9435b0fad273b1a9158cb28e7db97266ce1c"
+      }
+    ]
+  },
+  "not_run": [
+    "Core successful process exit",
+    "Core-only annotation",
+    "offline install/activation/repair/update/rollback actual EXE matrix",
+    "controlled TensorDataset DataLoader worker",
+    "DINO worker matrix",
+    "optional runtime/real model/worker CPU cases",
+    "business GPU",
+    "CPU-only wheel candidate",
+    "physical air-gap",
+    "Core upgrade"
+  ]
+}
