@@ -1,4 +1,4 @@
-param([Parameter(Mandatory)][string]$Root)
+param([Parameter(Mandatory)][string]$Root, [Parameter(Mandatory)][ValidateSet('edge', 'all')][string]$Scope)
 
 $ErrorActionPreference = 'Stop'
 if ($env:RUNNER_ENVIRONMENT -ne 'github-hosted' -or $env:RUNNER_OS -ne 'Windows' -or
@@ -8,7 +8,7 @@ if ($env:RUNNER_ENVIRONMENT -ne 'github-hosted' -or $env:RUNNER_OS -ne 'Windows'
     throw 'Use the dedicated disposable Windows GitHub-hosted job.'
 }
 $Root = (Resolve-Path -LiteralPath $Root).ProviderPath
-$expected = (Resolve-Path -LiteralPath (Join-Path $env:RUNNER_TEMP 'vw-disconnected')).ProviderPath
+$expected = (Resolve-Path -LiteralPath (Join-Path $env:RUNNER_TEMP "vw-disconnected-$Scope")).ProviderPath
 if ($Root -ne $expected -or ((Get-Item -LiteralPath $Root).Attributes -band [IO.FileAttributes]::ReparsePoint)) {
     throw 'Unexpected diagnostic directory.'
 }
@@ -18,6 +18,8 @@ $armed = Join-Path $reports 'watchdog-armed.json'
 $restore = Join-Path $reports 'watchdog-restore.request'
 $started = Join-Path $reports 'watchdog-restoring.json'
 $restored = Join-Path $reports 'watchdog-restored.json'
+$lifecycleSeconds = if ($Scope -eq 'all') { 490 } else { 215 }
+$watchdogSeconds = if ($Scope -eq 'all') { 540 } else { 270 }
 
 function Write-NetworkReport($Name, $Value) {
     $Value | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $reports $Name) -Encoding utf8
@@ -78,7 +80,7 @@ $clock = [Diagnostics.Stopwatch]::StartNew()
 $armedTemp = Join-Path $reports 'watchdog-armed.tmp'
 @{ pid = $PID; adapterIds = $ids; utc = [DateTime]::UtcNow.ToString('o') } | ConvertTo-Json | Set-Content -LiteralPath $armedTemp
 Move-Item -LiteralPath $armedTemp -Destination (Join-Path $reports 'watchdog-armed.json')
-while (-not (Test-Path -LiteralPath (Join-Path $reports 'watchdog-restore.request')) -and $clock.Elapsed.TotalSeconds -lt 270) {
+while (-not (Test-Path -LiteralPath (Join-Path $reports 'watchdog-restore.request')) -and $clock.Elapsed.TotalSeconds -lt $deadlineSeconds) {
     Start-Sleep -Milliseconds 500
 }
 try {
@@ -94,10 +96,10 @@ try {
     throw
 }
 '@
-$encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes("`$reports=$reportLiteral`n`$ids=$idLiteral`n$watchdog"))
+$encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes("`$reports=$reportLiteral`n`$ids=$idLiteral`n`$deadlineSeconds=$watchdogSeconds`n$watchdog"))
 $action = New-ScheduledTaskAction -Execute (Join-Path $PSHOME 'pwsh.exe') -Argument "-NoProfile -NonInteractive -EncodedCommand $encoded"
 $principal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount -RunLevel Highest
-$settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 6) -MultipleInstances IgnoreNew
+$settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Seconds ($watchdogSeconds + 90)) -MultipleInstances IgnoreNew
 $registered = $false
 $testChild = $null
 $passed = $false
@@ -125,14 +127,14 @@ try {
     Write-NetworkReport 'network-disconnected.json' @{ state = $disconnected; directTcp = $false; address = $ipv4.ToString() }
     $testChild = Start-Process -FilePath (Get-Command python.exe).Source -WindowStyle Hidden -PassThru `
         -WorkingDirectory (Split-Path -Parent $PSScriptRoot) `
-        -ArgumentList @('-B', '-m', 'scripts.verify_vision_train_disconnected', 'lifecycle', "`"$Root`"") `
+        -ArgumentList @('-B', '-m', 'scripts.verify_vision_train_disconnected', 'lifecycle', "`"$Root`"", '--scope', $Scope) `
         -RedirectStandardOutput (Join-Path $reports 'lifecycle.stdout.txt') `
         -RedirectStandardError (Join-Path $reports 'lifecycle.stderr.txt')
     while (-not $testChild.WaitForExit(5000)) {
         $snapshot = Get-NetworkSnapshot
         $samples.Add($snapshot)
         Assert-Disconnected $snapshot
-        if ($offlineClock.Elapsed.TotalSeconds -gt 215) { throw 'The offline lifecycle exceeded its bounded window.' }
+        if ($offlineClock.Elapsed.TotalSeconds -gt $lifecycleSeconds) { throw 'The offline lifecycle exceeded its bounded window.' }
     }
     $lastOffline = Get-NetworkSnapshot
     Assert-Disconnected $lastOffline

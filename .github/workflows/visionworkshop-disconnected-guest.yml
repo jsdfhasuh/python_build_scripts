@@ -17,10 +17,15 @@ jobs:
       contents: read
       actions: read
     runs-on: windows-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        scope: [edge, all]
     env:
       PYTHONDONTWRITEBYTECODE: '1'
       PYTHONUTF8: '1'
+      VW_SCOPE: ${{ matrix.scope }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -31,14 +36,14 @@ jobs:
       - name: Stage exact archived inputs before disconnection
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python -B -m scripts.verify_vision_train_disconnected stage "$env:RUNNER_TEMP/vw-disconnected"
+        run: python -B -m scripts.verify_vision_train_disconnected stage "$env:RUNNER_TEMP/vw-disconnected-$env:VW_SCOPE" --scope $env:VW_SCOPE
       - name: Install and update with the guest disconnected, then restore networking
-        run: ./scripts/verify_vision_train_disconnected.ps1 -Root "$env:RUNNER_TEMP/vw-disconnected"
+        run: ./scripts/verify_vision_train_disconnected.ps1 -Root "$env:RUNNER_TEMP/vw-disconnected-$env:VW_SCOPE" -Scope $env:VW_SCOPE
       - name: Upload the network and product evidence
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
-          name: visionworkshop-disconnected-guest-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/vw-disconnected/reports
+          name: visionworkshop-disconnected-guest-${{ matrix.scope }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/vw-disconnected-${{ matrix.scope }}/reports
           if-no-files-found: error
           retention-days: 7

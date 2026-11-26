@@ -117,6 +117,7 @@ class WorkflowSafetyTests(unittest.TestCase):
     data, events = loadWorkflow('visionworkshop-disconnected-guest.yml')
     job = data['jobs']['windows-disconnected-guest']
     self.assertEqual(job['runs-on'], 'windows-latest')
+    self.assertEqual(job['strategy']['matrix']['scope'], ['edge', 'all'])
     self.assertEqual(set(events), {'push'})
     self.assertEqual(events['push']['branches'], ['test/visionworkshop-modular-loader'])
     self.assertNotIn('GH_TOKEN', data.get('env', {}))

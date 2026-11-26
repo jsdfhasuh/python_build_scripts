@@ -11,6 +11,7 @@ from scripts.verify_vision_train_modular_product import (
 )
 from scripts.verify_vision_train_modules import writeReport
 from scripts.verify_vision_train_offline_network import ASSETS, EDGE_MANIFEST, checkAsset, prepare, require
+from vision_train_modular_reuse import prepareReuse
 
 
 CORE = {
@@ -25,9 +26,17 @@ CORE_EXE = 'ac1aed86df6c93222be8bd02cc1d68522250547034eb949a2d1bcb4947eebe49'
 EDGE = ASSETS[1]
 
 
-def stage(root):
-  prepare(root, (CORE, EDGE))
+def stage(root, scope):
+  prepare(root, (CORE, EDGE) if scope == 'edge' else (CORE,))
   (root / 'empty-cwd').mkdir()
+  if scope == 'all':
+    original = prepareReuse(45616400076, 1, root / 'original')
+    require(original['source_run']['head_sha'] == EDGE['head'] and len(original['modules']) == 11,
+            'The complete original module set is required')
+    writeReport(root / 'reports/original-module-archives.json', original)
+    # The EdgeSAM case already covers cold archive extraction while disconnected.
+    # Prepare only Core here so the bounded cut covers the full install/activate.
+    extractCore(root / CORE['name'], root / '中文 断网')
 
 
 def repairEdge(executable, archive, reports, environment, identity):
@@ -64,16 +73,30 @@ def repairEdge(executable, archive, reports, environment, identity):
           'restored_sha256': expected[relative], 'files_verified': len(expected), 'runtime_identity': identity}
 
 
-def lifecycle(root):
+def lifecycle(root, scope):
   reports = root / 'reports'
-  summary = {'status': 'FAIL', 'scope': 'Stock EXE with pre-downloaded original EdgeSAM ZIP and separate resource update fixture',
+  summary = {'status': 'FAIL', 'scope': scope,
              'core_sha256': CORE_MANIFEST, 'exe_sha256': CORE_EXE, 'integrity': []}
   try:
     require((reports / 'network-disconnected.json').is_file(), 'The offline controller did not start this phase')
     checkAsset(root / CORE['name'], CORE)
-    executable = extractCore(root / CORE['name'], root / '中文 断网')
-    archive = root / EDGE['name']
-    checkAsset(archive, EDGE)
+    destination = root / '中文 断网'
+    if scope == 'edge':
+      executable = extractCore(root / CORE['name'], destination)
+      archive = root / EDGE['name']
+      checkAsset(archive, EDGE)
+      archives = {'resource.edgesam': str(archive)}
+      hashes = {'resource.edgesam': EDGE['sha256']}
+      manifests = {'resource.edgesam': EDGE_MANIFEST}
+    else:
+      executable = destination / 'VisionWorkshop/VisionWorkshop.exe'
+      original = json.loads((reports / 'original-module-archives.json').read_bytes())
+      modules = original['modules']
+      require(len(modules) == 11 and original['source_run']['id'] == 45616400076
+              and original['source_run']['run_attempt'] == 1, 'The frozen archive set differs')
+      archives = {module: str(root / 'original' / entry['archive_path']) for module, entry in modules.items()}
+      hashes = {module: entry['sha256'] for module, entry in modules.items()}
+      manifests = {module: entry['manifest_sha256'] for module, entry in modules.items()}
     require(fileHash(executable) == CORE_EXE and fileHash(executable.parent / 'core.json') == CORE_MANIFEST,
             'The staged executable or Core identity changed')
     baseline = coreInventory(executable.parent)
@@ -86,19 +109,24 @@ def lifecycle(root):
     first, _ = cli(executable, ['status'], reports, 'empty', environment)
     initial = activeIdentity(first, CORE_MANIFEST)
     require(initial['generation'] == 0 and not initial['modules'], 'Expected a fresh empty Core')
-    installed, _ = cli(executable, ['install', str(archive)], reports, 'original-install', environment)
-    require(installed['result']['pending'] and installed['result']['archives'] ==
-            [{'module_id': 'resource.edgesam', 'sha256': EDGE['sha256']}], 'Unexpected original install receipt')
+    installed, _ = cli(executable, ['install', *archives.values()], reports, 'original-install', environment)
+    accepted = installed['result']['archives']
+    require(installed['result']['pending'] and len(accepted) == len(hashes)
+            and {row['module_id']: row['sha256'] for row in accepted} == hashes, 'Unexpected original install receipt')
     activated, _ = cli(executable, ['activate'], reports, 'original-activate', environment)
     identity = activeIdentity(activated, CORE_MANIFEST)
-    require(identity['generation'] == 1 and identity['modules'] == {'resource.edgesam': EDGE_MANIFEST},
-            'Wrong original module is active')
-    summary['repair'] = repairEdge(executable, archive, reports, environment, identity)
-    checkpoint('original-resource-repair')
-    transaction, restored = verifySingleModuleUpdate(executable, archive, reports, environment, identity,
-                                                     metadata, checkpoint)
-    summary.update(status='PASS', initial=initial, installed=identity, restored=restored,
-                   update_report_sha256=transaction['report_sha256'])
+    require(identity['generation'] == 1 and identity['modules'] == manifests, 'Wrong original modules are active')
+    summary.update(initial=initial, installed=identity)
+    if scope == 'edge':
+      summary['repair'] = repairEdge(executable, archive, reports, environment, identity)
+      checkpoint('original-resource-repair')
+      transaction, restored = verifySingleModuleUpdate(executable, archive, reports, environment, identity,
+                                                       metadata, checkpoint)
+      summary.update(restored=restored, update_report_sha256=transaction['report_sha256'])
+    else:
+      require(set(manifests) == set(metadata['catalog']), 'The full original snapshot differs from the catalog')
+      checkpoint('full-original-activation')
+    summary['status'] = 'PASS'
   finally:
     writeReport(reports / 'disconnected-product-summary.json', summary)
 
@@ -107,5 +135,6 @@ if __name__ == '__main__':
   parser = argparse.ArgumentParser(description=__doc__)
   parser.add_argument('mode', choices=('stage', 'lifecycle'))
   parser.add_argument('output', type=Path)
+  parser.add_argument('--scope', choices=('edge', 'all'), required=True)
   args = parser.parse_args()
-  {'stage': stage, 'lifecycle': lifecycle}[args.mode](args.output.resolve())
+  {'stage': stage, 'lifecycle': lifecycle}[args.mode](args.output.resolve(), args.scope)
