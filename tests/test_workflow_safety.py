@@ -93,7 +93,10 @@ class WorkflowSafetyTests(unittest.TestCase):
     self.assertEqual(downloads[0]['if'], "${{ env.REUSE_RUN_ID != '' }}")
     self.assertIn('packager/scripts/prepare_vision_train_module_reuse.py', downloads[0]['run'])
     self.assertEqual(events['workflow_dispatch']['inputs']['reuse_run_id']['default'], '')
-    self.assertEqual(events['push']['paths'], ['ci/visionworkshop-modular-candidate.json'])
+    self.assertEqual(events['push']['paths'], [
+      'ci/visionworkshop-modular-candidate.json',
+      '.github/workflows/visionworkshop-modular-candidate.yml',
+    ])
 
   def test_outbound_diagnostic_only_exposes_read_token_during_preparation(self) -> None:
     data, events = loadWorkflow('visionworkshop-offline-network.yml')
