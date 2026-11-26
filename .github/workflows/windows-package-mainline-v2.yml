@@ -2,6 +2,10 @@ name: Windows build-only V2 (inert until called)
 on:
   workflow_call:
     inputs:
+      product_sha:
+        description: Immutable product commit from the trusted public caller
+        type: string
+        required: true
       recipient:
         type: string
         required: true
@@ -9,7 +13,7 @@ permissions:
   contents: read
 jobs:
   windows:
-    if: github.repository == 'jsdfhasuh/emo_master_ci' && github.repository_id == '1468905732' && github.event_name == 'push' && github.ref == 'refs/heads/dot/mainline-ci-migration-20261124'
+    if: github.repository == 'jsdfhasuh/emo_master_ci' && github.repository_id == '1468905732' && github.event_name == 'push' && github.workflow_ref == 'jsdfhasuh/emo_master_ci/.github/workflows/windows-package-mainline-v2-call.yml@refs/heads/dot/mainline-ci-migration-20261124' && github.ref == 'refs/heads/dot/mainline-ci-migration-20261124'
     runs-on: windows-latest
     timeout-minutes: 90
     strategy:
@@ -21,8 +25,10 @@ jobs:
         id: v2_gate
         shell: pwsh
         env:
+          EXPECTED_PRODUCT_SHA: ${{ inputs.product_sha }}
           AGE_RECIPIENT: ${{ inputs.recipient }}
         run: |
+          if ($env:EXPECTED_PRODUCT_SHA -cnotmatch '\A[0-9a-f]{40}\z') { throw 'Expected immutable product commit' }
           if ($env:AGE_RECIPIENT -cnotmatch '\Aage1[0-9a-z]{58}\z') { throw 'Invalid V2 recipient' }
           $digest = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::ASCII.GetBytes($env:AGE_RECIPIENT))).ToLowerInvariant()
           if ($digest -cne 'ba311eeae31312c73f57c9a2cc4c80bbb58380e7c3df956db1d09432b79cca87') { throw 'V2 recipient mismatch' }
@@ -49,7 +55,7 @@ jobs:
         working-directory: packager
         env:
           TARGET: ${{ matrix.target }}
-          SOURCE_REF: e1c19fcdbbee523b51c34ece905d45152033dfda
+          SOURCE_REF: ${{ inputs.product_sha }}
           RELEASE_TAG: v0.6.6
           RELEASE_REPO_INPUT: jsdfhasuh/emo_master
         run: |
@@ -122,7 +128,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: jsdfhasuh/emo_master
-          ref: e1c19fcdbbee523b51c34ece905d45152033dfda
+          ref: ${{ inputs.product_sha }}
           path: source
           submodules: recursive
           fetch-depth: 0
@@ -133,7 +139,7 @@ jobs:
         shell: pwsh
         env:
           SOURCE_REPO: ${{ steps.config.outputs.source_repo }}
-          REQUESTED_SOURCE_REF: e1c19fcdbbee523b51c34ece905d45152033dfda
+          REQUESTED_SOURCE_REF: ${{ inputs.product_sha }}
           REQUESTED_PACKAGER_REF: e0204fe6fe83b0f31818d88e4f296c70e230d172
           PUBLISH_RELEASE_INPUT: 'false'
         run: |
@@ -258,6 +264,8 @@ jobs:
           }
 
       - name: Build Windows artifacts
+        env:
+          EXPECTED_PRODUCT_SHA: ${{ inputs.product_sha }}
         shell: pwsh
         working-directory: packager
         run: |
@@ -271,7 +279,7 @@ jobs:
               $sourceRoot = Join-Path $env:GITHUB_WORKSPACE 'source'
               $outputDirectory = Join-Path $env:GITHUB_WORKSPACE 'packager/release-output'
               New-Item -ItemType Directory $outputDirectory -Force | Out-Null
-              .\scripts\publish-local-release.ps1 -Target '${{ matrix.target }}' -ReleaseTag v0.6.6 -ReleaseRepo jsdfhasuh/emo_master -SourceRoot $sourceRoot -SourceRef e1c19fcdbbee523b51c34ece905d45152033dfda -PreviousSourceRef e1c19fcdbbee523b51c34ece905d45152033dfda -OutputDirectory $outputDirectory -BuildOnly
+              .\scripts\publish-local-release.ps1 -Target '${{ matrix.target }}' -ReleaseTag v0.6.6 -ReleaseRepo jsdfhasuh/emo_master -SourceRoot $sourceRoot -SourceRef $env:EXPECTED_PRODUCT_SHA -PreviousSourceRef $env:EXPECTED_PRODUCT_SHA -OutputDirectory $outputDirectory -BuildOnly
             } *> $log
           } catch {
             $_ | Out-String | Add-Content -LiteralPath $log
@@ -413,3 +421,4 @@ jobs:
           path: ${{ runner.temp }}/emo-diagnostics.tar.age
           if-no-files-found: error
           retention-days: 7
+
