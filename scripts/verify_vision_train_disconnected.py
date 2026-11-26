@@ -189,6 +189,7 @@ def prepareActivation(root):
 def continuous(root, staged):
   reports = root / 'reports'
   summary = {'status': 'FAIL', 'scope': 'continuous-disconnected-windows-container', 'integrity': []}
+  phase = 'verify-staged-inputs'
   try:
     require((reports / 'network-before.json').is_file(), 'Offline container did not start the lifecycle')
     (root / 'empty-cwd').mkdir()
@@ -196,6 +197,7 @@ def continuous(root, staged):
     original = json.loads((staged / 'reports/original-module-archives.json').read_bytes())
     require(original['source_run']['id'] == 45616400076 and original['source_run']['run_attempt'] == 1,
             'The archive source changed')
+    phase = 'extract-core'
     executable = extractCore(staged / CORE['name'], root / '中文 断网')
     verifyCoreIdentity(executable)
     metadata = json.loads((executable.parent / 'core.json').read_bytes())
@@ -212,11 +214,14 @@ def continuous(root, staged):
     def checkpoint(name):
       summary['integrity'].append(verifyCoreUnchanged(executable.parent, baseline, reports, name))
 
+    phase = 'empty-core'
     empty, _ = cli(executable, ['status'], reports, 'original-empty', env)
     initial = activeIdentity(empty, CORE_MANIFEST)
     require(initial['generation'] == 0 and not initial['modules'], 'Expected a fresh empty Core')
+    phase = 'install-original-modules'
     installOriginal(executable, archives, hashes, reports, env)
     summary['pending'] = verifyRegistry(executable, manifests, {}, 0)
+    phase = 'activate-original-modules'
     active, _ = cli(executable, ['activate'], reports, 'original-activate', env)
     installed = activeIdentity(active, CORE_MANIFEST)
     require(installed['generation'] == 1 and installed['modules'] == manifests, 'The original activation changed')
@@ -224,10 +229,15 @@ def continuous(root, staged):
                    installed=installed, original_archives=hashes)
     checkpoint('full-activation')
     archive = Path(archives['resource.edgesam'])
+    phase = 'cold-resource-repair'
     summary['repair'] = repairEdge(executable, archive, reports, env, installed)
     checkpoint('full-resource-repair')
+    phase = 'resource-update-and-rollback'
     transaction, restored = verifySingleModuleUpdate(executable, archive, reports, env, installed, metadata, checkpoint)
     summary.update(restored=restored, update_report_sha256=transaction['report_sha256'], status='PASS')
+  except Exception as error:
+    summary.update(failed_phase=phase, error_type=type(error).__name__, error=str(error))
+    raise
   finally:
     writeReport(reports / 'continuous-disconnected-product-summary.json', summary)
 

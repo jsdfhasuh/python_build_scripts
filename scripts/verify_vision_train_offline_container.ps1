@@ -73,7 +73,10 @@ if ($Mode -eq 'guest') {
         $last = Get-GuestNetwork $address
         Save-Report (Join-Path $reports 'network-after.json') $last
         Assert-GuestDisconnected $last
-        if ($child.ExitCode -ne 0) { throw 'The disconnected product lifecycle failed.' }
+        if ($child.ExitCode -ne 0) {
+            Get-Content -LiteralPath (Join-Path $reports 'product.stderr.txt') -Tail 24 | Write-Output
+            throw "The disconnected product lifecycle exited with $($child.ExitCode)."
+        }
     } finally {
         if ($child -and -not $child.HasExited) { $child.Kill(); $child.WaitForExit(5000) | Out-Null }
         Save-Report (Join-Path $reports 'network-during.json') @{ samples = @($samples.ToArray()); parentPid = $PID }
@@ -128,9 +131,12 @@ try {
     docker start --attach $id
     $result = $LASTEXITCODE
     $destination = Join-Path $reports 'guest'
-    New-Item -ItemType Directory -Path $destination | Out-Null
-    docker cp "${id}:C:/vw-validation/reports/." $destination
+    if (Test-Path -LiteralPath $destination) { throw 'The guest evidence directory must be new.' }
+    docker cp "${id}:C:/vw-validation/reports" $destination
     $copyCode = $LASTEXITCODE
+    if ($copyCode -ne 0) {
+        docker cp "${id}:C:/vw-validation/reports/product.stderr.txt" (Join-Path $reports 'guest-product.stderr.txt')
+    }
     $online = Test-DirectTcp $address
     Save-Report (Join-Path $reports 'host-after.json') @{ childExitCode = $result; reportsCopyExitCode = $copyCode; directTcp = $online }
     if ($result -ne 0 -or $copyCode -ne 0 -or -not $online) { throw 'Container lifecycle or evidence collection failed.' }

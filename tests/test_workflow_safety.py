@@ -157,6 +157,8 @@ class WorkflowSafetyTests(unittest.TestCase):
     script = (ROOT / 'scripts/verify_vision_train_offline_container.ps1').read_text(encoding='utf-8')
     self.assertIn('docker create --pull=never --network none', script)
     self.assertIn('Assert-GuestDisconnected $last', script)
+    self.assertIn('docker cp "${id}:C:/vw-validation/reports" $destination', script)
+    self.assertNotIn('C:/vw-validation/reports/.', script)
     self.assertNotIn('Disable-NetAdapter', script)
 
   def test_candidate_projections_are_read_only_always_and_do_not_skip_the_product_gate(self) -> None:
