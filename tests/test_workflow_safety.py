@@ -75,7 +75,9 @@ class WorkflowSafetyTests(unittest.TestCase):
           elif ((path.name == 'visionworkshop-modular-candidate.yml'
                  and jobName == 'windows-modular-candidate') or
                 (path.name == 'visionworkshop-core-diagnostic.yml'
-                 and jobName == 'windows-core-exit-diagnostic')):
+                 and jobName == 'windows-core-exit-diagnostic') or
+                (path.name == 'visionworkshop-offline-network.yml'
+                 and jobName == 'windows-outbound-block')):
             self.assertEqual(job['permissions'], {'contents': 'read', 'actions': 'read'})
           else:
             self.assertEqual(job.get('permissions', data['permissions']), {'contents': 'read'})
@@ -92,6 +94,19 @@ class WorkflowSafetyTests(unittest.TestCase):
     self.assertIn('packager/scripts/prepare_vision_train_module_reuse.py', downloads[0]['run'])
     self.assertEqual(events['workflow_dispatch']['inputs']['reuse_run_id']['default'], '')
     self.assertEqual(events['push']['paths'], ['ci/visionworkshop-modular-candidate.json'])
+
+  def test_outbound_diagnostic_only_exposes_read_token_during_preparation(self) -> None:
+    data, events = loadWorkflow('visionworkshop-offline-network.yml')
+    job = data['jobs']['windows-outbound-block']
+    self.assertEqual(job['runs-on'], 'windows-latest')
+    self.assertEqual(set(events), {'push'})
+    self.assertEqual(events['push']['branches'], ['test/visionworkshop-modular-loader'])
+    self.assertNotIn('GH_TOKEN', data.get('env', {}))
+    self.assertNotIn('GH_TOKEN', job.get('env', {}))
+    downloads = [step for step in getSteps(data) if 'GH_TOKEN' in step.get('env', {})]
+    self.assertEqual(len(downloads), 1)
+    self.assertEqual(downloads[0]['env']['GH_TOKEN'], '${{ github.token }}')
+    self.assertIn('-m scripts.verify_vision_train_offline_network prepare ', downloads[0]['run'])
 
   def test_candidate_projections_are_read_only_always_and_do_not_skip_the_product_gate(self) -> None:
     data, _ = loadWorkflow('visionworkshop-modular-candidate.yml')
