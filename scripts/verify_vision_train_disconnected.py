@@ -27,11 +27,41 @@ EDGE = ASSETS[1]
 
 def stage(root):
   prepare(root, (CORE, EDGE))
-  executable = extractCore(root / CORE['name'], root / '中文 断网')
-  require(fileHash(executable) == CORE_EXE and fileHash(executable.parent / 'core.json') == CORE_MANIFEST,
-          'The archived frozen executable or Core identity changed')
-  writeReport(root / 'baseline.json', coreInventory(executable.parent))
   (root / 'empty-cwd').mkdir()
+
+
+def repairEdge(executable, archive, reports, environment, identity):
+  module = executable.parent / 'modules/resource.edgesam' / EDGE_MANIFEST
+  manifest = json.loads((module / 'module.json').read_bytes())
+  expected = {row['path']: row['sha256'] for row in manifest['files']}
+  relative = 'resources/edge_sam_decoder.onnx'
+  victim = module / 'payload' / relative
+  require(fileHash(victim) == expected[relative], 'Repair must start with the original installed decoder')
+  with victim.open('r+b') as stream:
+    original = stream.read(1)
+    require(len(original) == 1, 'The backed decoder is empty')
+    stream.seek(0)
+    stream.write(bytes([original[0] ^ 1]))
+  damaged = fileHash(victim)
+  require(damaged != expected[relative], 'The independent copy was not damaged')
+
+  broken, _ = cli(executable, ['status'], reports, 'edge-repair-broken', environment)
+  row = next(item for item in broken['result']['modules'] if item['module_id'] == 'resource.edgesam')
+  require(row['status'] == 'broken' and activeIdentity(broken, CORE_MANIFEST) == identity,
+          'Broken resource must retain the active identity')
+  denied, _ = cli(executable, ['install', str(archive)], reports, 'edge-repair-install-denied', environment, expected=False)
+  require(denied['code'] == 'MODULE_REPAIR_REQUIRED', 'The normal install bypassed explicit repair')
+  repaired, _ = cli(executable, ['repair', str(archive)], reports, 'edge-repair', environment)
+  require(repaired['result']['repaired'] == [{'module_id': 'resource.edgesam', 'manifest_sha256': EDGE_MANIFEST}],
+          'The exact active resource was not repaired')
+  current, _ = cli(executable, ['status'], reports, 'edge-repair-restored', environment)
+  row = next(item for item in current['result']['modules'] if item['module_id'] == 'resource.edgesam')
+  require(row['status'] == 'installed' and activeIdentity(current, CORE_MANIFEST) == identity
+          and fileHash(module / 'module.json') == EDGE_MANIFEST
+          and all(fileHash(module / 'payload' / path) == digest for path, digest in expected.items()),
+          'The original file bytes or active version were not restored')
+  return {'status': 'PASS', 'file': relative, 'damaged_sha256': damaged,
+          'restored_sha256': expected[relative], 'files_verified': len(expected), 'runtime_identity': identity}
 
 
 def lifecycle(root):
@@ -40,13 +70,14 @@ def lifecycle(root):
              'core_sha256': CORE_MANIFEST, 'exe_sha256': CORE_EXE, 'integrity': []}
   try:
     require((reports / 'network-disconnected.json').is_file(), 'The offline controller did not start this phase')
-    executable = root / '中文 断网/VisionWorkshop/VisionWorkshop.exe'
-    baseline = json.loads((root / 'baseline.json').read_bytes())
-    metadata = json.loads((executable.parent / 'core.json').read_bytes())
+    checkAsset(root / CORE['name'], CORE)
+    executable = extractCore(root / CORE['name'], root / '中文 断网')
     archive = root / EDGE['name']
     checkAsset(archive, EDGE)
     require(fileHash(executable) == CORE_EXE and fileHash(executable.parent / 'core.json') == CORE_MANIFEST,
             'The staged executable or Core identity changed')
+    baseline = coreInventory(executable.parent)
+    metadata = json.loads((executable.parent / 'core.json').read_bytes())
     environment = productEnvironment(root)
 
     def checkpoint(name):
@@ -62,6 +93,8 @@ def lifecycle(root):
     identity = activeIdentity(activated, CORE_MANIFEST)
     require(identity['generation'] == 1 and identity['modules'] == {'resource.edgesam': EDGE_MANIFEST},
             'Wrong original module is active')
+    summary['repair'] = repairEdge(executable, archive, reports, environment, identity)
+    checkpoint('original-resource-repair')
     transaction, restored = verifySingleModuleUpdate(executable, archive, reports, environment, identity,
                                                      metadata, checkpoint)
     summary.update(status='PASS', initial=initial, installed=identity, restored=restored,
