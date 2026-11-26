@@ -25,7 +25,7 @@ $armed = Join-Path $reports 'watchdog-armed.json'
 $restore = Join-Path $reports 'watchdog-restore.request'
 $started = Join-Path $reports 'watchdog-restoring.json'
 $restored = Join-Path $reports 'watchdog-restored.json'
-$lifecycleSeconds = if ($Scope -eq 'all') { 254 } else { 215 }
+$lifecycleSeconds = if ($Scope -eq 'all') { 254 } else { 245 }
 $watchdogSeconds = if ($Scope -eq 'all') { 266 } else { 270 }
 
 function Write-NetworkReport($Name, $Value) {
@@ -181,6 +181,14 @@ try {
             Unregister-ScheduledTask -TaskName $taskName -Confirm:$false
             if (Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue) { throw 'The watchdog task was not removed.' }
             Write-NetworkReport 'network-cleanup.json' @{ watchdogTask = $taskName; removed = $true }
+            if ($passed) {
+                $productPath = Join-Path $reports 'disconnected-product-summary.json'
+                $product = Get-Content -Raw -LiteralPath $productPath | ConvertFrom-Json
+                @{ phase = $Phase; productStatus = $product.status; registry = $product.registry
+                   productSha256 = (Get-FileHash -LiteralPath $productPath -Algorithm SHA256).Hash.ToLowerInvariant()
+                   disconnectedSamples = $samples.Count + 2; networkRestored = $true } |
+                    ConvertTo-Json -Depth 8 -Compress | Write-Output
+            }
         }
     }
 }

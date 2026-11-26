@@ -132,6 +132,8 @@ class WorkflowSafetyTests(unittest.TestCase):
     self.assertEqual([steps[i]['run'].split()[-1] for i in cut], ['edge', 'torch', 'remaining', 'activate'])
     for i, nextCut in zip(cut[1:], cut[2:]):
       self.assertTrue(any(step.get('uses', '').startswith('actions/upload-artifact@') for step in steps[i + 1:nextCut]))
+    self.assertTrue(steps[cut[-1] + 1]['uses'].startswith('actions/upload-artifact@'))
+    self.assertIn('/reports/activate', steps[cut[-1] + 1]['with']['path'])
 
   def test_candidate_projections_are_read_only_always_and_do_not_skip_the_product_gate(self) -> None:
     data, _ = loadWorkflow('visionworkshop-modular-candidate.yml')

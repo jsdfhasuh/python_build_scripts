@@ -65,6 +65,14 @@ jobs:
       - name: Activate the complete original snapshot with the guest disconnected
         if: matrix.scope == 'all'
         run: ./scripts/verify_vision_train_disconnected.ps1 -Root "$env:RUNNER_TEMP/vw-disconnected-$env:VW_SCOPE" -Scope $env:VW_SCOPE -Phase activate
+      - name: Save the activation phase after connectivity is restored
+        if: matrix.scope == 'all'
+        uses: actions/upload-artifact@v4
+        with:
+          name: visionworkshop-disconnected-activation-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/vw-disconnected-all/reports/activate
+          if-no-files-found: error
+          retention-days: 7
       - name: Verify the unchanged Core and bind the three offline receipts
         if: matrix.scope == 'all'
         run: python -B -m scripts.verify_vision_train_disconnected finish "$env:RUNNER_TEMP/vw-disconnected-$env:VW_SCOPE" --scope all
