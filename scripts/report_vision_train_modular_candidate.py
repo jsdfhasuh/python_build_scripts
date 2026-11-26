@@ -21,6 +21,7 @@ MAX_PROCESS_REPORTS = 256
 MAX_PROCESS_LOG_BYTES = 64 * 1024
 CASE_REPORTS = (
   'empty-status-default-output', 'core-without-modules', 'annotation-without-modules',
+  'patchcore-lite-without-modules',
   'gui-runtime-lease', 'cold-ort-repair', 'ort-after-repair-without-torch',
   'dino-without-torch', 'dino-worker-without-torch', 'edgesam-without-torch',
   'edgesam-single-module-update', 'edgesam-after-version-rollback', 'core-after-remove',

@@ -487,6 +487,8 @@ def main(argv=None) -> int:
                                       environment, core, identity))
     summary['cases'].append(checkCase(executable, 'annotation', reports,
                                       'annotation-without-modules', environment, core, identity))
+    summary['cases'].append(checkCase(executable, 'patchcore-lite', reports,
+                                      'patchcore-lite-without-modules', environment, core, identity))
     checkpoint('fresh-core-and-annotation')
     summary['cases'].append(verifyGuiLease(executable, archives['runtime.ort'], reports, environment))
     checkpoint('ort-pending-install')
