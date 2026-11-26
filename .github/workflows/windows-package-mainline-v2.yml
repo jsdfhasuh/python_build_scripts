@@ -9,6 +9,11 @@ on:
       recipient:
         type: string
         required: true
+      designer_only:
+        description: Run only the additional Designer frozen proof
+        type: boolean
+        required: false
+        default: false
 permissions:
   contents: read
 jobs:
@@ -19,7 +24,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [emo-master, emo-master-runtime]
+        target: ${{ fromJSON(inputs.designer_only && '["emo-master"]' || '["emo-master","emo-master-runtime"]') }}
     steps:
       - name: Enforce approved V2 recipient before checkout
         id: v2_gate
@@ -327,6 +332,39 @@ jobs:
             throw 'Package phase failed; use V2 encrypted diagnostics'
           }
 
+      - name: Validate original frozen startup and workflow contracts
+        if: matrix.target == 'emo-master'
+        working-directory: source
+        shell: pwsh
+        env:
+          EXPECTED_SOURCE_SHA: ${{ inputs.product_sha }}
+        run: |
+          $dir = Join-Path $env:RUNNER_TEMP 'package-private-logs'
+          New-Item -ItemType Directory $dir -Force | Out-Null
+          $log = Join-Path $dir 'phase-8.log'
+          try {
+            & {
+              $ErrorActionPreference = 'Stop'
+              $PSNativeCommandUseErrorActionPreference = $true
+              python -m pip install -r requirements-dev.txt psutil pywinauto Pillow
+              python -c "from PIL import ImageGrab; import psutil, pywinauto"
+              python -m pytest tests/test_release_workflow_contract.py tests/test_frozen_runtime_validation.py -q
+              $env:PYTHONPATH = (Resolve-Path src).Path
+              $verifyAssets = Join-Path $env:RUNNER_TEMP 'fixed-frozen-validation-assets'
+              New-Item -ItemType Directory -Path $verifyAssets -ErrorAction Stop | Out-Null
+              foreach ($name in @('emo-master-windows-v0.6.6.zip','emo-master-setup-v0.6.6.exe','manifest.json')) {
+                $item = Get-Item -LiteralPath (Join-Path '../packager/release-output' $name) -ErrorAction Stop
+                if ($item.PSIsContainer -or $item.LinkType -or $item.Attributes.HasFlag([IO.FileAttributes]::ReparsePoint) -or $item.Length -le 0) { throw 'Invalid frozen validation member' }
+                Copy-Item -LiteralPath $item.FullName -Destination (Join-Path $verifyAssets $name) -ErrorAction Stop
+              }
+              python scripts/verify_frozen_runtime.py --artifact-directory $verifyAssets --output evidence/frozen-validation.json --expected-source-sha $env:EXPECTED_SOURCE_SHA
+              Copy-Item -LiteralPath evidence/frozen-validation.json -Destination ../packager/release-output/frozen-validation.json -ErrorAction Stop
+            } *> $log
+          } catch {
+            $_ | Out-String | Add-Content -LiteralPath $log
+            throw 'Frozen validation failed; see encrypted diagnostics'
+          }
+
       - name: Seal exact target files with reviewed age
         shell: pwsh
         env:
@@ -344,6 +382,7 @@ jobs:
               $root = 'packager/release-output'
               $names = @("$env:TARGET-windows-v0.6.6.zip","$env:TARGET-setup-v0.6.6.exe",'manifest.json')
               if ($env:TARGET -eq 'emo-master-runtime') { $names += @('runtime-build.json','archive-check/validation.json','archive-check/archive.json','archive-check/native.json') }
+              if ($env:TARGET -eq 'emo-master') { $names += 'frozen-validation.json' }
               foreach ($name in $names) {
                 $file = Get-Item -LiteralPath (Join-Path $root $name) -ErrorAction Stop
                 if ($file.PSIsContainer -or $file.LinkType -or $file.Length -le 0) { throw 'Package member is not a regular nonempty file' }
@@ -383,7 +422,7 @@ jobs:
           New-Item -ItemType Directory -Path $stage | Out-Null
           $names = @('capture-status.txt')
           Set-Content -LiteralPath (Join-Path $stage $names[0]) -Value 'V2 pilot; inspect the GitHub job conclusion independently.'
-          foreach ($i in 1..7) {
+          foreach ($i in 1..8) {
             $name = "phase-$i.log"
             $path = Join-Path $dir $name
             if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { continue }
@@ -401,6 +440,21 @@ jobs:
                 $writer.Write($buffer, 0, $read)
               } finally { $writer.Dispose() }
             } finally { $reader.Dispose() }
+            $names += $name
+          }
+          # Fixed evidence files only. Never include the extracted product or reparse points.
+          $base = Join-Path $env:GITHUB_WORKSPACE 'source/evidence'
+          foreach ($relative in @('frozen-validation.json','frozen-validation/designer-settings.png','frozen-validation/designer-startup.png','frozen-validation/designer-busy-directory.png','frozen-validation/designer-second-startup.png','frozen-validation/operator-view.png','frozen-validation/runtime-overlay.png','frozen-validation/icon-self-test.json')) {
+            $path = Join-Path $base $relative
+            if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { continue }
+            $item = Get-Item -LiteralPath $path -Force
+            for ($entry = $item; $entry.FullName -ne $env:GITHUB_WORKSPACE; ) {
+              if ($entry.Attributes.HasFlag([IO.FileAttributes]::ReparsePoint)) { throw 'Invalid evidence file' }
+              $entry = Get-Item -LiteralPath (Split-Path -Parent $entry.FullName)
+            }
+            if ($item.Length -gt 32MB) { throw 'Frozen evidence exceeds file limit' }
+            $name = 'frozen-' + $item.Name
+            Copy-Item -LiteralPath $path -Destination (Join-Path $stage $name)
             $names += $name
           }
           $tar = Join-Path $env:RUNNER_TEMP 'emo-diagnostics.tar'
@@ -421,4 +475,5 @@ jobs:
           path: ${{ runner.temp }}/emo-diagnostics.tar.age
           if-no-files-found: error
           retention-days: 7
+
 
