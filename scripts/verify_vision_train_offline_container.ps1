@@ -65,6 +65,8 @@ if ($Mode -eq 'guest') {
             -ArgumentList @('-B', '-m', 'scripts.verify_vision_train_disconnected', 'continuous', $root, '--scope', 'all', '--staged', $Staged) `
             -RedirectStandardOutput (Join-Path $reports 'product.stdout.txt') `
             -RedirectStandardError (Join-Path $reports 'product.stderr.txt')
+        # Windows PowerShell 5.1 otherwise loses the exit code of the redirected process.
+        $null = $child.Handle
         while (-not $child.WaitForExit(12000)) {
             $snapshot = Get-GuestNetwork $address
             $samples.Add($snapshot)
@@ -73,12 +75,21 @@ if ($Mode -eq 'guest') {
         $last = Get-GuestNetwork $address
         Save-Report (Join-Path $reports 'network-after.json') $last
         Assert-GuestDisconnected $last
-        if ($child.ExitCode -ne 0) {
+        $exitCode = $child.ExitCode
+        Save-Report (Join-Path $reports 'guest-driver-process.json') @{ pid = $child.Id; exitCode = $exitCode }
+        if ($null -eq $exitCode) { throw 'The guest validator could not read the product driver process exit code.' }
+        if ($exitCode -ne 0) {
             Get-Content -LiteralPath (Join-Path $reports 'product.stderr.txt') -Tail 24 | Write-Output
-            throw "The disconnected product lifecycle exited with $($child.ExitCode)."
+            throw "The disconnected product lifecycle exited with $exitCode."
         }
     } finally {
-        if ($child -and -not $child.HasExited) { $child.Kill(); $child.WaitForExit(5000) | Out-Null }
+        if ($child) {
+            try {
+                if (-not $child.HasExited) { $child.Kill(); $child.WaitForExit(5000) | Out-Null }
+            } finally {
+                $child.Dispose()
+            }
+        }
         Save-Report (Join-Path $reports 'network-during.json') @{ samples = @($samples.ToArray()); parentPid = $PID }
     }
     exit 0
