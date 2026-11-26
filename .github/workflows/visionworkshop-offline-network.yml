@@ -1,0 +1,39 @@
+name: VisionWorkshop Windows outbound-block diagnostic
+
+on:
+  push:
+    branches: [test/visionworkshop-modular-loader]
+    paths: ['.github/workflows/visionworkshop-offline-network.yml', 'scripts/verify_vision_train_offline_network.py']
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  windows-outbound-block:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      PYTHONUTF8: '1'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12.10'
+      - name: Stage the verified previous Core and original EdgeSAM archive
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python -B -m scripts.verify_vision_train_offline_network prepare "$env:RUNNER_TEMP/vw-net"
+      - name: Verify offline lifecycle under an outbound program block
+        run: python -B -m scripts.verify_vision_train_offline_network verify "$env:RUNNER_TEMP/vw-net"
+      - name: Upload evidence even when the diagnostic fails
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: visionworkshop-outbound-block-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/vw-net/reports
+          if-no-files-found: error
+          retention-days: 7
