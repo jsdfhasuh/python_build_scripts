@@ -37,8 +37,37 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: python -B -m scripts.verify_vision_train_disconnected stage "$env:RUNNER_TEMP/vw-disconnected-$env:VW_SCOPE" --scope $env:VW_SCOPE
-      - name: Install and update with the guest disconnected, then restore networking
-        run: ./scripts/verify_vision_train_disconnected.ps1 -Root "$env:RUNNER_TEMP/vw-disconnected-$env:VW_SCOPE" -Scope $env:VW_SCOPE
+      - name: Install and update EdgeSAM with the guest disconnected
+        if: matrix.scope == 'edge'
+        run: ./scripts/verify_vision_train_disconnected.ps1 -Root "$env:RUNNER_TEMP/vw-disconnected-$env:VW_SCOPE" -Scope $env:VW_SCOPE -Phase edge
+      - name: Install the original Torch module with the guest disconnected
+        if: matrix.scope == 'all'
+        run: ./scripts/verify_vision_train_disconnected.ps1 -Root "$env:RUNNER_TEMP/vw-disconnected-$env:VW_SCOPE" -Scope $env:VW_SCOPE -Phase torch
+      - name: Save the Torch phase after connectivity is restored
+        if: matrix.scope == 'all'
+        uses: actions/upload-artifact@v4
+        with:
+          name: visionworkshop-disconnected-torch-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/vw-disconnected-all/reports/torch
+          if-no-files-found: error
+          retention-days: 7
+      - name: Install the remaining ten original modules with the guest disconnected
+        if: matrix.scope == 'all'
+        run: ./scripts/verify_vision_train_disconnected.ps1 -Root "$env:RUNNER_TEMP/vw-disconnected-$env:VW_SCOPE" -Scope $env:VW_SCOPE -Phase remaining
+      - name: Save the remaining install phase after connectivity is restored
+        if: matrix.scope == 'all'
+        uses: actions/upload-artifact@v4
+        with:
+          name: visionworkshop-disconnected-remaining-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/vw-disconnected-all/reports/remaining
+          if-no-files-found: error
+          retention-days: 7
+      - name: Activate the complete original snapshot with the guest disconnected
+        if: matrix.scope == 'all'
+        run: ./scripts/verify_vision_train_disconnected.ps1 -Root "$env:RUNNER_TEMP/vw-disconnected-$env:VW_SCOPE" -Scope $env:VW_SCOPE -Phase activate
+      - name: Verify the unchanged Core and bind the three offline receipts
+        if: matrix.scope == 'all'
+        run: python -B -m scripts.verify_vision_train_disconnected finish "$env:RUNNER_TEMP/vw-disconnected-$env:VW_SCOPE" --scope all
       - name: Upload the network and product evidence
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4

@@ -1,4 +1,8 @@
-param([Parameter(Mandatory)][string]$Root, [Parameter(Mandatory)][ValidateSet('edge', 'all')][string]$Scope)
+param(
+    [Parameter(Mandatory)][string]$Root,
+    [Parameter(Mandatory)][ValidateSet('edge', 'all')][string]$Scope,
+    [Parameter(Mandatory)][ValidateSet('edge', 'torch', 'remaining', 'activate')][string]$Phase
+)
 
 $ErrorActionPreference = 'Stop'
 if ($env:RUNNER_ENVIRONMENT -ne 'github-hosted' -or $env:RUNNER_OS -ne 'Windows' -or
@@ -12,14 +16,17 @@ $expected = (Resolve-Path -LiteralPath (Join-Path $env:RUNNER_TEMP "vw-disconnec
 if ($Root -ne $expected -or ((Get-Item -LiteralPath $Root).Attributes -band [IO.FileAttributes]::ReparsePoint)) {
     throw 'Unexpected diagnostic directory.'
 }
-$reports = Join-Path $Root 'reports'
+if (($Scope -eq 'edge') -ne ($Phase -eq 'edge')) { throw 'The phase does not match its archive scope.' }
+$reports = Join-Path $Root "reports/$Phase"
+New-Item -ItemType Directory -Path $reports | Out-Null
+$productExe = [IO.Path]::GetFullPath((Join-Path $Root '中文 断网/VisionWorkshop/VisionWorkshop.exe'))
 $taskName = 'VisionWorkshop-disconnected-' + [guid]::NewGuid().ToString('N')
 $armed = Join-Path $reports 'watchdog-armed.json'
 $restore = Join-Path $reports 'watchdog-restore.request'
 $started = Join-Path $reports 'watchdog-restoring.json'
 $restored = Join-Path $reports 'watchdog-restored.json'
-$lifecycleSeconds = if ($Scope -eq 'all') { 490 } else { 215 }
-$watchdogSeconds = if ($Scope -eq 'all') { 540 } else { 270 }
+$lifecycleSeconds = if ($Scope -eq 'all') { 254 } else { 215 }
+$watchdogSeconds = if ($Scope -eq 'all') { 266 } else { 270 }
 
 function Write-NetworkReport($Name, $Value) {
     $Value | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $reports $Name) -Encoding utf8
@@ -59,6 +66,12 @@ function Assert-Disconnected($Snapshot) {
     }
 }
 
+function Get-ProductProcesses {
+    Get-CimInstance Win32_Process -Filter "Name = 'VisionWorkshop.exe'" |
+        Where-Object { $_.ExecutablePath -eq $productExe }
+}
+
+if (@(Get-ProductProcesses).Count) { throw 'The archived product was running before the offline phase.' }
 $before = Get-NetworkSnapshot
 $adapterIds = @($before.adapters | Where-Object Status -eq 'Up' | ForEach-Object { ([guid]$_.InterfaceGuid).ToString('D') })
 if ($adapterIds.Count -eq 0 -or @($adapterIds | Select-Object -Unique).Count -ne $adapterIds.Count -or
@@ -127,7 +140,7 @@ try {
     Write-NetworkReport 'network-disconnected.json' @{ state = $disconnected; directTcp = $false; address = $ipv4.ToString() }
     $testChild = Start-Process -FilePath (Get-Command python.exe).Source -WindowStyle Hidden -PassThru `
         -WorkingDirectory (Split-Path -Parent $PSScriptRoot) `
-        -ArgumentList @('-B', '-m', 'scripts.verify_vision_train_disconnected', 'lifecycle', "`"$Root`"", '--scope', $Scope) `
+        -ArgumentList @('-B', '-m', 'scripts.verify_vision_train_disconnected', 'lifecycle', "`"$Root`"", '--scope', $Scope, '--phase', $Phase) `
         -RedirectStandardOutput (Join-Path $reports 'lifecycle.stdout.txt') `
         -RedirectStandardError (Join-Path $reports 'lifecycle.stderr.txt')
     while (-not $testChild.WaitForExit(5000)) {
@@ -141,10 +154,16 @@ try {
     if (Test-DirectTcp $ipv4) { throw 'External TCP became reachable before the lifecycle ended.' }
     Write-NetworkReport 'network-still-disconnected.json' @{ state = $lastOffline; directTcp = $false; child = $testChild.Id; exitCode = $testChild.ExitCode }
     if ($testChild.ExitCode -ne 0) { throw 'The disconnected EXE lifecycle failed.' }
+    if ($offlineClock.Elapsed.TotalSeconds -gt $lifecycleSeconds) { throw 'The offline lifecycle exceeded its bounded window.' }
+    if (@(Get-ProductProcesses).Count) { throw 'The archived product did not exit before restoration.' }
     $passed = $true
 } finally {
     try {
         if ($testChild -and -not $testChild.HasExited) { $testChild.Kill($true); $testChild.WaitForExit(10000) | Out-Null }
+        $remaining = @(Get-ProductProcesses)
+        foreach ($process in $remaining) { Stop-Process -Id $process.ProcessId -Force }
+        if (@(Get-ProductProcesses).Count) { throw 'An isolated product process is still running.' }
+        Write-NetworkReport 'product-processes.json' @{ activeBefore = 0; activeBeforeRestoration = 0; forcedCleanup = $remaining.Count }
     } finally {
         if ($registered) {
             Set-Content -LiteralPath $restore -Value 'restore' -Encoding ascii
