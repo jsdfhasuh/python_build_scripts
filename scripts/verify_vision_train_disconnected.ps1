@@ -1,6 +1,6 @@
 param(
     [Parameter(Mandatory)][string]$Root,
-    [Parameter(Mandatory)][ValidateSet('edge', 'all')][string]$Scope,
+    [Parameter(Mandatory)][ValidateSet('edge', 'all', 'activation')][string]$Scope,
     [Parameter(Mandatory)][ValidateSet('edge', 'torch', 'remaining', 'activate')][string]$Phase
 )
 
@@ -17,6 +17,7 @@ if ($Root -ne $expected -or ((Get-Item -LiteralPath $Root).Attributes -band [IO.
     throw 'Unexpected diagnostic directory.'
 }
 if (($Scope -eq 'edge') -ne ($Phase -eq 'edge')) { throw 'The phase does not match its archive scope.' }
+if ($Scope -eq 'activation' -and $Phase -ne 'activate') { throw 'Use online preparation for the independent activation fixture.' }
 $reports = Join-Path $Root "reports/$Phase"
 New-Item -ItemType Directory -Path $reports | Out-Null
 $productExe = [IO.Path]::GetFullPath((Join-Path $Root '中文 断网/VisionWorkshop/VisionWorkshop.exe'))
@@ -25,8 +26,8 @@ $armed = Join-Path $reports 'watchdog-armed.json'
 $restore = Join-Path $reports 'watchdog-restore.request'
 $started = Join-Path $reports 'watchdog-restoring.json'
 $restored = Join-Path $reports 'watchdog-restored.json'
-$lifecycleSeconds = if ($Scope -eq 'all') { 254 } else { 245 }
-$watchdogSeconds = if ($Scope -eq 'all') { 266 } else { 270 }
+$lifecycleSeconds = if ($Scope -eq 'edge') { 245 } else { 254 }
+$watchdogSeconds = if ($Scope -eq 'edge') { 270 } else { 266 }
 
 function Write-NetworkReport($Name, $Value) {
     $Value | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $reports $Name) -Encoding utf8

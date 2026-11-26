@@ -25,13 +25,13 @@ CORE_MANIFEST = '240ce1e8faeb31e78823d8ce4407ff778550ce37afb324c940e54a05bdd53da
 CORE_EXE = 'ac1aed86df6c93222be8bd02cc1d68522250547034eb949a2d1bcb4947eebe49'
 EDGE = ASSETS[1]
 TORCH = 'runtime.torch'
-PHASES = {'edge': ('edge',), 'all': ('torch', 'remaining', 'activate')}
+PHASES = {'edge': ('edge',), 'all': ('torch', 'remaining', 'activate'), 'activation': ('activate',)}
 
 
 def stage(root, scope):
   prepare(root, (CORE, EDGE) if scope == 'edge' else (CORE,))
   (root / 'reports/empty-cwd').mkdir()
-  if scope == 'all':
+  if scope != 'edge':
     original = prepareReuse(45616400076, 1, root / 'original')
     require(original['source_run']['head_sha'] == EDGE['head'] and len(original['modules']) == 11,
             'The complete original module set is required')
@@ -139,7 +139,7 @@ def lifecycle(root, scope, phase):
              'core_sha256': CORE_MANIFEST, 'exe_sha256': CORE_EXE, 'integrity': []}
   try:
     require((reports / 'network-disconnected.json').is_file(), 'The offline controller did not start this phase')
-    if scope == 'all':
+    if scope != 'edge':
       fullPhase(root, phase, reports, summary)
       summary['status'] = 'PASS'
       return
@@ -176,11 +176,21 @@ def lifecycle(root, scope, phase):
     writeReport(reports / 'disconnected-product-summary.json', summary)
 
 
-def finish(root):
+def prepareActivation(root):
+  for phase in ('torch', 'remaining'):
+    reports = root / 'reports' / ('fixture-' + phase)
+    reports.mkdir()
+    product = {'scope': 'online-staging-for-activation'}
+    fullPhase(root, phase, reports, product)
+    writeReport(reports / 'prepared-online.json', product)
+
+
+def finish(root, scope):
   reports = root / 'reports'
   executable = root / '中文 断网/VisionWorkshop/VisionWorkshop.exe'
   phaseReports = {}
-  for phase in PHASES['all']:
+  phases = PHASES[scope]
+  for phase in phases:
     path = reports / phase / 'disconnected-product-summary.json'
     product = json.loads(path.read_bytes())
     after = json.loads((path.parent / 'network-after.json').read_bytes())
@@ -189,28 +199,34 @@ def finish(root):
             and exited == {'activeBefore': 0, 'activeBeforeRestoration': 0, 'forcedCleanup': 0},
             'A full-install phase has no verified disconnected product and restored network')
     phaseReports[phase] = {'sha256': fileHash(path), 'before': product['registry_before'], 'after': product['registry']}
-  for left, right in zip(PHASES['all'], PHASES['all'][1:]):
+  for left, right in zip(phases, phases[1:]):
     require(phaseReports[left]['after'] == phaseReports[right]['before'],
             'The frozen registry changed between the disconnected phases')
+  if scope == 'activation':
+    prepared = json.loads((reports / 'fixture-remaining/prepared-online.json').read_bytes())
+    require(prepared['registry'] == phaseReports['activate']['before'], 'The online fixture changed before activation')
   baseline = json.loads((reports / 'core-baseline.json').read_bytes())
   checkpoint = verifyCoreUnchanged(executable.parent, baseline, reports, 'full-original-activation')
+  classification = 'separate-disconnected-windows' if scope == 'all' else 'disconnected-activation-with-online-staging'
   writeReport(reports / 'full-disconnected-phased-summary.json',
-              {'status': 'PASS', 'scope': 'separate-disconnected-windows', 'phases': phaseReports,
+              {'status': 'PASS', 'scope': classification, 'phases': phaseReports,
                'core_integrity': checkpoint})
 
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser(description=__doc__)
-  parser.add_argument('mode', choices=('stage', 'lifecycle', 'finish'))
+  parser.add_argument('mode', choices=('stage', 'prepare-activation', 'lifecycle', 'finish'))
   parser.add_argument('output', type=Path)
-  parser.add_argument('--scope', choices=('edge', 'all'), required=True)
+  parser.add_argument('--scope', choices=PHASES, required=True)
   parser.add_argument('--phase')
   args = parser.parse_args()
   root = args.output.resolve()
   if args.mode == 'stage':
     stage(root, args.scope)
-  elif args.mode == 'finish' and args.scope == 'all':
-    finish(root)
+  elif args.mode == 'prepare-activation' and args.scope == 'activation':
+    prepareActivation(root)
+  elif args.mode == 'finish' and args.scope != 'edge':
+    finish(root, args.scope)
   elif args.mode == 'lifecycle' and args.phase in PHASES[args.scope]:
     lifecycle(root, args.scope, args.phase)
   else:

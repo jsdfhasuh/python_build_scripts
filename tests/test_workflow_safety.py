@@ -117,7 +117,7 @@ class WorkflowSafetyTests(unittest.TestCase):
     data, events = loadWorkflow('visionworkshop-disconnected-guest.yml')
     job = data['jobs']['windows-disconnected-guest']
     self.assertEqual(job['runs-on'], 'windows-latest')
-    self.assertEqual(job['strategy']['matrix']['scope'], ['edge', 'all'])
+    self.assertEqual(job['strategy']['matrix']['scope'], ['edge', 'all', 'activation'])
     self.assertEqual(set(events), {'push'})
     self.assertEqual(events['push']['branches'], ['test/visionworkshop-modular-loader'])
     self.assertNotIn('GH_TOKEN', data.get('env', {}))
@@ -134,6 +134,10 @@ class WorkflowSafetyTests(unittest.TestCase):
       self.assertTrue(any(step.get('uses', '').startswith('actions/upload-artifact@') for step in steps[i + 1:nextCut]))
     self.assertTrue(steps[cut[-1] + 1]['uses'].startswith('actions/upload-artifact@'))
     self.assertIn('/reports/activate', steps[cut[-1] + 1]['with']['path'])
+    fixture = [step for step in steps[downloads[0] + 1:cut[-1]]
+               if '-m scripts.verify_vision_train_disconnected prepare-activation ' in step.get('run', '')]
+    self.assertEqual(len(fixture), 1)
+    self.assertEqual(fixture[0]['if'], "matrix.scope == 'activation'")
 
   def test_candidate_projections_are_read_only_always_and_do_not_skip_the_product_gate(self) -> None:
     data, _ = loadWorkflow('visionworkshop-modular-candidate.yml')
