@@ -1,0 +1,44 @@
+name: VisionWorkshop disconnected Windows guest
+
+on:
+  push:
+    branches: [test/visionworkshop-modular-loader]
+    paths:
+      - '.github/workflows/visionworkshop-disconnected-guest.yml'
+      - 'scripts/verify_vision_train_disconnected.py'
+      - 'scripts/verify_vision_train_disconnected.ps1'
+
+permissions:
+  contents: read
+
+jobs:
+  windows-disconnected-guest:
+    permissions:
+      contents: read
+      actions: read
+    runs-on: windows-latest
+    timeout-minutes: 20
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      PYTHONUTF8: '1'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12.10'
+      - name: Stage exact archived inputs before disconnection
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python -B -m scripts.verify_vision_train_disconnected stage "$env:RUNNER_TEMP/vw-disconnected"
+      - name: Install and update with the guest disconnected, then restore networking
+        run: ./scripts/verify_vision_train_disconnected.ps1 -Root "$env:RUNNER_TEMP/vw-disconnected"
+      - name: Upload the network and product evidence
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: visionworkshop-disconnected-guest-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/vw-disconnected/reports
+          if-no-files-found: error
+          retention-days: 7

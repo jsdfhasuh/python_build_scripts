@@ -77,7 +77,9 @@ class WorkflowSafetyTests(unittest.TestCase):
                 (path.name == 'visionworkshop-core-diagnostic.yml'
                  and jobName == 'windows-core-exit-diagnostic') or
                 (path.name == 'visionworkshop-offline-network.yml'
-                 and jobName == 'windows-outbound-block')):
+                 and jobName == 'windows-outbound-block') or
+                (path.name == 'visionworkshop-disconnected-guest.yml'
+                 and jobName == 'windows-disconnected-guest')):
             self.assertEqual(job['permissions'], {'contents': 'read', 'actions': 'read'})
           else:
             self.assertEqual(job.get('permissions', data['permissions']), {'contents': 'read'})
@@ -110,6 +112,22 @@ class WorkflowSafetyTests(unittest.TestCase):
     self.assertEqual(len(downloads), 1)
     self.assertEqual(downloads[0]['env']['GH_TOKEN'], '${{ github.token }}')
     self.assertIn('-m scripts.verify_vision_train_offline_network prepare ', downloads[0]['run'])
+
+  def test_disconnected_guest_uses_a_hosted_job_and_stages_before_the_network_cut(self) -> None:
+    data, events = loadWorkflow('visionworkshop-disconnected-guest.yml')
+    job = data['jobs']['windows-disconnected-guest']
+    self.assertEqual(job['runs-on'], 'windows-latest')
+    self.assertEqual(set(events), {'push'})
+    self.assertEqual(events['push']['branches'], ['test/visionworkshop-modular-loader'])
+    self.assertNotIn('GH_TOKEN', data.get('env', {}))
+    self.assertNotIn('GH_TOKEN', job.get('env', {}))
+    steps = getSteps(data)
+    downloads = [i for i, step in enumerate(steps) if 'GH_TOKEN' in step.get('env', {})]
+    cut = [i for i, step in enumerate(steps) if './scripts/verify_vision_train_disconnected.ps1' in step.get('run', '')]
+    self.assertEqual((len(downloads), len(cut)), (1, 1))
+    self.assertLess(downloads[0], cut[0])
+    self.assertEqual(steps[downloads[0]]['env']['GH_TOKEN'], '${{ github.token }}')
+    self.assertIn('-m scripts.verify_vision_train_disconnected stage ', steps[downloads[0]]['run'])
 
   def test_candidate_projections_are_read_only_always_and_do_not_skip_the_product_gate(self) -> None:
     data, _ = loadWorkflow('visionworkshop-modular-candidate.yml')

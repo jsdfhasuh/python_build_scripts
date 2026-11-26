@@ -50,13 +50,13 @@ def checkAsset(path, record):
           'The staged original archive differs: ' + path.name)
 
 
-def prepare(root):
+def prepare(root, assets=ASSETS):
   root.mkdir(parents=True, exist_ok=False)
   reports = root / 'reports'
   reports.mkdir()
   receipts = []
   try:
-    for record in ASSETS:
+    for record in assets:
       endpoint = '/actions/runs/' + str(record['run'])
       run = sourceRun(apiJson(endpoint), record['run'], 1)
       require(run['head_sha'] == record['head'], 'Artifact source commit changed')
