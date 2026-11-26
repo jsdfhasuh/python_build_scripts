@@ -12,7 +12,7 @@ import zipfile
 
 from build_records import fileHash
 from scripts.verify_vision_train_modular_product import (activeIdentity, cli, coreInventory, extractCore,
-  productEnvironment, verifyCoreUnchanged, verifySingleModuleUpdate)
+  productEnvironment, verifyColdRepair, verifyCoreUnchanged, verifySingleModuleUpdate)
 from scripts.verify_vision_train_modules import writeReport
 from vision_train_modular_reuse import apiJson, downloadArtifact, selectArtifact, sourceRun
 
@@ -20,6 +20,7 @@ from vision_train_modular_reuse import apiJson, downloadArtifact, selectArtifact
 CORE_MANIFEST = 'e71ea34e9fda8b684645f28f4934c25342ddf7edc9207f6cc4f00c125f62f78a'
 CORE_EXE = 'c75d26221bd14565089a5832176901ee52996b3e00acb36131ee3efa156e423f'
 EDGE_MANIFEST = '742cdb3ec4cec487a805db0b9b66b75aed8d0fddc2f64b3aee379d0755dac70f'
+ORT_MANIFEST = '0e195f8718ea5c1f42401e99845f018a5f8e4022b4eb9cf1f237a5f4a26ec52a'
 ASSETS = (
   {'run': 45828010095, 'head': '92aa9e0ca76bf28b2aa43eebbf3cfe4d8e6fc2b2',
    'artifact': 'visionworkshop-core-candidate-45828010095-1', 'id': 15128429321,
@@ -31,6 +32,11 @@ ASSETS = (
    'outer_bytes': 35561103, 'outer_sha256': '4189832f2263c43b39cbdcc32230a52886818ee70e93c9b9248f847062cab9b7',
    'name': 'resource.edgesam-0.0.0.zip', 'bytes': 35560937,
    'sha256': 'fc8f55a868dc640adea28d1a18f7be0416c069e2a5a2870db82b701daac4b553'},
+  {'run': 45616400076, 'head': 'f9703a9c6a0c0370a10eed0afadd39e677770547',
+   'artifact': 'visionworkshop-module-runtime.ort-45616400076-1', 'id': 15029901741,
+   'outer_bytes': 113428375, 'outer_sha256': '19a0a8ce5e3e54f85f810902b48e7ffd9ca2858204a6626bc3b3d345ba3272cd',
+   'name': 'runtime.ort-0.0.0.zip', 'bytes': 113428219,
+   'sha256': 'cb52bcffd03aefac8fd7aa3ce7b8ce80ac9509ed4f87c776b218c0439d903d5a'},
 )
 
 
@@ -99,7 +105,7 @@ def verify(root):
             'Original frozen Core identity is incorrect')
     baseline = coreInventory(core)
     metadata = json.loads((core / 'core.json').read_bytes())
-    archive = root / ASSETS[1]['name']
+    edgeArchive, ortArchive = (root / item['name'] for item in ASSETS[1:])
     (root / 'empty-cwd').mkdir()
     environment = productEnvironment(root)
     environment.update(VW_NET_TEST_RULE='VisionWorkshop offline CI ' + uuid.uuid4().hex,
@@ -141,17 +147,23 @@ def verify(root):
       first, _ = cli(executable, ['status'], reports, 'empty', environment)
       initial = activeIdentity(first, CORE_MANIFEST)
       require(not initial['modules'], 'Expected an empty Core')
-      installed, _ = cli(executable, ['install', str(archive)], reports, 'original-install', environment)
-      require(installed['result']['pending'] and installed['result']['archives'] ==
-              [{'module_id': 'resource.edgesam', 'sha256': ASSETS[1]['sha256']}], 'Unexpected original install receipt')
+      installed, _ = cli(executable, ['install', str(edgeArchive), str(ortArchive)], reports,
+                         'original-install', environment)
+      recorded = {row['module_id']: row['sha256'] for row in installed['result']['archives']}
+      require(installed['result']['pending'] and len(installed['result']['archives']) == 2 and
+              recorded == {'resource.edgesam': ASSETS[1]['sha256'], 'runtime.ort': ASSETS[2]['sha256']},
+              'Unexpected original install receipt')
       activated, _ = cli(executable, ['activate'], reports, 'original-activate', environment)
       identity = activeIdentity(activated, CORE_MANIFEST)
-      require(identity['modules'] == {'resource.edgesam': EDGE_MANIFEST}, 'Wrong original module is active')
+      require(identity['modules'] == {'resource.edgesam': EDGE_MANIFEST, 'runtime.ort': ORT_MANIFEST},
+              'Wrong original modules are active')
 
       def checkpoint(name):
         summary['integrity'].append(verifyCoreUnchanged(core, baseline, reports, name))
 
-      transaction, restored = verifySingleModuleUpdate(executable, archive, reports, environment, identity,
+      summary['repair'] = verifyColdRepair(executable, ortArchive, reports, environment, identity)
+      checkpoint('cold-ort-repair')
+      transaction, restored = verifySingleModuleUpdate(executable, edgeArchive, reports, environment, identity,
                                                        metadata, checkpoint)
       summary.update(initial=initial, installed=identity, restored=restored, transaction=transaction['status'])
       executable.replace(held)

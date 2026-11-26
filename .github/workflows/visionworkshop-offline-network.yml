@@ -23,7 +23,7 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12.10'
-      - name: Stage the verified previous Core and original EdgeSAM archive
+      - name: Stage the verified previous Core and original module archives
         env:
           GH_TOKEN: ${{ github.token }}
         run: python -B -m scripts.verify_vision_train_offline_network prepare "$env:RUNNER_TEMP/vw-net"
