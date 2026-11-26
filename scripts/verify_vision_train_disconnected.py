@@ -28,7 +28,7 @@ TORCH = 'runtime.torch'
 PHASES = {'edge': ('edge',), 'all': ('torch', 'remaining', 'activate'), 'activation': ('activate',)}
 
 
-def stage(root, scope):
+def stage(root, scope, *, extract=True):
   prepare(root, (CORE, EDGE) if scope == 'edge' else (CORE,))
   (root / 'reports/empty-cwd').mkdir()
   if scope != 'edge':
@@ -36,8 +36,9 @@ def stage(root, scope):
     require(original['source_run']['head_sha'] == EDGE['head'] and len(original['modules']) == 11,
             'The complete original module set is required')
     writeReport(root / 'reports/original-module-archives.json', original)
-    executable = extractCore(root / CORE['name'], root / '中文 断网')
-    writeReport(root / 'reports/core-baseline.json', coreInventory(executable.parent))
+    if extract:
+      executable = extractCore(root / CORE['name'], root / '中文 断网')
+      writeReport(root / 'reports/core-baseline.json', coreInventory(executable.parent))
 
 
 def installOriginal(executable, archives, hashes, reports, environment):
@@ -185,6 +186,52 @@ def prepareActivation(root):
     writeReport(reports / 'prepared-online.json', product)
 
 
+def continuous(root, staged):
+  reports = root / 'reports'
+  summary = {'status': 'FAIL', 'scope': 'continuous-disconnected-windows-container', 'integrity': []}
+  try:
+    require((reports / 'network-before.json').is_file(), 'Offline container did not start the lifecycle')
+    (root / 'empty-cwd').mkdir()
+    checkAsset(staged / CORE['name'], CORE)
+    original = json.loads((staged / 'reports/original-module-archives.json').read_bytes())
+    require(original['source_run']['id'] == 45616400076 and original['source_run']['run_attempt'] == 1,
+            'The archive source changed')
+    executable = extractCore(staged / CORE['name'], root / '中文 断网')
+    verifyCoreIdentity(executable)
+    metadata = json.loads((executable.parent / 'core.json').read_bytes())
+    modules = original['modules']
+    require(len(modules) == 11 and set(modules) == set(metadata['catalog']), 'The original catalog changed')
+    archives = {module: str(staged / 'original' / entry['archive_path']) for module, entry in modules.items()}
+    hashes = {module: entry['sha256'] for module, entry in modules.items()}
+    manifests = {module: entry['manifest_sha256'] for module, entry in modules.items()}
+    require(hashes['resource.edgesam'] == EDGE['sha256'] and manifests['resource.edgesam'] == EDGE_MANIFEST,
+            'The EdgeSAM identity changed')
+    baseline = coreInventory(executable.parent)
+    env = productEnvironment(root)
+
+    def checkpoint(name):
+      summary['integrity'].append(verifyCoreUnchanged(executable.parent, baseline, reports, name))
+
+    empty, _ = cli(executable, ['status'], reports, 'original-empty', env)
+    initial = activeIdentity(empty, CORE_MANIFEST)
+    require(initial['generation'] == 0 and not initial['modules'], 'Expected a fresh empty Core')
+    installOriginal(executable, archives, hashes, reports, env)
+    summary['pending'] = verifyRegistry(executable, manifests, {}, 0)
+    active, _ = cli(executable, ['activate'], reports, 'original-activate', env)
+    installed = activeIdentity(active, CORE_MANIFEST)
+    require(installed['generation'] == 1 and installed['modules'] == manifests, 'The original activation changed')
+    summary.update(core_sha256=CORE_MANIFEST, exe_sha256=CORE_EXE, initial=initial,
+                   installed=installed, original_archives=hashes)
+    checkpoint('full-activation')
+    archive = Path(archives['resource.edgesam'])
+    summary['repair'] = repairEdge(executable, archive, reports, env, installed)
+    checkpoint('full-resource-repair')
+    transaction, restored = verifySingleModuleUpdate(executable, archive, reports, env, installed, metadata, checkpoint)
+    summary.update(restored=restored, update_report_sha256=transaction['report_sha256'], status='PASS')
+  finally:
+    writeReport(reports / 'continuous-disconnected-product-summary.json', summary)
+
+
 def finish(root, scope):
   reports = root / 'reports'
   executable = root / '中文 断网/VisionWorkshop/VisionWorkshop.exe'
@@ -215,14 +262,19 @@ def finish(root, scope):
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser(description=__doc__)
-  parser.add_argument('mode', choices=('stage', 'prepare-activation', 'lifecycle', 'finish'))
+  parser.add_argument('mode', choices=('stage', 'stage-container', 'continuous', 'prepare-activation', 'lifecycle', 'finish'))
   parser.add_argument('output', type=Path)
   parser.add_argument('--scope', choices=PHASES, required=True)
   parser.add_argument('--phase')
+  parser.add_argument('--staged', type=Path)
   args = parser.parse_args()
   root = args.output.resolve()
   if args.mode == 'stage':
     stage(root, args.scope)
+  elif args.mode == 'stage-container' and args.scope == 'all':
+    stage(root, args.scope, extract=False)
+  elif args.mode == 'continuous' and args.scope == 'all' and args.staged is not None:
+    continuous(root, args.staged.resolve())
   elif args.mode == 'prepare-activation' and args.scope == 'activation':
     prepareActivation(root)
   elif args.mode == 'finish' and args.scope != 'edge':

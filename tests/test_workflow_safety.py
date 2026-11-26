@@ -79,7 +79,9 @@ class WorkflowSafetyTests(unittest.TestCase):
                 (path.name == 'visionworkshop-offline-network.yml'
                  and jobName == 'windows-outbound-block') or
                 (path.name == 'visionworkshop-disconnected-guest.yml'
-                 and jobName == 'windows-disconnected-guest')):
+                 and jobName == 'windows-disconnected-guest') or
+                (path.name == 'visionworkshop-offline-container.yml'
+                 and jobName == 'windows-continuous-offline')):
             self.assertEqual(job['permissions'], {'contents': 'read', 'actions': 'read'})
           else:
             self.assertEqual(job.get('permissions', data['permissions']), {'contents': 'read'})
@@ -138,6 +140,24 @@ class WorkflowSafetyTests(unittest.TestCase):
                if '-m scripts.verify_vision_train_disconnected prepare-activation ' in step.get('run', '')]
     self.assertEqual(len(fixture), 1)
     self.assertEqual(fixture[0]['if'], "matrix.scope == 'activation'")
+
+  def test_continuous_offline_container_keeps_transport_separate_from_the_product(self) -> None:
+    data, events = loadWorkflow('visionworkshop-offline-container.yml')
+    job = data['jobs']['windows-continuous-offline']
+    self.assertEqual(job['runs-on'], 'windows-2022')
+    self.assertEqual(set(events), {'push'})
+    self.assertEqual(events['push']['branches'], ['test/visionworkshop-modular-loader'])
+    steps = getSteps(data)
+    download, = [i for i, step in enumerate(steps) if 'GH_TOKEN' in step.get('env', {})]
+    run, = [i for i, step in enumerate(steps) if 'verify_vision_train_offline_container.ps1' in step.get('run', '')]
+    self.assertLess(download, run)
+    self.assertIn(' stage-container ', steps[download]['run'])
+    self.assertNotIn('GH_TOKEN', data.get('env', {}))
+    self.assertNotIn('GH_TOKEN', job.get('env', {}))
+    script = (ROOT / 'scripts/verify_vision_train_offline_container.ps1').read_text(encoding='utf-8')
+    self.assertIn('docker create --pull=never --network none', script)
+    self.assertIn('Assert-GuestDisconnected $last', script)
+    self.assertNotIn('Disable-NetAdapter', script)
 
   def test_candidate_projections_are_read_only_always_and_do_not_skip_the_product_gate(self) -> None:
     data, _ = loadWorkflow('visionworkshop-modular-candidate.yml')
