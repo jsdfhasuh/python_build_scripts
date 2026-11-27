@@ -84,9 +84,15 @@ def prepare(args: argparse.Namespace) -> dict:
             "Invalid candidate builder SHA")
     require(re.fullmatch(r"[0-9a-f]{40}", request["app_sha"]) is not None, "Invalid application SHA")
     version = request["core_version"]
-    require(re.fullmatch(r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)", version) is not None,
-            "Invalid stable Core version")
+    semver = r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)"
+    require(re.fullmatch(semver, version) is not None, "Invalid stable Core version")
+    max_version = request["max_core_version"]
+    require(re.fullmatch(semver, max_version) is not None, "Invalid maximum Core version")
+    require(tuple(map(int, version.split("."))) < tuple(map(int, max_version.split("."))),
+            "Core compatibility interval must be nonempty")
     require(request["tag_name"] == f"v{version}-preview.1", "Preview tag does not match Core version")
+    require(isinstance(request["release_title"], str) and request["release_title"].strip(),
+            "Release title is required")
     require(request["release_repo"] == "jsdfhasuh/emo-vision-train-release",
             "Unexpected public release repository")
     require(type(request["expected_case_count"]) is int and request["expected_case_count"] >= 1,
@@ -124,6 +130,10 @@ def prepare(args: argparse.Namespace) -> dict:
 
     require(index.get("type") == "visionworkshop-module-index" and index.get("schema_version") == 1,
             "Unsupported module index")
+    require(index.get("protocol_version") == 4 and index.get("module_api") == 1,
+            "Preview requires protocol 4 / module API 1")
+    require(index.get("python") == {"version": "3.12.10", "abi": "cp312", "platform": "win_amd64"},
+            "Preview Python/ABI/platform identity mismatch")
     require(index.get("asset_count") == 12 and len(index.get("modules", [])) == 11,
             "Module index must contain Core plus exactly 11 modules")
     require(index.get("build") == expected_identity, "Module index build identity mismatch")
