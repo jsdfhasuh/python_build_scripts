@@ -5,6 +5,24 @@ ZIPs. It does not change the protocol-3 portable publisher, other target configs
 or create a Release. Actual sizes come from verified Windows build artifacts;
 product behavior requires the separate real EXE matrix to pass.
 
+## VisionWorkshop 1.0.42 modular Preview
+
+The previous candidate run `45960883708` proved the 26-case Windows product matrix and 11-module lifecycle, but its Core and module manifests were still versioned `0.0.0`. It is retained as historical test evidence and is **not** a publishable release candidate.
+
+The existing public release repository already contains `v1.0.40` and `v1.0.41`. The modular Preview therefore advances the application version to `1.0.42` in app commit `2fc75c58335c2059b785a4b1694210b6bfe0a34e`. The candidate request is explicitly bound to:
+
+- Core and module version: `1.0.42`
+- Module compatibility interval: `[1.0.42, 1.1.0)`
+- Build identity: `1.0.42+preview1`
+- Application SHA: `2fc75c58335c2059b785a4b1694210b6bfe0a34e`
+- Module reuse: disabled; build Core and all 11 modules afresh
+
+The candidate workflow checks that the requested Core version equals the checked-out application's `APP_VERSION`, validates the compatibility interval/build ID, and passes these exact values to the builder. The release-preparation tool independently checks the final build summary, product summary, protocol-4/CP312 identity, 26 passing product cases, 12 Core integrity checkpoints, module index, dependency lock, and the size/SHA-256 of Core plus every module archive before it creates any release assets.
+
+After PR #4, PR #5 and PR #6 are merged, a dedicated `release-requests/*` branch can trigger the publisher. It downloads only the specified successful candidate run, verifies that the exact app/builder commits are merged, prepares Core + 11 module ZIPs + index + installation guide + SHA256SUMS + full evidence bundles, creates a **Draft Preview** in `jsdfhasuh/emo-vision-train-release`, verifies the complete asset set, and only then publishes it as a GitHub prerelease. It reuses the existing `RELEASE_REPO_TOKEN`; it does not request or create a new PAT.
+
+The Preview tag is `v1.0.42-preview.1`. It remains a prerelease with qualification status `NOT_QUALIFIED` until the user's T1000 GPU, physical power-loss and external AnomalyDetect installation checks are complete. The legacy updater reads `/releases/latest` and accepts only non-prerelease releases, so this Preview does not replace or become the stable update target for protocol-3 installations.
+
 ## Prerequisite and scope
 
 The separate [B2 loader evidence](evidence/visionworkshop-modular-loader.md)
