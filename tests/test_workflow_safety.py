@@ -112,7 +112,7 @@ class WorkflowSafetyTests(unittest.TestCase):
     self.assertIs(request['guarded_core'], True)
     self.assertEqual((request['reuse_run_id'], request['reuse_run_attempt']), ('', '1'))
     self.assertEqual((request['core_version'], request['max_core_version'], request['build_id']),
-                     ('1.0.40', '1.1.0', '1.0.40+preview1'))
+                     ('1.0.42', '1.1.0', '1.0.42+preview1'))
     inputs = events['workflow_dispatch']['inputs']
     for name in ('core_version', 'max_core_version', 'build_id'):
       self.assertIs(inputs[name]['required'], True)
