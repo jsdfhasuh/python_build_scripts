@@ -130,6 +130,8 @@ def prepare(args: argparse.Namespace) -> dict:
     require(index.get("core", {}).get("version") == version, "Module index Core version mismatch")
     require(index.get("core", {}).get("manifest_sha256") == build.get("core_sha256"),
             "Module index Core manifest identity mismatch")
+    require(index.get("dependency_lock_sha256") == build.get("core", {}).get("dependency_lock_sha256"),
+            "Module index dependency-lock identity mismatch")
     require(index.get("qualification", {}).get("release") == "NOT_QUALIFIED",
             "Module index qualification state changed")
     verify_file(index_path, {"bytes": build.get("module_index", {}).get("bytes"),
@@ -139,6 +141,8 @@ def prepare(args: argparse.Namespace) -> dict:
     require(product.get("release_gate") == "NOT_QUALIFIED" and product.get("gpu_hardware") == "NOT_RUN",
             "Product qualification scope changed")
     require(product.get("cpu_product_fixtures") == "PASS", "CPU product fixture gate did not pass")
+    require(product.get("module_reuse", {}).get("enabled") is False,
+            "Preview product report unexpectedly reused module archives")
     require(product.get("build") == expected_identity, "Product report build identity mismatch")
     require(product.get("core_sha256") == build.get("core_sha256"), "Product Core manifest identity mismatch")
     require(product.get("module_index", {}).get("status") == "PASS", "Product module-index verification failed")
@@ -178,6 +182,10 @@ def prepare(args: argparse.Namespace) -> dict:
         descriptor = module.get("archive", {})
         build_record = build_modules[module_id]
         require(module.get("version") == version, f"{module_id} version mismatch")
+        core_range = module.get("core_versions", {})
+        require(core_range.get("min") == version
+                and core_range.get("max_exclusive") == request["max_core_version"],
+                f"{module_id} Core compatibility range mismatch")
         require(module.get("build") == expected_identity, f"{module_id} build identity mismatch")
         require(descriptor.get("bytes") == build_record.get("bytes")
                 and descriptor.get("sha256") == build_record.get("sha256")
