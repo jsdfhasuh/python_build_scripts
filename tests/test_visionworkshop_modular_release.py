@@ -132,7 +132,7 @@ class ModularPreviewReleaseTests(unittest.TestCase):
       'release_gate': 'NOT_QUALIFIED',
       'source': {'commit': self.request['app_sha']},
       'packager': {'commit': self.request['candidate_builder_sha']},
-      'core': {'version': '1.0.42', 'build': self.request['build_id']},
+      'core': {'version': '1.0.42', 'build': self.request['build_id'], 'dependency_lock_sha256': 'd' * 64},
       'core_sha256': core_manifest_sha,
       'core_archive': core_archive,
       'module_archives': build_archives,
