@@ -107,6 +107,9 @@ class ModularPreviewReleaseTests(unittest.TestCase):
     index = {
       'type': 'visionworkshop-module-index',
       'schema_version': 1,
+      'protocol_version': 4,
+      'module_api': 1,
+      'python': {'version': '3.12.10', 'abi': 'cp312', 'platform': 'win_amd64'},
       'asset_count': 12,
       'build': identity,
       'dependency_lock_sha256': 'd' * 64,
