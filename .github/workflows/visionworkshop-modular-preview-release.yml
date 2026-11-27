@@ -128,7 +128,7 @@ jobs:
           find "$RUNNER_TEMP/visionworkshop-release-assets" -maxdepth 1 -type f -printf '%f\n' | sort \
             > "$RUNNER_TEMP/expected-release-assets.txt"
 
-      - name: Publish Preview to the existing public release repository
+      - name: Create draft Preview with verified assets
         env:
           GH_TOKEN: ${{ secrets.RELEASE_REPO_TOKEN }}
         shell: bash
@@ -150,14 +150,42 @@ jobs:
             --repo "$RELEASE_REPO" \
             --title "$RELEASE_TITLE" \
             --notes-file "$RUNNER_TEMP/visionworkshop-release-assets/RELEASE_NOTES.md" \
-            --prerelease
+            --draft --prerelease
 
-      - name: Verify uploaded Preview assets
+      - name: Verify draft Preview assets before publication
         env:
           GH_TOKEN: ${{ secrets.RELEASE_REPO_TOKEN }}
         shell: bash
         run: |
-          gh release view "$TAG_NAME" --repo "$RELEASE_REPO" --json tagName,isPrerelease,assets \
+          gh release view "$TAG_NAME" --repo "$RELEASE_REPO" --json tagName,isDraft,isPrerelease,assets \
+            > "$RUNNER_TEMP/draft-release.json"
+          python -I -S -B - <<'PY'
+          import json, os
+          from pathlib import Path
+          release = json.loads(Path(os.environ["RUNNER_TEMP"] + "/draft-release.json").read_text(encoding="utf-8"))
+          expected = set(Path(os.environ["RUNNER_TEMP"] + "/expected-release-assets.txt").read_text(encoding="utf-8").splitlines())
+          actual = {asset["name"] for asset in release.get("assets", [])}
+          if release.get("tagName") != os.environ["TAG_NAME"] or release.get("isDraft") is not True or release.get("isPrerelease") is not True:
+              raise SystemExit("Draft Preview identity/channel verification failed")
+          if actual != expected:
+              raise SystemExit(f"Draft asset set mismatch: missing={sorted(expected-actual)}, extra={sorted(actual-expected)}")
+          print(f"Verified {len(actual)} draft Preview assets")
+          PY
+
+      - name: Publish the verified Preview
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_REPO_TOKEN }}
+        shell: bash
+        run: |
+          release_id=$(gh release view "$TAG_NAME" --repo "$RELEASE_REPO" --json databaseId --jq .databaseId)
+          gh api --method PATCH "repos/$RELEASE_REPO/releases/$release_id" -F draft=false -F prerelease=true
+
+      - name: Verify published Preview
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_REPO_TOKEN }}
+        shell: bash
+        run: |
+          gh release view "$TAG_NAME" --repo "$RELEASE_REPO" --json tagName,isDraft,isPrerelease,assets,url \
             > "$RUNNER_TEMP/published-release.json"
           python -I -S -B - <<'PY'
           import json, os
@@ -165,11 +193,10 @@ jobs:
           release = json.loads(Path(os.environ["RUNNER_TEMP"] + "/published-release.json").read_text(encoding="utf-8"))
           expected = set(Path(os.environ["RUNNER_TEMP"] + "/expected-release-assets.txt").read_text(encoding="utf-8").splitlines())
           actual = {asset["name"] for asset in release.get("assets", [])}
-          if release.get("tagName") != os.environ["TAG_NAME"] or release.get("isPrerelease") is not True:
-              raise SystemExit("Published release tag/channel verification failed")
+          if release.get("tagName") != os.environ["TAG_NAME"] or release.get("isDraft") is not False or release.get("isPrerelease") is not True:
+              raise SystemExit("Published Preview identity/channel verification failed")
           if actual != expected:
               raise SystemExit(f"Published asset set mismatch: missing={sorted(expected-actual)}, extra={sorted(actual-expected)}")
-          print(f"Verified {len(actual)} Preview assets for {release['tagName']}")
+          print(f"Verified {len(actual)} published Preview assets for {release['tagName']}")
           PY
-          gh release view "$TAG_NAME" --repo "$RELEASE_REPO" --json url --jq .url \
-            | tee -a "$GITHUB_STEP_SUMMARY"
+          gh release view "$TAG_NAME" --repo "$RELEASE_REPO" --json url --jq .url | tee -a "$GITHUB_STEP_SUMMARY"
