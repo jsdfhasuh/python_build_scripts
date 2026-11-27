@@ -178,7 +178,7 @@ def prepare(args: argparse.Namespace) -> dict:
         descriptor = module.get("archive", {})
         build_record = build_modules[module_id]
         require(module.get("version") == version, f"{module_id} version mismatch")
-        require(module.get("build") == request["build_id"], f"{module_id} build identity mismatch")
+        require(module.get("build") == expected_identity, f"{module_id} build identity mismatch")
         require(descriptor.get("bytes") == build_record.get("bytes")
                 and descriptor.get("sha256") == build_record.get("sha256")
                 and module.get("manifest_sha256") == build_record.get("manifest_sha256"),
