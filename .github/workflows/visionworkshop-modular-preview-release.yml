@@ -98,23 +98,17 @@ jobs:
             exit 1
           }
 
-      - name: Checkout the exact application installation guide
-        uses: actions/checkout@v7
-        with:
-          repository: jsdfhasuh/emo-vision-train
-          ref: ${{ env.APP_SHA }}
-          path: app
-          token: ${{ github.token }}
-          persist-credentials: false
-
-      - name: Verify application source is merged into main
+      - name: Checkout and verify exact application source
         shell: bash
         run: |
-          git -C app fetch --no-tags origin main
-          git -C app merge-base --is-ancestor "$APP_SHA" FETCH_HEAD || {
+          git clone --filter=blob:none --no-checkout --single-branch --branch main \
+            https://github.com/jsdfhasuh/emo-vision-train.git app
+          git -C app checkout --detach "$APP_SHA"
+          git -C app merge-base --is-ancestor "$APP_SHA" origin/main || {
             echo "::error::Candidate application commit is not merged into main"
             exit 1
           }
+          test -f app/docs/offline-modules.md
 
       - name: Download the exact candidate artifacts
         env:
