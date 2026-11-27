@@ -1,0 +1,24 @@
+name: Validate staged mainline packager contract
+on:
+  push:
+    branches: [dot/mainline-ci-migration-20261124]
+    paths:
+      - .github/workflows/windows-package-mainline-v2.yml
+      - .github/workflows/mainline-packager-contract-validation.yml
+      - tests/test_mainline_packager_contract.py
+permissions:
+  contents: read
+jobs:
+  validate:
+    if: github.repository_id == '1284528638' && github.ref == 'refs/heads/dot/mainline-ci-migration-20261124'
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Verify existing and new frozen-target contract without building
+        run: |
+          python3 -m pip install PyYAML==6.0.2
+          python3 -m unittest discover -s tests -p test_mainline_packager_contract.py -v

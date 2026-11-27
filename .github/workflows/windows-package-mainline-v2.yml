@@ -14,17 +14,44 @@ on:
         type: boolean
         required: false
         default: false
+      runtime_only:
+        description: Run only Runtime BuildOnly and its native verification
+        type: boolean
+        required: false
+        default: false
 permissions:
   contents: read
 jobs:
+  validate_selection:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Reject incompatible target selections
+        if: inputs.designer_only && inputs.runtime_only
+        run: exit 1
   windows:
-    if: github.repository == 'jsdfhasuh/emo_master_ci' && github.repository_id == '1468905732' && github.event_name == 'push' && github.workflow_ref == 'jsdfhasuh/emo_master_ci/.github/workflows/windows-package-mainline-v2-call.yml@refs/heads/dot/mainline-ci-migration-20261124' && github.ref == 'refs/heads/dot/mainline-ci-migration-20261124'
+    needs: validate_selection
+    if: >-
+      github.repository == 'jsdfhasuh/emo_master_ci' &&
+      github.repository_id == '1468905732' &&
+      ((github.event_name == 'push' && !inputs.runtime_only &&
+        github.workflow_ref == 'jsdfhasuh/emo_master_ci/.github/workflows/windows-package-mainline-v2-call.yml@refs/heads/dot/mainline-ci-migration-20261124' &&
+        github.ref == 'refs/heads/dot/mainline-ci-migration-20261124') ||
+       (github.event_name == 'workflow_dispatch' &&
+        startsWith(github.ref, 'refs/tags/ci-worker-') &&
+        ((inputs.runtime_only && !inputs.designer_only &&
+          startsWith(github.workflow_ref, 'jsdfhasuh/emo_master_ci/.github/workflows/dispatch-runtime-windows-candidate.yml@refs/tags/ci-worker-')) ||
+         (inputs.designer_only && !inputs.runtime_only &&
+          startsWith(github.workflow_ref, 'jsdfhasuh/emo_master_ci/.github/workflows/dispatch-windows-package-candidate.yml@refs/tags/ci-worker-'))) &&
+        github.workflow_sha == vars.EMO_CI_CANDIDATE_WORKER_SHA &&
+        github.actor_id == vars.EMO_CI_CANDIDATE_BROKER_ACTOR_ID &&
+        github.run_attempt == '1'))
     runs-on: windows-latest
     timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
-        target: ${{ fromJSON(inputs.designer_only && '["emo-master"]' || '["emo-master","emo-master-runtime"]') }}
+        target: ${{ fromJSON(inputs.designer_only && '["emo-master"]' || inputs.runtime_only && '["emo-master-runtime"]' || '["emo-master","emo-master-runtime"]') }}
     steps:
       - name: Enforce approved V2 recipient before checkout
         id: v2_gate
@@ -61,7 +88,6 @@ jobs:
         env:
           TARGET: ${{ matrix.target }}
           SOURCE_REF: ${{ inputs.product_sha }}
-          RELEASE_TAG: v0.6.6
           RELEASE_REPO_INPUT: jsdfhasuh/emo_master
         run: |
           if ([string]::IsNullOrWhiteSpace($env:SOURCE_REF) -or $env:SOURCE_REF -match '[\r\n]' -or $env:SOURCE_REF.StartsWith('-')) {
@@ -70,10 +96,6 @@ jobs:
           if ($env:TARGET -notmatch '^[A-Za-z0-9_.-]+$') {
             throw "Invalid target name: $env:TARGET"
           }
-          if ($env:RELEASE_TAG -notmatch '^v[0-9]+(\.[0-9]+){1,3}([-.][A-Za-z0-9._-]+)?$') {
-            throw "release_tag must look like v1.2.3, got: $env:RELEASE_TAG"
-          }
-
           $configPath = Join-Path 'configs' "$env:TARGET.json"
           if (-not (Test-Path -LiteralPath $configPath)) {
             throw "Target config not found: $configPath"
@@ -153,6 +175,13 @@ jobs:
           $packagerSha = git -C packager rev-parse HEAD
           if ($LASTEXITCODE -ne 0) { throw 'Cannot resolve packager SHA' }
           if ($sourceSha.Trim() -cne $env:REQUESTED_SOURCE_REF -or $packagerSha.Trim() -cne $env:REQUESTED_PACKAGER_REF -or $env:SOURCE_REPO -cne 'jsdfhasuh/emo_master') { throw 'Checkout identity mismatch' }
+          # Parse a single constant without importing product code.
+          $ver = Get-Item -LiteralPath 'source/src/emo_master/app_version.py' -ErrorAction Stop
+          if ($ver.PSIsContainer -or $ver.LinkType -or $ver.Attributes.HasFlag([IO.FileAttributes]::ReparsePoint) -or $ver.Length -gt 4096) { throw 'Invalid application version file' }
+          $literal = [IO.File]::ReadAllText($ver.FullName)
+          $match = [regex]::Match($literal, '(?m)^APP_VERSION[ \t]*=[ \t]*"([0-9]+\.[0-9]+\.[0-9]+)"[ \t]*\r?$')
+          if (-not $match.Success -or [regex]::Matches($literal,'(?m)^APP_VERSION[ \t]*=').Count -ne 1) { throw 'Cannot confirm exact application version' }
+          Add-Content $env:GITHUB_OUTPUT "release_tag=v$($match.Groups[1].Value)"
           if ('${{ matrix.target }}' -ne 'emo-master-runtime') { return }
           $output = Join-Path $env:GITHUB_WORKSPACE 'packager/release-output'
           New-Item -ItemType Directory -Path $output -Force | Out-Null
@@ -271,6 +300,7 @@ jobs:
       - name: Build Windows artifacts
         env:
           EXPECTED_PRODUCT_SHA: ${{ inputs.product_sha }}
+          RELEASE_TAG_INPUT: ${{ steps.identity.outputs.release_tag }}
         shell: pwsh
         working-directory: packager
         run: |
@@ -284,7 +314,7 @@ jobs:
               $sourceRoot = Join-Path $env:GITHUB_WORKSPACE 'source'
               $outputDirectory = Join-Path $env:GITHUB_WORKSPACE 'packager/release-output'
               New-Item -ItemType Directory $outputDirectory -Force | Out-Null
-              .\scripts\publish-local-release.ps1 -Target '${{ matrix.target }}' -ReleaseTag v0.6.6 -ReleaseRepo jsdfhasuh/emo_master -SourceRoot $sourceRoot -SourceRef $env:EXPECTED_PRODUCT_SHA -PreviousSourceRef $env:EXPECTED_PRODUCT_SHA -OutputDirectory $outputDirectory -BuildOnly
+              .\scripts\publish-local-release.ps1 -Target '${{ matrix.target }}' -ReleaseTag $env:RELEASE_TAG_INPUT -ReleaseRepo jsdfhasuh/emo_master -SourceRoot $sourceRoot -SourceRef $env:EXPECTED_PRODUCT_SHA -PreviousSourceRef $env:EXPECTED_PRODUCT_SHA -OutputDirectory $outputDirectory -BuildOnly
             } *> $log
           } catch {
             $_ | Out-String | Add-Content -LiteralPath $log
@@ -297,7 +327,7 @@ jobs:
         env:
           SOURCE_SHA: ${{ steps.identity.outputs.source_sha }}
           PACKAGER_SHA: ${{ steps.identity.outputs.packager_sha }}
-          RELEASE_TAG_INPUT: v0.6.6
+          RELEASE_TAG_INPUT: ${{ steps.identity.outputs.release_tag }}
         run: |
           $dir = Join-Path $env:RUNNER_TEMP 'package-private-logs'
           New-Item -ItemType Directory $dir -Force | Out-Null
@@ -317,6 +347,8 @@ jobs:
       - name: Verify Designer icons
         if: matrix.target == 'emo-master'
         shell: pwsh
+        env:
+          RELEASE_TAG_INPUT: ${{ steps.identity.outputs.release_tag }}
         run: |
           $dir = Join-Path $env:RUNNER_TEMP 'package-private-logs'
           New-Item -ItemType Directory $dir -Force | Out-Null
@@ -325,7 +357,7 @@ jobs:
             & {
               $ErrorActionPreference = 'Stop'
               $PSNativeCommandUseErrorActionPreference = $true
-              ./source/scripts/verify_windows_package.ps1 -Archive 'packager/release-output/emo-master-windows-v0.6.6.zip'
+              ./source/scripts/verify_windows_package.ps1 -Archive "packager/release-output/emo-master-windows-$($env:RELEASE_TAG_INPUT).zip"
             } *> $log
           } catch {
             $_ | Out-String | Add-Content -LiteralPath $log
@@ -338,6 +370,7 @@ jobs:
         shell: pwsh
         env:
           EXPECTED_SOURCE_SHA: ${{ inputs.product_sha }}
+          RELEASE_TAG_INPUT: ${{ steps.identity.outputs.release_tag }}
         run: |
           $dir = Join-Path $env:RUNNER_TEMP 'package-private-logs'
           New-Item -ItemType Directory $dir -Force | Out-Null
@@ -352,7 +385,7 @@ jobs:
               $env:PYTHONPATH = (Resolve-Path src).Path
               $verifyAssets = Join-Path $env:RUNNER_TEMP 'fixed-frozen-validation-assets'
               New-Item -ItemType Directory -Path $verifyAssets -ErrorAction Stop | Out-Null
-              foreach ($name in @('emo-master-windows-v0.6.6.zip','emo-master-setup-v0.6.6.exe','manifest.json')) {
+              foreach ($name in @("emo-master-windows-$($env:RELEASE_TAG_INPUT).zip","emo-master-setup-$($env:RELEASE_TAG_INPUT).exe",'manifest.json')) {
                 $item = Get-Item -LiteralPath (Join-Path '../packager/release-output' $name) -ErrorAction Stop
                 if ($item.PSIsContainer -or $item.LinkType -or $item.Attributes.HasFlag([IO.FileAttributes]::ReparsePoint) -or $item.Length -le 0) { throw 'Invalid frozen validation member' }
                 Copy-Item -LiteralPath $item.FullName -Destination (Join-Path $verifyAssets $name) -ErrorAction Stop
@@ -370,6 +403,7 @@ jobs:
         env:
           AGE_RECIPIENT: ${{ inputs.recipient }}
           TARGET: ${{ matrix.target }}
+          RELEASE_TAG_INPUT: ${{ steps.identity.outputs.release_tag }}
         run: |
           $dir = Join-Path $env:RUNNER_TEMP 'package-private-logs'
           New-Item -ItemType Directory $dir -Force | Out-Null
@@ -380,7 +414,7 @@ jobs:
               $PSNativeCommandUseErrorActionPreference = $true
               $tool = Join-Path $env:RUNNER_TEMP 'emo-age'
               $root = 'packager/release-output'
-              $names = @("$env:TARGET-windows-v0.6.6.zip","$env:TARGET-setup-v0.6.6.exe",'manifest.json')
+              $names = @("$env:TARGET-windows-$($env:RELEASE_TAG_INPUT).zip","$env:TARGET-setup-$($env:RELEASE_TAG_INPUT).exe",'manifest.json')
               if ($env:TARGET -eq 'emo-master-runtime') { $names += @('runtime-build.json','archive-check/validation.json','archive-check/archive.json','archive-check/native.json') }
               if ($env:TARGET -eq 'emo-master') { $names += 'frozen-validation.json' }
               foreach ($name in $names) {
@@ -475,5 +509,3 @@ jobs:
           path: ${{ runner.temp }}/emo-diagnostics.tar.age
           if-no-files-found: error
           retention-days: 7
-
-
