@@ -38,7 +38,7 @@ jobs:
       contents: read
       actions: read
     runs-on: windows-latest
-    timeout-minutes: 150
+    timeout-minutes: 210
     env:
       PYTHONDONTWRITEBYTECODE: '1'
       PYTHONNOUSERSITE: '1'
