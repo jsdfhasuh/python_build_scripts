@@ -178,20 +178,50 @@ reused B2 validator. Every other Python executable or DLL in optional payloads i
 rejected. Actual product checks additionally inspect loaded Python and compute
 DLL paths and hashes.
 
-## Known vendor declaration gate
+## Ultralytics 8.4.9 / Torch 2.10 metadata compatibility
 
-Ultralytics commit `74b2b91e5c4420af47875801b8e13333ab7026ac` declares
-`torch>=1.8.0,<2.10` (and a Windows variant). The baseline is Torch 2.10.0. Its
-source and requirements are preserved exactly; source-tree distribution metadata
-is generated faithfully from the pinned pyproject and explicitly identifies
-itself as a source inventory, not an upstream wheel. This discrepancy remains an
-`observed/unqualified` compatibility finding and a release gate.
+The previous application vendor pin `74b2b91e5c4420af47875801b8e13333ab7026ac`
+declared `torch>=1.8.0,<2.10`, which conflicted with the selected Torch 2.10.0
+runtime. Application PR #5 updates the fixed Ultralytics source to official
+v8.4.9 commit
+`a8b639bc35aa3d43efdde6691e5706a5525d8db6`. Its original
+[pyproject.toml](https://github.com/ultralytics/ultralytics/blob/a8b639bc35aa3d43efdde6691e5706a5525d8db6/pyproject.toml#L71-L72)
+declares `torch>=1.8.0` and the Windows-specific
+`torch>=1.8.0,!=2.4.0; sys_platform == 'win32'`; it no longer declares the
+global `<2.10` upper bound. The vendor source and its declared requirements are
+kept intact rather than patched locally.
 
-The product fixture performs actual CPU YOLO training, prediction, ONNX export
-and reload parity. Passing that bounded fixture does not turn the vendor's
-declared dependency interval into a supported combination or establish that a
-full `pip check` including this source vendor passed. The preparation-environment
-`pip check` occurs before the source-only vendor is added and is labelled as such.
+The latest application candidate (PR #5 head
+`3508a6911e0e12873e85bb06fac89ebb53a9c3e2`) adds a runtime metadata check that
+reads the installed Ultralytics distribution's actual `Requires-Dist` entries,
+evaluates active PEP 508 platform markers, checks the installed Torch version
+against every active Torch requirement, and records the exact requirements and
+violations in the product report. Its source tests accept
+`2.10.0+cu128` with the Windows `!=2.4.0` exclusion and reject the old
+`torch<2.10` constraint.
+
+The latest builder candidate (PR #6 head
+`27489026136701649c694084c6d76f9fc409a14e`) requires the YOLO product report to
+show `metadata_compatibility.status == PASS`, exact Ultralytics/Torch versions
+matching the Core catalog, non-empty active requirements and an empty violation
+list. This is a report-level check of the actual installed distribution
+metadata; it does not claim that all business models or GPU inference are
+qualified.
+
+The in-flight candidate run `45949863344` was started from earlier builder
+`5e878559` and application `964b1be`. It uses the v8.4.9 source pin, but those
+earlier app/builder commits do not yet include the new runtime metadata report
+and product assertion. Its module ZIPs may be reused only if the completed run
+actually uploads all 11 archives and the strict source-run, manifest, dependency
+lock, catalog, RECORD and payload checks pass. The next Core candidate must use
+the exact app head `3508a691` and current builder branch, then execute the
+metadata-aware product check. If the in-flight run is cancelled by its old
+150-minute job limit before artifact upload, its in-memory module outputs are
+not reusable and the corrected 210-minute workflow must perform a full build.
+
+The bounded CPU YOLO fixture covers training, prediction, ONNX export and reload
+parity. It is not business-model qualification, T1000 GPU inference, a full
+production training qualification, or physical power-loss recovery evidence.
 
 ## Build commands
 
