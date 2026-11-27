@@ -178,18 +178,33 @@ class WorkflowSafetyTests(unittest.TestCase):
     self.assertNotIn('C:/vw-validation/reports/.', script)
     self.assertNotIn('Disable-NetAdapter', script)
 
-  def test_candidate_projections_are_read_only_always_and_do_not_skip_the_product_gate(self) -> None:
+  def test_candidate_artifacts_are_preserved_before_the_product_gate(self) -> None:
     data, _ = loadWorkflow('visionworkshop-modular-candidate.yml')
     steps = getSteps(data)
     actual = [i for i, step in enumerate(steps)
               if 'packager/scripts/verify_vision_train_modular_product.py' in step.get('run', '')]
     logging = [i for i, step in enumerate(steps)
                if 'packager/scripts/report_vision_train_modular_candidate.py' in step.get('run', '')]
-    uploads = [i for i, step in enumerate(steps)
-               if step.get('name') == 'Upload candidate evidence independently']
-    self.assertEqual((len(actual), len(logging), len(uploads)), (1, 1, 1))
+    build_uploads = [i for i, step in enumerate(steps)
+                     if step.get('name') == 'Upload candidate build evidence independently']
+    product_uploads = [i for i, step in enumerate(steps)
+                       if step.get('name') == 'Upload candidate product evidence independently']
+    module_uploads = [i for i, step in enumerate(steps)
+                      if step.get('name') == 'Upload the independent module index'
+                      or step.get('name') == 'Upload Core candidate independently'
+                      or ' offline candidate' in step.get('name', '')]
+    self.assertEqual((len(actual), len(logging), len(build_uploads), len(product_uploads)), (1, 1, 1, 1))
+    self.assertTrue(module_uploads)
+    self.assertLess(build_uploads[0], actual[0])
+    self.assertTrue(all(index < actual[0] for index in module_uploads))
     self.assertLess(actual[0], logging[0])
-    self.assertLess(logging[0], uploads[0])
+    self.assertLess(logging[0], product_uploads[0])
+    self.assertEqual(steps[build_uploads[0]]['if'], "${{ !cancelled() }}")
+    self.assertIn('modular-candidate/reports/**', steps[build_uploads[0]]['with']['path'])
+    self.assertNotIn('modular-acceptance', steps[build_uploads[0]]['with']['path'])
+    self.assertIn('modular-acceptance/reports/**', steps[product_uploads[0]]['with']['path'])
+    self.assertEqual(steps[actual[0]]['if'],
+                     "${{ !cancelled() && steps.build-candidate.outcome == 'success' }}")
     self.assertEqual(steps[logging[0]]['if'], 'always()')
     self.assertNotIn('GH_TOKEN', steps[logging[0]].get('env', {}))
     self.assertIn('python -I -S -B', steps[logging[0]]['run'])

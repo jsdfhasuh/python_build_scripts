@@ -306,25 +306,7 @@ jobs:
             2>&1 | Tee-Object reports/modular-build.log
           if ($LASTEXITCODE -ne 0) { throw 'Modular candidate construction failed' }
 
-      - name: Exercise actual product EXE and offline module lifecycle
-        shell: pwsh
-        env:
-          QT_QPA_PLATFORM: windows
-        run: |
-          & $env:BUILD_PYTHON packager/scripts/verify_vision_train_modular_product.py `
-            --build-summary modular-candidate/reports/modular-build-summary.json `
-            --output modular-acceptance --pt-timeout 1800 `
-            2>&1 | Tee-Object reports/modular-acceptance.log
-          if ($LASTEXITCODE -ne 0) { throw 'Real modular product acceptance failed' }
-
-      - name: Print bounded hash-bound candidate report projections
-        if: always()
-        shell: pwsh
-        run: |
-          python -I -S -B packager/scripts/report_vision_train_modular_candidate.py --build modular-candidate/reports --product modular-acceptance/reports
-          if ($LASTEXITCODE -ne 0) { throw 'Candidate log projection failed; full reports remain in the artifact' }
-
-      - name: Upload candidate evidence independently
+      - name: Upload candidate build evidence independently
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
@@ -335,8 +317,6 @@ jobs:
             modular-reuse/*.json
             modular-crt/reports/**
             modular-candidate/reports/**
-            modular-acceptance/reports/**
-            modular-acceptance/isolated-user/AppData/Local/VisionWorkshop/logs/**
           if-no-files-found: error
           compression-level: 0
           retention-days: 7
@@ -467,6 +447,38 @@ jobs:
         with:
           name: visionworkshop-module-resource.patchcore-dino-${{ github.run_id }}-${{ github.run_attempt }}
           path: modular-candidate/archives/resource.patchcore-dino-*.zip
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
+      - name: Exercise actual product EXE and offline module lifecycle
+        if: ${{ !cancelled() && steps.build-candidate.outcome == 'success' }}
+        shell: pwsh
+        env:
+          QT_QPA_PLATFORM: windows
+        run: |
+          & $env:BUILD_PYTHON packager/scripts/verify_vision_train_modular_product.py `
+            --build-summary modular-candidate/reports/modular-build-summary.json `
+            --output modular-acceptance --pt-timeout 1800 `
+            2>&1 | Tee-Object reports/modular-acceptance.log
+          if ($LASTEXITCODE -ne 0) { throw 'Real modular product acceptance failed' }
+
+      - name: Print bounded hash-bound candidate report projections
+        if: always()
+        shell: pwsh
+        run: |
+          python -I -S -B packager/scripts/report_vision_train_modular_candidate.py --build modular-candidate/reports --product modular-acceptance/reports
+          if ($LASTEXITCODE -ne 0) { throw 'Candidate log projection failed; full reports remain in the artifact' }
+
+      - name: Upload candidate product evidence independently
+        if: ${{ !cancelled() && steps.build-candidate.outcome == 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: visionworkshop-modular-product-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            reports/modular-acceptance.log
+            modular-acceptance/reports/**
+            modular-acceptance/isolated-user/AppData/Local/VisionWorkshop/logs/**
           if-no-files-found: error
           compression-level: 0
           retention-days: 7
