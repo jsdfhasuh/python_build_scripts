@@ -45,7 +45,10 @@ jobs:
           startsWith(github.workflow_ref, 'jsdfhasuh/emo_master_ci/.github/workflows/dispatch-windows-package-candidate.yml@refs/tags/ci-worker-'))) &&
         github.workflow_sha == vars.EMO_CI_CANDIDATE_WORKER_SHA &&
         github.actor_id == vars.EMO_CI_CANDIDATE_BROKER_ACTOR_ID &&
-        github.run_attempt == '1'))
+        github.run_attempt == '1') ||
+       (github.event_name == 'workflow_dispatch' && github.ref == 'refs/tags/ci-worker-buildonly-review-20261127' && github.actor_id == '49879362' && github.run_attempt == '1' &&
+        ((inputs.designer_only && !inputs.runtime_only && github.workflow_ref == 'jsdfhasuh/emo_master_ci/.github/workflows/dispatch-windows-package-candidate.yml@refs/tags/ci-worker-buildonly-review-20261127') ||
+         (inputs.runtime_only && !inputs.designer_only && github.workflow_ref == 'jsdfhasuh/emo_master_ci/.github/workflows/dispatch-runtime-windows-candidate.yml@refs/tags/ci-worker-buildonly-review-20261127'))))
     runs-on: windows-latest
     timeout-minutes: 90
     strategy:
