@@ -350,12 +350,17 @@ class WorkflowSafetyTests(unittest.TestCase):
     self.assertIn('git merge-base --is-ancestor', merged['run'])
     app_merge, = [step for step in steps if step.get('name') == 'Checkout and verify exact application source']
     self.assertIn('git -C app merge-base --is-ancestor', app_merge['run'])
-    publish, = [step for step in steps if step.get('name') == 'Publish Preview to the existing public release repository']
-    self.assertEqual(publish['env']['GH_TOKEN'], '${{ secrets.RELEASE_REPO_TOKEN }}')
-    self.assertIn('jsdfhasuh/emo-vision-train-release', publish['run'])
-    self.assertIn('--prerelease', publish['run'])
-    self.assertIn('RELEASE_REPO_TOKEN is not configured', publish['run'])
-    verify, = [step for step in steps if step.get('name') == 'Verify uploaded Preview assets']
+    create_draft, = [step for step in steps if step.get('name') == 'Create draft Preview with verified assets']
+    self.assertEqual(create_draft['env']['GH_TOKEN'], '${{ secrets.RELEASE_REPO_TOKEN }}')
+    self.assertIn('jsdfhasuh/emo-vision-train-release', create_draft['run'])
+    self.assertIn('--draft --prerelease', create_draft['run'])
+    self.assertIn('RELEASE_REPO_TOKEN is not configured', create_draft['run'])
+    verify_draft, = [step for step in steps if step.get('name') == 'Verify draft Preview assets before publication']
+    self.assertIn('isDraft', verify_draft['run'])
+    self.assertIn('expected-release-assets.txt', verify_draft['run'])
+    publish, = [step for step in steps if step.get('name') == 'Publish the verified Preview']
+    self.assertIn('draft=false', publish['run'])
+    verify, = [step for step in steps if step.get('name') == 'Verify published Preview']
     self.assertIn('isPrerelease', verify['run'])
     self.assertIn('expected-release-assets.txt', verify['run'])
 
