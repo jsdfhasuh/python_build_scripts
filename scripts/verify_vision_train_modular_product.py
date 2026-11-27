@@ -353,6 +353,17 @@ def checkCase(executable, case, reports, name, environment, core, expectedIdenti
         or not str(result.get('worker_full_import_audit', '')).startswith('NOT_RUN;')
         or result.get('torch_module_installed') is not ('runtime.torch' in expectedIdentity['modules'])):
       raise RuntimeError('DINO worker lifecycle evidence overstates or mismatches its tested scope: ' + name)
+  if case == 'yolo':
+    result = report.get('result', {})
+    metadata = result.get('metadata_compatibility', {})
+    expected_ultralytics = core['catalog']['feature.yolo']['distributions']['ultralytics']
+    expected_torch = core['catalog']['runtime.torch']['distributions']['torch']
+    if (metadata.get('status') != 'PASS'
+        or metadata.get('ultralytics_version') != expected_ultralytics
+        or metadata.get('torch_version') != expected_torch
+        or not metadata.get('requirements')
+        or metadata.get('violations') != []):
+      raise RuntimeError('YOLO product run did not verify exact installed Ultralytics/Torch metadata: ' + name)
   for package, origin in report['loaded_packages'].items():
     owner = 'core' if package in core['import_roots'] else next(
       (module for module, item in core['catalog'].items() if package in item['import_roots']), None)
@@ -558,7 +569,7 @@ def main(argv=None) -> int:
                     compatibility_findings=build['compatibility_findings'],
                     release_gate='NOT_QUALIFIED', limitations=[
                       'Physical GPU execution not qualified',
-                      'Pinned Ultralytics metadata excludes the selected Torch version',
+                      'YOLO metadata compatibility is checked against the installed distributions; only the controlled CPU fixture is covered',
                       'Controlled fixtures do not qualify existing business models or all annotation workflows',
                       'DINO worker checks cover CPU inspect and negative/cancelled sessions, not model predictions or full worker import auditing',
                       'Core upgrades and power-loss recovery are not covered by this matrix'])
