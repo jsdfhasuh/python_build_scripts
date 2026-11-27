@@ -348,7 +348,7 @@ class WorkflowSafetyTests(unittest.TestCase):
     self.assertIn('v{version}-preview.1', request['run'])
     merged, = [step for step in steps if step.get('name') == 'Verify candidate run and merged builder source']
     self.assertIn('git merge-base --is-ancestor', merged['run'])
-    app_merge, = [step for step in steps if step.get('name') == 'Verify application source is merged into main']
+    app_merge, = [step for step in steps if step.get('name') == 'Checkout and verify exact application source']
     self.assertIn('git -C app merge-base --is-ancestor', app_merge['run'])
     publish, = [step for step in steps if step.get('name') == 'Publish Preview to the existing public release repository']
     self.assertEqual(publish['env']['GH_TOKEN'], '${{ secrets.RELEASE_REPO_TOKEN }}')
