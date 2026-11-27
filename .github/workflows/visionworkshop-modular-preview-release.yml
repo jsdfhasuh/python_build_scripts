@@ -1,0 +1,172 @@
+name: Publish VisionWorkshop modular Preview
+
+on:
+  push:
+    branches:
+      - 'release-requests/**'
+    paths:
+      - 'ci/visionworkshop-modular-release-request.json'
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: visionworkshop-modular-preview-\${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Checkout the immutable release request
+        uses: actions/checkout@v7
+        with:
+          ref: \${{ github.sha }}
+          persist-credentials: false
+
+      - name: Validate Preview request
+        shell: bash
+        run: |
+          python -I -S -B - <<'PY'
+          import json, os, re
+          from pathlib import Path
+          request = json.loads(Path("ci/visionworkshop-modular-release-request.json").read_text(encoding="utf-8"))
+          required = {
+              "candidate_run_id", "candidate_run_attempt", "candidate_builder_sha",
+              "app_sha", "core_version", "max_core_version", "build_id",
+              "tag_name", "release_title", "expected_case_count", "release_repo",
+          }
+          if set(request) != required:
+              raise SystemExit("Release request fields differ from the reviewed schema")
+          if type(request["candidate_run_id"]) is not int or request["candidate_run_id"] <= 0:
+              raise SystemExit("Invalid candidate run ID")
+          if type(request["candidate_run_attempt"]) is not int or request["candidate_run_attempt"] <= 0:
+              raise SystemExit("Invalid candidate attempt")
+          for field in ("candidate_builder_sha", "app_sha"):
+              if not re.fullmatch(r"[0-9a-f]{40}", request[field]):
+                  raise SystemExit(f"Invalid {field}")
+          version = request["core_version"]
+          if not re.fullmatch(r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)", version):
+              raise SystemExit("Core version must be stable major.minor.patch")
+          if request["tag_name"] != f"v{version}-preview.1":
+              raise SystemExit("Only the matching first Preview tag may be published")
+          if request["release_repo"] != "jsdfhasuh/emo-vision-train-release":
+              raise SystemExit("Unexpected release repository")
+          if request["expected_case_count"] != 26:
+              raise SystemExit("Unexpected product acceptance case count")
+          if not request["build_id"].startswith(version + "+"):
+              raise SystemExit("Build identity does not match Core version")
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as env:
+              env.write(f"CANDIDATE_RUN_ID={request['candidate_run_id']}\n")
+              env.write(f"CANDIDATE_RUN_ATTEMPT={request['candidate_run_attempt']}\n")
+              env.write(f"CANDIDATE_BUILDER_SHA={request['candidate_builder_sha']}\n")
+              env.write(f"APP_SHA={request['app_sha']}\n")
+              env.write(f"CORE_VERSION={request['core_version']}\n")
+              env.write(f"TAG_NAME={request['tag_name']}\n")
+              env.write(f"RELEASE_TITLE={request['release_title']}\n")
+              env.write(f"RELEASE_REPO={request['release_repo']}\n")
+          PY
+
+      - name: Verify candidate run and merged builder source
+        env:
+          GH_TOKEN: \${{ github.token }}
+        shell: bash
+        run: |
+          gh api "repos/\${GITHUB_REPOSITORY}/actions/runs/\${CANDIDATE_RUN_ID}" > "$RUNNER_TEMP/candidate-run.json"
+          python -I -S -B - <<'PY'
+          import json, os
+          from pathlib import Path
+          run = json.loads(Path(os.environ["RUNNER_TEMP"] + "/candidate-run.json").read_text(encoding="utf-8"))
+          expected = {
+              "status": "completed",
+              "conclusion": "success",
+              "head_sha": os.environ["CANDIDATE_BUILDER_SHA"],
+              "run_attempt": int(os.environ["CANDIDATE_RUN_ATTEMPT"]),
+          }
+          for key, value in expected.items():
+              if run.get(key) != value:
+                  raise SystemExit(f"Candidate run {key} mismatch: {run.get(key)!r}")
+          PY
+          git fetch --no-tags origin master
+          git merge-base --is-ancestor "$CANDIDATE_BUILDER_SHA" FETCH_HEAD || {
+            echo "::error::Candidate builder commit is not merged into master"
+            exit 1
+          }
+
+      - name: Checkout the exact application installation guide
+        uses: actions/checkout@v7
+        with:
+          repository: jsdfhasuh/emo-vision-train
+          ref: \${{ env.APP_SHA }}
+          path: app
+          token: \${{ github.token }}
+          persist-credentials: false
+
+      - name: Download the exact candidate artifacts
+        env:
+          GH_TOKEN: \${{ github.token }}
+        shell: bash
+        run: |
+          gh run download "$CANDIDATE_RUN_ID" --repo "$GITHUB_REPOSITORY" --dir "$RUNNER_TEMP/visionworkshop-artifacts"
+
+      - name: Prepare and verify release assets
+        shell: bash
+        run: |
+          python -I -S -B scripts/prepare_visionworkshop_modular_release.py \
+            --artifacts-root "$RUNNER_TEMP/visionworkshop-artifacts" \
+            --request ci/visionworkshop-modular-release-request.json \
+            --install-guide app/docs/offline-modules.md \
+            --output "$RUNNER_TEMP/visionworkshop-release-assets"
+          find "$RUNNER_TEMP/visionworkshop-release-assets" -maxdepth 1 -type f -printf '%f\n' | sort \
+            > "$RUNNER_TEMP/expected-release-assets.txt"
+
+      - name: Publish Preview to the existing public release repository
+        env:
+          GH_TOKEN: \${{ secrets.RELEASE_REPO_TOKEN }}
+        shell: bash
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::error::RELEASE_REPO_TOKEN is not configured; no new token is requested or created"
+            exit 1
+          fi
+          if gh release view "$TAG_NAME" --repo "$RELEASE_REPO" >/dev/null 2>&1; then
+            echo "::error::Release tag already exists; refusing to overwrite it"
+            exit 1
+          fi
+          if gh api "repos/$RELEASE_REPO/git/ref/tags/$TAG_NAME" >/dev/null 2>&1; then
+            echo "::error::Release tag already exists without a Release; refusing to overwrite it"
+            exit 1
+          fi
+          mapfile -t assets < <(find "$RUNNER_TEMP/visionworkshop-release-assets" -maxdepth 1 -type f | sort)
+          gh release create "$TAG_NAME" "\${assets[@]}" \
+            --repo "$RELEASE_REPO" \
+            --title "$RELEASE_TITLE" \
+            --notes-file "$RUNNER_TEMP/visionworkshop-release-assets/RELEASE_NOTES.md" \
+            --prerelease
+
+      - name: Verify uploaded Preview assets
+        env:
+          GH_TOKEN: \${{ secrets.RELEASE_REPO_TOKEN }}
+        shell: bash
+        run: |
+          gh release view "$TAG_NAME" --repo "$RELEASE_REPO" --json tagName,isPrerelease,assets \
+            > "$RUNNER_TEMP/published-release.json"
+          python -I -S -B - <<'PY'
+          import json, os
+          from pathlib import Path
+          release = json.loads(Path(os.environ["RUNNER_TEMP"] + "/published-release.json").read_text(encoding="utf-8"))
+          expected = set(Path(os.environ["RUNNER_TEMP"] + "/expected-release-assets.txt").read_text(encoding="utf-8").splitlines())
+          actual = {asset["name"] for asset in release.get("assets", [])}
+          if release.get("tagName") != os.environ["TAG_NAME"] or release.get("isPrerelease") is not True:
+              raise SystemExit("Published release tag/channel verification failed")
+          if actual != expected:
+              raise SystemExit(f"Published asset set mismatch: missing={sorted(expected-actual)}, extra={sorted(actual-expected)}")
+          print(f"Verified {len(actual)} Preview assets for {release['tagName']}")
+          PY
+          gh release view "$TAG_NAME" --repo "$RELEASE_REPO" --json url --jq .url \
+            | tee -a "$GITHUB_STEP_SUMMARY"
