@@ -200,7 +200,7 @@ class ModularPreviewReleaseTests(unittest.TestCase):
     module_dir = self.artifacts / 'visionworkshop-module-runtime.torch-12345-1'
     archive = next(module_dir.glob('*.zip'))
     archive.write_bytes(b'tampered')
-    with self.assertRaisesRegex(ValueError, 'SHA-256 mismatch'):
+    with self.assertRaisesRegex(ValueError, 'byte count mismatch'):
       self._prepare()
 
   def test_rejects_candidate_source_identity_mismatch(self):
