@@ -345,6 +345,7 @@ class WorkflowSafetyTests(unittest.TestCase):
     steps = getSteps(data)
     request, = [step for step in steps if step.get('name') == 'Validate Preview request']
     self.assertIn('candidate_builder_sha', request['run'])
+    self.assertIn('jsdfhasuh/emo-vision-train-release', request['run'])
     self.assertIn('v{version}-preview.1', request['run'])
     merged, = [step for step in steps if step.get('name') == 'Verify candidate run and merged builder source']
     self.assertIn('git merge-base --is-ancestor', merged['run'])
