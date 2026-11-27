@@ -124,7 +124,7 @@ def prepare(args: argparse.Namespace) -> dict:
     require(build.get("packager", {}).get("commit") == request["candidate_builder_sha"],
             "Build packager SHA mismatch")
     require(build.get("core", {}).get("version") == version, "Built Core version mismatch")
-    require(build.get("core", {}).get("build") == request["build_id"], "Built Core build identity mismatch")
+    require(build.get("core", {}).get("build") == expected_identity, "Built Core build identity mismatch")
     require(build.get("module_reuse", {}).get("enabled") is False,
             "Initial Preview must contain freshly built modules")
 
