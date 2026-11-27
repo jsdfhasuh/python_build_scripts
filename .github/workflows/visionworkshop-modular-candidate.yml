@@ -290,6 +290,7 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw 'Pinned guarded bootloader compilation failed' }
             $receipt = Join-Path $bootloader 'bootloader-build.json'
             Copy-Item -LiteralPath $receipt -Destination reports/core-admission-toolchain.json
+            Copy-Item -LiteralPath (Join-Path $bootloader 'runw.exe') -Destination reports/core-admission-runw.exe
             Copy-Item -LiteralPath (Join-Path $bootloader 'waf-build.log') -Destination reports/core-admission-waf.log
             Copy-Item -LiteralPath (Join-Path $bootloader 'upgrade-launcher-build.log') -Destination reports/core-upgrade-launcher-build.log
             $toolchain = Get-Content -LiteralPath $receipt -Raw | ConvertFrom-Json
