@@ -9,7 +9,6 @@ on:
 
 permissions:
   contents: read
-  actions: read
 
 concurrency:
   group: visionworkshop-modular-preview-${{ github.ref }}
