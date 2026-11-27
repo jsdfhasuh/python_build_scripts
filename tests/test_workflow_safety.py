@@ -111,12 +111,27 @@ class WorkflowSafetyTests(unittest.TestCase):
     request = json.loads((ROOT / 'ci/visionworkshop-modular-candidate.json').read_text(encoding='utf-8'))
     self.assertIs(request['guarded_core'], True)
     self.assertEqual((request['reuse_run_id'], request['reuse_run_attempt']), ('', '1'))
+    self.assertEqual((request['core_version'], request['max_core_version'], request['build_id']),
+                     ('1.0.40', '1.1.0', '1.0.40+preview1'))
+    inputs = events['workflow_dispatch']['inputs']
+    for name in ('core_version', 'max_core_version', 'build_id'):
+      self.assertIs(inputs[name]['required'], True)
     validate, = [step['run'] for step in getSteps(data) if step.get('name') == 'Validate exact application source input']
     self.assertNotIn('$guardedCore -and -not $env:REUSE_RUN_ID', validate)
-    self.assertIn("if ($env:REUSE_RUN_ID) { $reuseArgs = @('--reuse-root', 'modular-reuse') }", 
+    self.assertIn('CORE_VERSION=$env:CORE_VERSION', validate)
+    self.assertIn('MAX_CORE_VERSION=$env:MAX_CORE_VERSION', validate)
+    self.assertIn('BUILD_ID=$env:BUILD_ID', validate)
+    version_check, = [step['run'] for step in getSteps(data)
+                      if step.get('name') == 'Verify Core version matches the application version']
+    self.assertIn('source/app_version.py', version_check)
+    self.assertIn('$appVersion -ne $env:CORE_VERSION', version_check)
+    self.assertIn("if ($env:REUSE_RUN_ID) { $reuseArgs = @('--reuse-root', 'modular-reuse') }",
                   next(step['run'] for step in getSteps(data) if step.get('id') == 'build-candidate'))
     build, = [step['run'] for step in getSteps(data) if step.get('id') == 'build-candidate']
     self.assertIn('build_vision_train_core_bootloader.py', build)
+    self.assertIn('--core-version $env:CORE_VERSION', build)
+    self.assertIn('--max-core-version $env:MAX_CORE_VERSION', build)
+    self.assertIn('--build-id $env:BUILD_ID', build)
     self.assertIn('@reuseArgs @guardArgs', build)
 
   def test_outbound_diagnostic_only_exposes_read_token_during_preparation(self) -> None:
