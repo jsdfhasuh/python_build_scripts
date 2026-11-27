@@ -12,7 +12,7 @@ permissions:
   actions: read
 
 concurrency:
-  group: visionworkshop-modular-preview-\${{ github.ref }}
+  group: visionworkshop-modular-preview-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -26,7 +26,7 @@ jobs:
       - name: Checkout the immutable release request
         uses: actions/checkout@v7
         with:
-          ref: \${{ github.sha }}
+          ref: ${{ github.sha }}
           persist-credentials: false
 
       - name: Validate Preview request
@@ -74,7 +74,7 @@ jobs:
 
       - name: Verify candidate run and merged builder source
         env:
-          GH_TOKEN: \${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           gh api "repos/\${GITHUB_REPOSITORY}/actions/runs/\${CANDIDATE_RUN_ID}" > "$RUNNER_TEMP/candidate-run.json"
@@ -102,9 +102,9 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: jsdfhasuh/emo-vision-train
-          ref: \${{ env.APP_SHA }}
+          ref: ${{ env.APP_SHA }}
           path: app
-          token: \${{ github.token }}
+          token: ${{ github.token }}
           persist-credentials: false
 
       - name: Verify application source is merged into main
@@ -118,7 +118,7 @@ jobs:
 
       - name: Download the exact candidate artifacts
         env:
-          GH_TOKEN: \${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           gh run download "$CANDIDATE_RUN_ID" --repo "$GITHUB_REPOSITORY" --dir "$RUNNER_TEMP/visionworkshop-artifacts"
@@ -136,7 +136,7 @@ jobs:
 
       - name: Publish Preview to the existing public release repository
         env:
-          GH_TOKEN: \${{ secrets.RELEASE_REPO_TOKEN }}
+          GH_TOKEN: ${{ secrets.RELEASE_REPO_TOKEN }}
         shell: bash
         run: |
           if [ -z "$GH_TOKEN" ]; then
@@ -160,7 +160,7 @@ jobs:
 
       - name: Verify uploaded Preview assets
         env:
-          GH_TOKEN: \${{ secrets.RELEASE_REPO_TOKEN }}
+          GH_TOKEN: ${{ secrets.RELEASE_REPO_TOKEN }}
         shell: bash
         run: |
           gh release view "$TAG_NAME" --repo "$RELEASE_REPO" --json tagName,isPrerelease,assets \
