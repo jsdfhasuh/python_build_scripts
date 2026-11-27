@@ -180,6 +180,8 @@ class WorkflowSafetyTests(unittest.TestCase):
 
   def test_candidate_artifacts_are_preserved_before_the_product_gate(self) -> None:
     data, _ = loadWorkflow('visionworkshop-modular-candidate.yml')
+    job = data['jobs']['windows-modular-candidate']
+    self.assertEqual(job['timeout-minutes'], 210)
     steps = getSteps(data)
     actual = [i for i, step in enumerate(steps)
               if 'packager/scripts/verify_vision_train_modular_product.py' in step.get('run', '')]
@@ -194,9 +196,13 @@ class WorkflowSafetyTests(unittest.TestCase):
                       or step.get('name') == 'Upload Core candidate independently'
                       or ' offline candidate' in step.get('name', '')]
     self.assertEqual((len(actual), len(logging), len(build_uploads), len(product_uploads)), (1, 1, 1, 1))
-    self.assertTrue(module_uploads)
+    self.assertEqual(len(module_uploads), 13)
     self.assertLess(build_uploads[0], actual[0])
     self.assertTrue(all(index < actual[0] for index in module_uploads))
+    self.assertTrue(all(
+      steps[index]['if'] == "${{ !cancelled() && steps.build-candidate.outcome == 'success' }}"
+      for index in module_uploads
+    ))
     self.assertLess(actual[0], logging[0])
     self.assertLess(logging[0], product_uploads[0])
     self.assertEqual(steps[build_uploads[0]]['if'], "${{ !cancelled() }}")
