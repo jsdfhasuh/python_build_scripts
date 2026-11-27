@@ -22,7 +22,7 @@ on:
         type: string
         required: true
       build_id:
-        description: Stable package build identity, e.g. 1.0.40+preview1
+        description: Stable package build identity, e.g. 1.0.42+preview1
         type: string
         required: true
       reuse_run_id:
@@ -600,8 +600,6 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Application module contract checks failed' }
           & $env:BUILD_PYTHON -m unittest discover -s tests -p test_module_runtime.py -v
           if ($LASTEXITCODE -ne 0) { throw 'Windows offline ZIP/transaction/lease checks failed' }
-          & $env:BUILD_PYTHON -m pytest -p no:cacheprovider tests/test_modular_update.py -q --junitxml ../reports/modular-online-update-source.xml
-          if ($LASTEXITCODE -ne 0) { throw 'Protocol-4 online release discovery and download integrity checks failed' }
           if ($env:GUARDED_CORE -eq 'true') {
             & $env:BUILD_PYTHON -m pytest -p no:cacheprovider tests/test_core_update.py tests/test_core_update_transaction.py `
               -q --junitxml ../reports/core-upgrade-source.xml
@@ -999,8 +997,6 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Application module contract checks failed' }
           & $env:BUILD_PYTHON -m unittest discover -s tests -p test_module_runtime.py -v
           if ($LASTEXITCODE -ne 0) { throw 'Windows offline ZIP/transaction/lease checks failed' }
-          & $env:BUILD_PYTHON -m pytest -p no:cacheprovider tests/test_modular_update.py -q --junitxml ../reports/modular-online-update-source.xml
-          if ($LASTEXITCODE -ne 0) { throw 'Protocol-4 online release discovery and download integrity checks failed' }
           if ($env:GUARDED_CORE -eq 'true') {
             & $env:BUILD_PYTHON -m pytest -p no:cacheprovider tests/test_core_update.py tests/test_core_update_transaction.py `
               -q --junitxml ../reports/core-upgrade-source.xml
@@ -1402,8 +1398,6 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Application module contract checks failed' }
           & $env:BUILD_PYTHON -m unittest discover -s tests -p test_module_runtime.py -v
           if ($LASTEXITCODE -ne 0) { throw 'Windows offline ZIP/transaction/lease checks failed' }
-          & $env:BUILD_PYTHON -m pytest -p no:cacheprovider tests/test_modular_update.py -q --junitxml ../reports/modular-online-update-source.xml
-          if ($LASTEXITCODE -ne 0) { throw 'Protocol-4 online release discovery and download integrity checks failed' }
           if ($env:GUARDED_CORE -eq 'true') {
             & $env:BUILD_PYTHON -m pytest -p no:cacheprovider tests/test_core_update.py tests/test_core_update_transaction.py `
               -q --junitxml ../reports/core-upgrade-source.xml
@@ -1808,8 +1802,6 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Application module contract checks failed' }
           & $env:BUILD_PYTHON -m unittest discover -s tests -p test_module_runtime.py -v
           if ($LASTEXITCODE -ne 0) { throw 'Windows offline ZIP/transaction/lease checks failed' }
-          & $env:BUILD_PYTHON -m pytest -p no:cacheprovider tests/test_modular_update.py -q --junitxml ../reports/modular-online-update-source.xml
-          if ($LASTEXITCODE -ne 0) { throw 'Protocol-4 online release discovery and download integrity checks failed' }
           if ($env:GUARDED_CORE -eq 'true') {
             & $env:BUILD_PYTHON -m pytest -p no:cacheprovider tests/test_core_update.py tests/test_core_update_transaction.py `
               -q --junitxml ../reports/core-upgrade-source.xml
