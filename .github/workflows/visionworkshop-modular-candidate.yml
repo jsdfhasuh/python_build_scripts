@@ -23,6 +23,11 @@ on:
         type: string
         required: false
         default: '1'
+      guarded_core:
+        description: Build a protocol-4 Core with the native pre-Python startup guard
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: read
@@ -54,11 +59,14 @@ jobs:
           APP_SOURCE_INPUT: ${{ inputs.app_ref }}
           REUSE_RUN_INPUT: ${{ inputs.reuse_run_id }}
           REUSE_ATTEMPT_INPUT: ${{ inputs.reuse_run_attempt }}
+          GUARDED_CORE_INPUT: ${{ inputs.guarded_core }}
         run: |
+          $guardedCore = $false
           if ($env:CANDIDATE_EVENT -eq 'push') {
             $candidate = Get-Content packager/ci/visionworkshop-modular-candidate.json -Raw | ConvertFrom-Json
-            if ((($candidate.PSObject.Properties.Name | Sort-Object) -join ',') -ne 'app_ref,reuse_run_attempt,reuse_run_id') {
-              throw 'The explicit candidate request must contain exactly its three reviewed input fields'
+            $fields = ($candidate.PSObject.Properties.Name | Sort-Object) -join ','
+            if ($fields -notin @('app_ref,reuse_run_attempt,reuse_run_id','app_ref,guarded_core,reuse_run_attempt,reuse_run_id')) {
+              throw 'The explicit candidate request contains unexpected input fields'
             }
             foreach ($field in @('app_ref', 'reuse_run_id', 'reuse_run_attempt')) {
               if ($candidate.$field -isnot [string]) { throw 'Candidate request fields must be strings' }
@@ -66,10 +74,15 @@ jobs:
             $env:APP_SOURCE_REF = $candidate.app_ref
             $env:REUSE_RUN_ID = $candidate.reuse_run_id
             $env:REUSE_RUN_ATTEMPT = $candidate.reuse_run_attempt
+            if ($candidate.PSObject.Properties['guarded_core']) {
+              if ($candidate.guarded_core -isnot [bool]) { throw 'guarded_core must be a Boolean' }
+              $guardedCore = $candidate.guarded_core
+            }
           } elseif ($env:CANDIDATE_EVENT -eq 'workflow_dispatch') {
             $env:APP_SOURCE_REF = $env:APP_SOURCE_INPUT
             $env:REUSE_RUN_ID = $env:REUSE_RUN_INPUT
             $env:REUSE_RUN_ATTEMPT = $env:REUSE_ATTEMPT_INPUT
+            $guardedCore = $env:GUARDED_CORE_INPUT -eq 'true'
           } else {
             throw 'Only explicit candidate requests or workflow dispatch may start this build'
           }
@@ -79,6 +92,8 @@ jobs:
           if (($env:REUSE_RUN_ID -and $env:REUSE_RUN_ID -notmatch '^[1-9][0-9]*$') -or $env:REUSE_RUN_ATTEMPT -notmatch '^[1-9][0-9]*$') {
             throw 'Optional reuse requires positive exact run and attempt numbers'
           }
+          if ($guardedCore -and -not $env:REUSE_RUN_ID) { throw 'A guarded Core candidate requires verified original module ZIPs' }
+          "GUARDED_CORE=$($guardedCore.ToString().ToLowerInvariant())" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
           "APP_SOURCE_REF=$env:APP_SOURCE_REF" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
           "REUSE_RUN_ID=$env:REUSE_RUN_ID" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
           "REUSE_RUN_ATTEMPT=$env:REUSE_RUN_ATTEMPT" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
@@ -260,13 +275,27 @@ jobs:
         run: |
           $reuseArgs = @()
           if ($env:REUSE_RUN_ID) { $reuseArgs = @('--reuse-root', 'modular-reuse') }
+          $guardArgs = @()
+          if ($env:GUARDED_CORE -eq 'true') {
+            $archive = Join-Path $env:RUNNER_TEMP 'pyinstaller-6.18.0.tar.gz'
+            $bootloader = Join-Path $env:RUNNER_TEMP 'visionworkshop-core-bootloader'
+            Invoke-WebRequest 'https://files.pythonhosted.org/packages/9f/b8/0fe3359920b0a4e7008e0e93ff383003763e3eee3eb31a07c52868722960/pyinstaller-6.18.0.tar.gz' -OutFile $archive
+            & $env:BUILD_PYTHON -I -B packager/scripts/build_vision_train_core_bootloader.py `
+              --source-archive $archive --output $bootloader
+            if ($LASTEXITCODE -ne 0) { throw 'Pinned guarded bootloader compilation failed' }
+            $receipt = Join-Path $bootloader 'bootloader-build.json'
+            Copy-Item -LiteralPath $receipt -Destination reports/core-admission-toolchain.json
+            Copy-Item -LiteralPath (Join-Path $bootloader 'waf-build.log') -Destination reports/core-admission-waf.log
+            $digest = (Get-Content -LiteralPath $receipt -Raw | ConvertFrom-Json).bootloader_sha256
+            $guardArgs = @('--core-admission-bootloader', (Join-Path $bootloader 'runw.exe'), $digest)
+          }
           & $env:BUILD_PYTHON packager/scripts/build_vision_train_modular.py build `
             --source-root source --assets-root modular-assets --output modular-candidate `
             --build-python $env:BUILD_PYTHON --runtime-python $env:RUNTIME_PYTHON `
             --install-report reports/runtime-install.json --install-report reports/provider-install.json `
             --torch-install-report reports/runtime-install.json --crt-root modular-crt `
             --build-id "candidate-${{ github.run_id }}-${{ github.run_attempt }}" `
-            @reuseArgs `
+            @reuseArgs @guardArgs `
             2>&1 | Tee-Object reports/modular-build.log
           if ($LASTEXITCODE -ne 0) { throw 'Modular candidate construction failed' }
 

@@ -1,5 +1,6 @@
 """Keep merged diagnostics separate from production publication entrypoints."""
 
+import json
 import unittest
 from pathlib import Path
 
@@ -101,6 +102,18 @@ class WorkflowSafetyTests(unittest.TestCase):
       'ci/visionworkshop-modular-candidate.json',
       '.github/workflows/visionworkshop-modular-candidate.yml',
     ])
+
+  def test_guarded_candidate_keeps_the_original_archive_reuse_required(self) -> None:
+    data, events = loadWorkflow('visionworkshop-modular-candidate.yml')
+    self.assertIs(events['workflow_dispatch']['inputs']['guarded_core']['default'], False)
+    request = json.loads((ROOT / 'ci/visionworkshop-modular-candidate.json').read_text(encoding='utf-8'))
+    self.assertIs(request['guarded_core'], True)
+    self.assertEqual((request['reuse_run_id'], request['reuse_run_attempt']), ('45616400076', '1'))
+    validate, = [step['run'] for step in getSteps(data) if step.get('name') == 'Validate exact application source input']
+    self.assertIn('$guardedCore -and -not $env:REUSE_RUN_ID', validate)
+    build, = [step['run'] for step in getSteps(data) if step.get('id') == 'build-candidate']
+    self.assertIn('build_vision_train_core_bootloader.py', build)
+    self.assertIn('@reuseArgs @guardArgs', build)
 
   def test_outbound_diagnostic_only_exposes_read_token_during_preparation(self) -> None:
     data, events = loadWorkflow('visionworkshop-offline-network.yml')

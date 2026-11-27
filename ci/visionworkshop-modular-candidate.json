@@ -1,5 +1,6 @@
 {
   "reuse_run_id": "45616400076",
   "reuse_run_attempt": "1",
-  "app_ref": "557f9d3ce6acf1b9d452eba07a9188cdf4aa3a27"
+  "app_ref": "1ab966aef653be9f2b0359fa18dbab18bad61e18",
+  "guarded_core": true
 }
