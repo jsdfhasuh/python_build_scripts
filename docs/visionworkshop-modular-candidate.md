@@ -262,11 +262,25 @@ No operation publishes anything.
 ### Optional byte-preserving module ZIP reuse
 
 A Core-only source fix can reuse a completed candidate's module archives by
-explicitly supplying `reuse_run_id` and `reuse_run_attempt`. The current request
-selects application `591f8bef7b2292caf50f4848e3047518e490742c` and the original
-module ZIPs from run `45616400076`, attempt 1. That source run failed its first
-EXE CLI check; its build was `BUILT`. Reuse preserves that failure status and
-does not transfer native qualification to the new candidate.
+explicitly supplying `reuse_run_id` and `reuse_run_attempt`, but only when the
+dependency lock, catalog, manifests and payloads remain compatible.
+
+The earlier request using app `591f8bef7b2292caf50f4848e3047518e490742c` and
+module ZIPs from run `45616400076`, attempt 1, is historical. That source used
+the pre-v8.4.9 dependency identity and is not eligible for the current Torch
+2.10 / Ultralytics 8.4.9 candidate. Its build was `BUILT` but its first EXE CLI
+check failed; that failure remains historical evidence and is not transferred
+into a new candidate.
+
+Current request (2026-11-27) uses app `964b1be` and an empty
+`reuse_run_id`, so the 11 modules are built fresh. Run `45949863344` has
+completed the Core/module build step and is still in product acceptance; no
+artifacts have yet been uploaded. If it completes and all 11 module ZIPs pass
+strict source-run, manifest, dependency-lock, catalog, RECORD and payload
+validation, the next Core-only candidate may reuse those ZIPs with app head
+`9e854055`. If the run times out before upload or any artifact is missing or
+invalid, the next candidate must build all modules with the updated 210-minute
+early-upload workflow.
 
 The scoped Actions read token is available only to the downloader. It requires
 the exact completed run/attempt, source commit, unique nonexpired artifact names
@@ -485,8 +499,7 @@ source gate before downloading reusable artifacts, freezing Core or invoking
 the product EXE. Evidence artifact `15032501325` is 238,312 bytes, with API SHA-256
 `e703bf063a5cc06d2da2aa88159c603bab6490f45168b8589367a17cd3a8fc87`.
 App `fa92b08720726ccf984fdf90d03dc4071a1adf68` updates those three exact string
-expectations to `os.linesep`; production encoding behavior is unchanged. The
-explicit candidate request continues to select the original `45616400076` ZIPs.
+expectations to `os.linesep`; production encoding behavior is unchanged. The historical request was superseded when the Ultralytics source and dependency lock changed for v8.4.9. Run `45949863344` is the first fresh module build under that dependency identity; its archives are not reusable until the run completes and the exact artifacts pass the strict verifier.
 
 [Run 45634156750](https://github.com/jsdfhasuh/python_build_scripts/actions/runs/45634156750)
 at builder `baf33237b9613f69758415ace80f969b0c8a01b4`, app
@@ -545,9 +558,11 @@ Evidence artifact `15039047778` is 73,329,961 bytes, with downloaded SHA-256
 The complete archive identities, receipt proof, actual CLI results, failure and
 report bindings are preserved in
 `docs/evidence/visionworkshop-modular-candidate-45643325579.json`.
-Further Core-only candidates continue to select the original `45616400076`
-source. A reused run's fresh installed report is not automatically treated as
-the original module's retained RECORD provenance.
+The original `45616400076` source is not eligible for the v8.4.9 dependency
+identity. Only the completed `45949863344` run may become a source for the next
+Core build, and only after the strict archive/manifest/RECORD/payload checks.
+A reused run's fresh installed report is not automatically treated as the
+original module's retained RECORD provenance.
 
 [Run 45652987042](https://github.com/jsdfhasuh/python_build_scripts/actions/runs/45652987042)
 at builder `0d48c66b90bf95df45ae8f0a12cc882c87f58b16`, app
@@ -838,7 +853,7 @@ The product change is limited to `modular_product_launcher.configureCore`: it st
 
 Three regression guards exercise real temporary directories and hashed fixture files: one internal registration with all nine ordered preloads, rejection of missing/outside/non-directory declarations before registration, and rejection of an equal-size changed preload. Their operating-system registration/load calls are mocked, so they are source guards rather than native qualification. With the local executor unavailable they are **NOT_RUN locally**; the candidate's existing Windows builder gate must execute all 38 builder tests before construction.
 
-The explicit candidate request retains application `591f8bef7b2292caf50f4848e3047518e490742c` and reusable source run `45616400076` / attempt `1`. Its three fields are reordered only to submit this separately reviewed builder change through the existing request-file trigger. Core will be rebuilt; the 11 module ZIPs must again pass the unchanged immutable-source reuse checks. The full ordinary-EXE acceptance matrix, including real exit codes, remains mandatory. Qt object lifetimes, vendor sources, dependency versions, and release qualification are unchanged.
+The active candidate `45949863344` is a fresh build using app `964b1be` and builder `5e878559`; its Core and 11 module ZIPs were built, while product acceptance and artifact upload remain pending. The next candidate must use app head `9e854055` and builder head `a896772`, rebuild Core, and run the metadata-aware product matrix. It may reuse the 11 ZIPs from `45949863344` only after the source run completes, all artifacts are present, and immutable-source checks pass. Otherwise it must perform a full 11-module build using the 210-minute workflow that uploads build artifacts before product acceptance. The full ordinary-EXE acceptance matrix, including real exit codes, remains mandatory. Qt object lifetimes and release qualification remain separate gates.
 
 The candidate workflow now also prints read-only, bounded report projections after the ordinary product step, even if construction or acceptance fails. They bind each original report's byte count/SHA256 and each chunked projection's separate SHA256. Core/module archive and index identities, all completed case names, discovered process exit reports, complete case results/errors, and the DataLoader finally/worker evidence are retained; large native and file-inventory tables remain in the artifact. Missing reports stay MISSING. Oversized sources/projections or a combined budget breach produce an explicit report ERROR without truncating fields. Six small source-report regressions and the workflow ordering guard are added; these new guards are NOT_RUN locally and run in Windows CI before the long build. The new helper does not change any product result or original evidence file.
 For every nonzero, timed-out or otherwise failed process receipt, the logger also reads the sibling stdout/stderr files derived from its fixed receipt basename. Empty streams are valid; each full stream has its own size/SHA and a 64 KiB read limit. A missing case JSON therefore cannot hide the original startup traceback. Unknown UTF-8 bytes are explicitly escaped without guessing a codepage; excess source/projection budgets remain errors, never truncation.
