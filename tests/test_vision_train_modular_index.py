@@ -102,6 +102,38 @@ class ModuleIndexTests(unittest.TestCase):
   def verify(self):
     return verifyModuleIndex(self.path, self.summary, self.contract)
 
+  def test_core_admission_anchor_is_bound_to_its_core_manifest(self):
+    root = self.root / 'core'
+    state = root / '.core-update'
+    state.mkdir()
+    lock = state / 'launch.lock'
+    marker = state / 'current-trial.json'
+    for guarded, anchor, recovery, expected in (
+        (False, b'', False, 'unguarded'), (True, None, False, 'empty startup lock'),
+        (True, b'bad', False, 'empty startup lock'), (True, b'', True, 'empty startup lock'),
+        (True, b'', False, None)):
+      with self.subTest(guarded=guarded, anchor=anchor, recovery=recovery):
+        core = deepcopy(self.core)
+        if guarded:
+          core['admission_bootloader_sha256'] = 'a' * 64
+        (root / 'core.json').write_bytes(self.contract.canonical_json(core))
+        lock.unlink(missing_ok=True)
+        marker.unlink(missing_ok=True)
+        if anchor is not None:
+          lock.write_bytes(anchor)
+        if recovery:
+          marker.write_bytes(b'{}')
+        path = Path(self.summary['core_archive']['path'])
+        path.unlink()
+        self.summary['core_archive'] = compressPackage(root, path, prefix='VisionWorkshop', dictionaryMiB=1)
+        self.summary.update(core=core, core_sha256=self.contract.manifest_digest(core))
+        if expected:
+          with self.assertRaisesRegex(BuildConfigError, expected):
+            self.write()
+        else:
+          self.write()
+          self.verify()
+
   def replaceIndex(self, document):
     data = self.contract.canonical_json(document)
     self.path.write_bytes(data)

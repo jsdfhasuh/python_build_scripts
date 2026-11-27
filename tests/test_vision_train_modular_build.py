@@ -21,6 +21,7 @@ from vision_train_modular_build import canonicalBytes
 from vision_train_modular_build import copyBranding
 from vision_train_modular_build import copyUltralytics
 from vision_train_modular_build import dependencyRecipe
+from vision_train_modular_build import guardedBootloaderSpec
 from vision_train_modular_build import loadProfile
 from vision_train_modular_build import loadContract
 from vision_train_modular_build import nativeDirectories
@@ -57,6 +58,19 @@ class ModularBuildTests(unittest.TestCase):
     self.root = Path(self.temporary.name)
     self.site = self.root / 'site-packages'
     self.site.mkdir()
+
+  def test_guarded_bootloader_spec_stages_only_the_pinned_input(self):
+    source = self.root / 'runw.exe'
+    source.write_bytes(b'guarded fixture, not a PE')
+    staged = self.root / 'guarded-runw.exe'
+    with self.assertRaisesRegex(BuildConfigError, 'pinned SHA-256'):
+      guardedBootloaderSpec(self.root, source, '0' * 64)
+    self.assertFalse(staged.exists())
+    code = guardedBootloaderSpec(self.root, source, fileHash(source))
+    self.assertEqual(staged.read_bytes(), source.read_bytes())
+    self.assertIn('class GuardedEXE(EXE):', code)
+    self.assertIn(repr(str(staged)), code)
+    compile(code, 'guarded-test.spec', 'exec')
 
   def distribution(self, name, files, *, version='1.0', requires=()):
     metadata = self.site / (name.replace('-', '_') + '-' + version + '.dist-info')

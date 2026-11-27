@@ -12,6 +12,7 @@ from vision_train_modular_reuse import boundedLzmaMember
 
 INDEX_FILE = 'module-index.json'
 INDEX_SCHEMA = 1
+CORE_ADMISSION_LOCK = '.core-update/launch.lock'
 ARCHIVE_FIELDS = ('bytes', 'sha256', 'compression', 'file_count', 'expanded_bytes',
                   'compressed_payload_bytes')
 MODULE_FIELDS = ('module_id', 'version', 'kind', 'core_versions', 'python',
@@ -81,6 +82,19 @@ def validateMembers(archive: zipfile.ZipFile, descriptor: dict, contract,
   return dict(zip(names, members))
 
 
+def validateCoreAdmissionMembers(members: dict, core: dict, contract) -> None:
+  prefix = 'VisionWorkshop/'
+  reserved = {name for name in members
+              if name[len(prefix):].split('/', 1)[0].casefold() == '.core-update'}
+  if 'admission_bootloader_sha256' in core:
+    contract.sha256(core['admission_bootloader_sha256'])
+    lock = prefix + CORE_ADMISSION_LOCK
+    if reserved != {lock} or members[lock].file_size != 0:
+      raise BuildConfigError('Guarded Core ZIP must contain only its empty startup lock in .core-update')
+  elif reserved:
+    raise BuildConfigError('An unguarded Core ZIP may not contain Core update state')
+
+
 def buildIndexDocument(summary: dict, directory: Path, contract) -> dict:
   corePath, coreArchive = archiveDescriptor(summary['core_archive'], directory, contract)
   with zipfile.ZipFile(corePath) as archive:
@@ -90,6 +104,7 @@ def buildIndexDocument(summary: dict, directory: Path, contract) -> dict:
         raise BuildConfigError('Indexed Core ZIP is missing bound metadata: ' + name)
     core, coreBytes = readMetadata(archive, 'VisionWorkshop/' + contract.CORE_FILE, contract)
     lock, lockBytes = readMetadata(archive, 'VisionWorkshop/' + contract.LOCK_FILE, contract)
+    validateCoreAdmissionMembers(members, core, contract)
   verifyArchiveBytes(corePath, coreArchive)
   contract.validate_core(core)
   coreDigest = hashlib.sha256(coreBytes).hexdigest()

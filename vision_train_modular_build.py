@@ -34,6 +34,7 @@ from vision_train_modular_archive import compressPackage
 from vision_train_modular_crt import loadRuntimeProfile
 from vision_train_modular_crt import prepareRuntime
 from vision_train_modular_crt import qualifyVendorCrt
+from vision_train_modular_index import CORE_ADMISSION_LOCK
 from vision_train_modular_index import INDEX_FILE
 from vision_train_modular_index import writeModuleIndex
 from vision_train_modular_receipts import selectSourceStaging
@@ -532,16 +533,44 @@ def qualifyReadlineCompatibility(python: Path, info: dict, site: Path, distribut
     loader.writeReport(reports / 'readline-compatibility.json', record)
 
 
-def buildFrozenCore(python: Path, info: dict, core: Path, metadata: dict,
-                    output: Path, reports: Path, icon: Path, crtRoot: Path, crtProfile: dict) -> None:
+def guardedBootloaderSpec(compiler: Path, source: Path, expected: str) -> str:
+  rejectLinks(source)
+  if not source.is_file() or source.name != 'runw.exe' or fileHash(source) != expected:
+    raise BuildConfigError('The selected guarded runw.exe does not match its pinned SHA-256')
+  staged = compiler / 'guarded-runw.exe'
+  copyFile(source, staged)
+  if fileHash(staged) != expected:
+    raise BuildConfigError('Guarded bootloader changed while copying compiler input')
+  return (
+    'from PyInstaller import __version__ as pyinstaller_version\n'
+    'if pyinstaller_version != "6.18.0":\n'
+    '  raise RuntimeError("Guarded Core requires the pinned PyInstaller 6.18.0")\n'
+    'class GuardedEXE(EXE):\n'
+    '  def _bootloader_file(self, exe, extension=None):\n'
+    '    standard = Path(super()._bootloader_file(exe, extension))\n'
+    '    if standard.name != "runw.exe" or standard.parent.name != "Windows-64bit-intel":\n'
+    '      raise RuntimeError("Guarded Core requires the x64 Windows release windowed bootloader")\n'
+    '    return ' + repr(str(staged)) + '\n')
+
+
+def buildFrozenCore(python: Path, info: dict, core: Path, metadata: dict, output: Path, reports: Path,
+                    icon: Path, crtRoot: Path, crtProfile: dict, *,
+                    admissionBootloader: Path | None = None) -> None:
   compiler = output / 'compiler-input'
   compiler.mkdir()
+  admissionSha = metadata.get('admission_bootloader_sha256')
+  if (admissionBootloader is not None) != ('admission_bootloader_sha256' in metadata):
+    raise BuildConfigError('Guarded Core must bind its bootloader in the embedded metadata')
+  guardSpec = (guardedBootloaderSpec(compiler, admissionBootloader, admissionSha)
+               if admissionBootloader is not None else '')
   template = (ROOT / 'scripts/modular_product_launcher.py').read_text(encoding='utf-8')
   marker = "EMBEDDED_CORE_JSON = '__BUILD_CORE_JSON__'"
   if template.count(marker) != 1:
     raise BuildConfigError('The stdlib launcher template is not unique')
   entry = compiler / 'visionworkshop_core.py'
   embedded = (core / 'core.json').read_bytes()
+  if guardSpec and json.loads(embedded).get('admission_bootloader_sha256') != admissionSha:
+    raise BuildConfigError('Embedded Core admission identity differs from the selected bootloader')
   entry.write_text(template.replace(marker, 'EMBEDDED_CORE_JSON = '
                    + repr(embedded.decode('utf-8'))), encoding='utf-8')
   replacements = {name: str(crtRoot / 'dlls' / name)
@@ -553,7 +582,7 @@ def buildFrozenCore(python: Path, info: dict, core: Path, metadata: dict,
   hidden = loader.collectStdlibModules(info)
   specification = compiler / 'VisionWorkshop.spec'
   specification.write_text(
-    'import json\nfrom pathlib import Path\n'
+    'import json\nfrom pathlib import Path\n' + guardSpec +
     'a = Analysis(' + repr([str(entry)]) + ', pathex=[], binaries=' + repr(native) + ', datas=[],\n'
     '  hiddenimports=' + pprint.pformat(hidden) + ',\n'
     '  hookspath=[], runtime_hooks=[], excludes=' + repr(sorted(excluded)) + ', noarchive=False)\n'
@@ -567,7 +596,8 @@ def buildFrozenCore(python: Path, info: dict, core: Path, metadata: dict,
     '  "original_binaries": original_binaries, "reviewed_crt_replacements": replacements\n'
     '}), encoding="utf-8")\n'
     'pyz = PYZ(a.pure)\n'
-    'exe = EXE(pyz, a.scripts, [], exclude_binaries=True, name="VisionWorkshop",\n'
+    'exe = ' + ('GuardedEXE' if guardSpec else 'EXE') +
+    '(pyz, a.scripts, [], exclude_binaries=True, name="VisionWorkshop",\n'
     '  debug=False, bootloader_ignore_signals=False, strip=False, upx=False, console=False,\n'
     '  icon=' + repr(str(icon)) + ')\n'
     'coll = COLLECT(exe, a.binaries, a.datas, strip=False, upx=False, name="VisionWorkshop")\n',
@@ -581,6 +611,11 @@ def buildFrozenCore(python: Path, info: dict, core: Path, metadata: dict,
                     '--distpath', str(output / 'compiler-output'),
                     '--workpath', str(output / 'compiler-work'), str(specification)],
                    reports, 'core-build', timeout=900, cwd=compiler, env=environment)
+  if guardSpec:
+    if fileHash(compiler / 'guarded-runw.exe') != admissionSha:
+      raise BuildConfigError('Guarded bootloader changed during the build')
+    loader.writeReport(reports / 'core-admission-bootloader.json', {'sha256': admissionSha,
+      'pyinstaller': '6.18.0', 'lock_file': CORE_ADMISSION_LOCK})
   analysis = json.loads((reports / 'core-analysis.json').read_text(encoding='utf-8'))
   sourceSets = {}
   for key in ('original_binaries', 'binaries'):
@@ -620,6 +655,10 @@ def buildFrozenCore(python: Path, info: dict, core: Path, metadata: dict,
   built = output / 'compiler-output/VisionWorkshop'
   copyFile(built / 'VisionWorkshop.exe', core / 'VisionWorkshop.exe')
   copyTree(built / '_internal', core / '_internal')
+  if guardSpec:
+    admissionLock = core / CORE_ADMISSION_LOCK
+    admissionLock.parent.mkdir()
+    admissionLock.touch(exist_ok=False)
   for record in metadata['preload_dlls']:
     if fileHash(core / record['path']) != record['sha256']:
       raise BuildConfigError('Frozen Core ABI DLL differs from the selected interpreter')
@@ -741,6 +780,11 @@ def buildCandidate(args) -> dict:
         ('python/', 'site-packages/', 'native/'))],
       'native_dlls': [record for record in records if record['path'].lower().endswith('.dll')],
     }
+    admissionBootloader = None
+    if args.core_admission_bootloader:
+      path, digest = args.core_admission_bootloader
+      admissionBootloader = Path(path).absolute()
+      metadata['admission_bootloader_sha256'] = contract.sha256(digest)
     contract.validate_core(metadata)
     writeCanonical(core / contract.CORE_FILE, metadata, encoder=contract.canonical_json,
                     maximumBytes=contract.MAX_METADATA)
@@ -791,7 +835,8 @@ def buildCandidate(args) -> dict:
       'source_receipt': reuse['receipt'] if reuse else None,
       'scope': 'Original ZIP verification; the new Core and full EXE matrix are independent'})
     buildFrozenCore(args.build_python.resolve(), buildInfo, core, metadata, output, reports,
-                     Path(branding['icon_source']), crtRoot, crtProfile)
+                     Path(branding['icon_source']), crtRoot, crtProfile,
+                     admissionBootloader=admissionBootloader)
     records = fileRecords(core)
     pythonFiles = [record for record in records if loader.isInterpreterFile(Path(record['path']))]
     if {record['path'] for record in pythonFiles} != {'_internal/python312.dll', '_internal/python3.dll'}:
@@ -851,10 +896,14 @@ def parseArgs(argv=None):
   parser.add_argument('--crt-root', type=Path)
   parser.add_argument('--reuse-root', type=Path,
                       help='Optional exact completed-run artifacts; absent means build every module ZIP')
+  parser.add_argument('--core-admission-bootloader', nargs=2, metavar=('RUNW.EXE', 'SHA256'),
+                      help='Build a guarded protocol-4 Core using a pinned local bootloader')
   parser.add_argument('--core-version', default='0.0.0')
   parser.add_argument('--max-core-version', default='0.0.1')
   parser.add_argument('--build-id', default=time.strftime('%Y%m%dT%H%M%SZ', time.gmtime()))
   args = parser.parse_args(argv)
+  if args.core_admission_bootloader and args.operation != 'build':
+    parser.error('--core-admission-bootloader is only for a protocol-4 candidate build')
   if args.operation in ('assets', 'build') and (args.source_root is None or args.assets_root is None):
     parser.error('--source-root and an isolated --assets-root are required for assets/build')
   if args.operation == 'crt' and args.source_root is None:

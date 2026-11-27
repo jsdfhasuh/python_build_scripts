@@ -19,7 +19,7 @@ from scripts.verify_vision_train_modular_product import (
 )
 from scripts.verify_vision_train_modules import writeReport
 from vision_train_modular_build import loadContract
-from vision_train_modular_index import readMetadata, validateMembers
+from vision_train_modular_index import readMetadata, validateCoreAdmissionMembers, validateMembers
 from vision_train_runtime import ioPath
 
 
@@ -89,11 +89,12 @@ def stageTarget(archivePath: Path, output: Path, index: dict, descriptor: dict, 
       members = validateMembers(archive, descriptor, contract, core=True)
       relative = {name.removeprefix('VisionWorkshop/'): member.file_size
                   for name, member in members.items()}
-      require({name.split('/', 1)[0] for name in relative} == CORE_ROOTS,
-              'Target archive contains unexpected Core roots')
       target, raw = readMetadata(archive, 'VisionWorkshop/core.json', contract)
       _, lockRaw = readMetadata(archive, 'VisionWorkshop/dependency-lock.json', contract)
       contract.validate_core(target)
+      validateCoreAdmissionMembers(members, target, contract)
+      roots = {name.split('/', 1)[0] for name in relative}
+      require(roots - {'.core-update'} == CORE_ROOTS, 'Target archive contains unexpected Core roots')
       coreSha = hashlib.sha256(raw).hexdigest()
       lockSha = hashlib.sha256(lockRaw).hexdigest()
       require(coreSha == index['core']['manifest_sha256'] and target['build'] == index['build']
