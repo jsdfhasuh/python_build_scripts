@@ -22,7 +22,7 @@ on:
         type: string
         required: true
       build_id:
-        description: Stable package build identity, e.g. 1.0.40+preview1
+        description: Stable package build identity, e.g. 1.0.42+preview1
         type: string
         required: true
       reuse_run_id:
