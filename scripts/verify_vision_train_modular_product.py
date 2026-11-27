@@ -537,7 +537,10 @@ def main(argv=None) -> int:
     checkpoint('complete-install-and-activation')
     for case, timeout in (('torch', 300), ('dataloader-spawn', 360), ('ort', 300),
                           ('dino', 300), ('dino-worker', 600), ('sklearn', 180),
-                          ('image-simplification', 240), ('cnn-pretrained', 180),
+                          ('image-simplification', 240),
+                          # The previous exact-Core CI run hit 180s; local same-Core supplement measured 147.5s.
+                          # Keep the model, inputs and assertions unchanged; allow bounded Windows-runner headroom.
+                          ('cnn-pretrained', 300),
                           ('dino-pretrained', 240), ('yolo-pretrained', 300),
                           ('yolo', 900), ('pt', args.pt_timeout)):
       summary['cases'].append(checkCase(executable, case, reports, case + '-full',

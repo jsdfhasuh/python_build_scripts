@@ -66,7 +66,7 @@
   "vendor": {
     "ultralytics": {
       "path": "ultralytics",
-      "commit": "74b2b91e5c4420af47875801b8e13333ab7026ac",
+      "commit": "a8b639bc35aa3d43efdde6691e5706a5525d8db6",
       "owner": "feature.yolo"
     },
     "anylabeling": {
