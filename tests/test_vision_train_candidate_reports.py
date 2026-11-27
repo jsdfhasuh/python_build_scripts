@@ -9,9 +9,50 @@ import unittest
 from unittest.mock import patch
 
 from scripts import report_vision_train_modular_candidate as reports
+from scripts import verify_vision_train_modular_product as product
 
 
 class CandidateReportTests(unittest.TestCase):
+  def test_yolo_product_case_requires_exact_installed_vendor_and_torch_metadata(self):
+    with tempfile.TemporaryDirectory() as directory:
+      executable = Path(directory) / 'VisionWorkshop.exe'
+      identity = {'modules': {'runtime.ort': 'a' * 64,
+                              'runtime.torch': 'b' * 64,
+                              'feature.yolo': 'c' * 64}}
+      core = {'catalog': {
+        'feature.yolo': {'distributions': {'ultralytics': '8.4.9'}},
+        'runtime.torch': {'distributions': {'torch': '2.10.0+cu128'}},
+      }}
+      report = {
+        'status': 'PASS', 'case': 'yolo', 'frozen': True, 'python': '3.12.10',
+        'platform': 'win32', 'pid': 42, 'executable': str(executable),
+        'runtime_identity': identity, 'network_attempts': [], 'loaded_packages': {},
+        'inert_pth': {'status': 'PASS', 'module_id': 'runtime.ort',
+                      'manifest_sha256': identity['modules']['runtime.ort'],
+                      'COLOREDLOGS_AUTO_INSTALL': '1', 'imported_during_mount': False,
+                      'normal_import_succeeded': True},
+        'result': {'metadata_compatibility': {
+          'status': 'PASS', 'ultralytics_version': '8.4.9',
+          'torch_version': '2.10.0+cu128',
+          'requirements': ['torch>=1.8.0',
+                           'torch!=2.4.0,>=1.8.0; sys_platform == "win32"'],
+          'violations': [],
+        }},
+      }
+      process = {'pid': 42, 'report_sha256': 'd' * 64}
+      with patch.object(product, 'invoke', return_value=(report, process)):
+        accepted = product.checkCase(executable, 'yolo', Path(directory), 'yolo-full',
+                                     {}, core, identity)
+      self.assertEqual(accepted['status'], 'PASS')
+      self.assertEqual(accepted['result']['metadata_compatibility']['torch_version'], '2.10.0+cu128')
+
+      mismatched = deepcopy(report)
+      mismatched['result']['metadata_compatibility']['torch_version'] = '2.9.1'
+      with patch.object(product, 'invoke', return_value=(mismatched, process)):
+        with self.assertRaisesRegex(RuntimeError, 'exact installed Ultralytics/Torch metadata'):
+          product.checkCase(executable, 'yolo', Path(directory), 'yolo-full',
+                            {}, core, identity)
+
   def roots(self, directory):
     root = Path(directory).resolve()
     build, product = root / 'build', root / 'product'
