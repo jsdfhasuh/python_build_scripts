@@ -180,6 +180,11 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Application module contract checks failed' }
           & $env:BUILD_PYTHON -m unittest discover -s tests -p test_module_runtime.py -v
           if ($LASTEXITCODE -ne 0) { throw 'Windows offline ZIP/transaction/lease checks failed' }
+          if ($env:GUARDED_CORE -eq 'true') {
+            & $env:BUILD_PYTHON -m pytest -p no:cacheprovider tests/test_core_update.py tests/test_core_update_transaction.py `
+              -q --junitxml ../reports/core-upgrade-source.xml
+            if ($LASTEXITCODE -ne 0) { throw 'Offline Core upgrade preparation and recovery checks failed' }
+          }
           & $env:BUILD_PYTHON -m pytest -p no:cacheprovider tests/test_module_repair.py `
             tests/test_module_runtime_check_annotation.py tests/test_offline_fonts.py `
             tests/test_module_runtime_check_resources.py `
@@ -286,8 +291,10 @@ jobs:
             $receipt = Join-Path $bootloader 'bootloader-build.json'
             Copy-Item -LiteralPath $receipt -Destination reports/core-admission-toolchain.json
             Copy-Item -LiteralPath (Join-Path $bootloader 'waf-build.log') -Destination reports/core-admission-waf.log
-            $digest = (Get-Content -LiteralPath $receipt -Raw | ConvertFrom-Json).bootloader_sha256
-            $guardArgs = @('--core-admission-bootloader', (Join-Path $bootloader 'runw.exe'), $digest)
+            Copy-Item -LiteralPath (Join-Path $bootloader 'upgrade-launcher-build.log') -Destination reports/core-upgrade-launcher-build.log
+            $toolchain = Get-Content -LiteralPath $receipt -Raw | ConvertFrom-Json
+            $guardArgs = @('--core-admission-bootloader', (Join-Path $bootloader 'runw.exe'), $toolchain.bootloader_sha256,
+                           '--core-upgrade-launcher', (Join-Path $bootloader 'VisionWorkshopLauncher.exe'), $toolchain.upgrade_launcher_sha256)
           }
           & $env:BUILD_PYTHON packager/scripts/build_vision_train_modular.py build `
             --source-root source --assets-root modular-assets --output modular-candidate `

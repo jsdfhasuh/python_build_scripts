@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -18,6 +19,32 @@ from build_records import rejectLinks
 VERSION = '6.18.0'
 SOURCE_SHA256 = 'cdc507542783511cad4856fce582fdc37e9f29665ca596889c663c83ec8c6ec9'
 MAIN_SHA256 = '261f79aeb9dc82d8c4a7386727628e00181570fc029b407e7fc3849ae32d053f'
+
+
+def buildLauncher(output: Path) -> dict:
+  source = Path(__file__).resolve().parent / 'native/core-upgrade-launcher.c'
+  vswhere = Path(os.environ['ProgramFiles(x86)']) / 'Microsoft Visual Studio/Installer/vswhere.exe'
+  setup = subprocess.check_output([
+    str(vswhere), '-latest', '-products', '*', '-requires', 'Microsoft.VisualStudio.Component.VC.Tools.x86.x64',
+    '-find', r'VC\Auxiliary\Build\vcvars64.bat', '-utf8',
+  ], encoding='utf-8').strip()
+  if not setup or not Path(setup).is_file():
+    raise BuildConfigError('The x64 MSVC developer environment is unavailable')
+  script = output / 'build-upgrade-launcher.cmd'
+  script.write_text(
+    '@echo off\n'
+    f'call "{setup}"\n'
+    'if errorlevel 1 exit /b %errorlevel%\n'
+    f'cl.exe /nologo /std:c17 /O2 /W4 /WX /MT /DUNICODE /D_UNICODE "{source}" '
+    '/Fe:VisionWorkshopLauncher.exe /link /SUBSYSTEM:WINDOWS /Brepro shell32.lib bcrypt.lib\n'
+    'exit /b %errorlevel%\n', encoding='utf-8')
+  log = output / 'upgrade-launcher-build.log'
+  with log.open('xb') as stream:
+    subprocess.run(['cmd.exe', '/d', '/c', script.name], cwd=output, stdout=stream,
+                   stderr=subprocess.STDOUT, check=True, timeout=180)
+  launcher = output / 'VisionWorkshopLauncher.exe'
+  return {'upgrade_launcher': str(launcher), 'upgrade_launcher_sha256': fileHash(launcher),
+          'upgrade_launcher_source_sha256': fileHash(source), 'upgrade_launcher_log_sha256': fileHash(log)}
 
 
 def build(sourceArchive: Path, output: Path) -> dict:
@@ -61,6 +88,7 @@ def build(sourceArchive: Path, output: Path) -> dict:
              'upstream_main_sha256': MAIN_SHA256, 'patched_main_sha256': fileHash(main),
              'guard_source_sha256': fileHash(header), 'waf_build_log_sha256': fileHash(log),
              'bootloader_sha256': fileHash(binary), 'bootloader': str(binary)}
+  receipt.update(buildLauncher(output))
   (output / 'bootloader-build.json').write_text(json.dumps(receipt, indent=2) + '\n', encoding='utf-8')
   return receipt
 

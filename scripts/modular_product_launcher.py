@@ -76,6 +76,10 @@ def verifyCore(root: Path, embedded: str) -> dict:
       raise RuntimeError('Core dependency lock does not match its metadata')
   for record in core.get('native_dlls', []):
     verifyFile(root, record)
+  if 'core_update_launcher_sha256' in core:
+    with checkedFile(root, 'VisionWorkshopLauncher.exe').open('rb') as stream:
+      if hashlib.file_digest(stream, 'sha256').hexdigest() != core['core_update_launcher_sha256']:
+        raise RuntimeError('Stable Core upgrade launcher does not match this installation')
   return core
 
 

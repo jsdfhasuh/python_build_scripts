@@ -19,7 +19,7 @@ from scripts.verify_vision_train_modular_product import (
 )
 from scripts.verify_vision_train_modules import writeReport
 from vision_train_modular_build import loadContract
-from vision_train_modular_index import readMetadata, validateCoreAdmissionMembers, validateMembers
+from vision_train_modular_index import CORE_UPGRADE_LAUNCHER, readMetadata, validateCoreAdmissionMembers, validateMembers
 from vision_train_runtime import ioPath
 
 
@@ -94,7 +94,8 @@ def stageTarget(archivePath: Path, output: Path, index: dict, descriptor: dict, 
       contract.validate_core(target)
       validateCoreAdmissionMembers(members, target, contract)
       roots = {name.split('/', 1)[0] for name in relative}
-      require(roots - {'.core-update'} == CORE_ROOTS, 'Target archive contains unexpected Core roots')
+      require(roots - {'.core-update', CORE_UPGRADE_LAUNCHER} == CORE_ROOTS,
+              'Target archive contains unexpected Core roots')
       coreSha = hashlib.sha256(raw).hexdigest()
       lockSha = hashlib.sha256(lockRaw).hexdigest()
       require(coreSha == index['core']['manifest_sha256'] and target['build'] == index['build']
@@ -109,6 +110,9 @@ def stageTarget(archivePath: Path, output: Path, index: dict, descriptor: dict, 
   require(inventory['core.json']['sha256'] == coreSha
           and inventory['dependency-lock.json']['sha256'] == lockSha,
           'Extracted target Core metadata changed')
+  if 'core_update_launcher_sha256' in target:
+    require(inventory[CORE_UPGRADE_LAUNCHER]['sha256'] == target['core_update_launcher_sha256'],
+            'Extracted stable Core launcher differs from the manifest')
   return executable, inventory, {
     'archive': descriptor, 'build': target['build'], 'core_sha256': coreSha,
     'dependency_lock_sha256': lockSha, 'version': target['version'],

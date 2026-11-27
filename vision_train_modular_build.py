@@ -35,6 +35,7 @@ from vision_train_modular_crt import loadRuntimeProfile
 from vision_train_modular_crt import prepareRuntime
 from vision_train_modular_crt import qualifyVendorCrt
 from vision_train_modular_index import CORE_ADMISSION_LOCK
+from vision_train_modular_index import CORE_UPGRADE_LAUNCHER
 from vision_train_modular_index import INDEX_FILE
 from vision_train_modular_index import writeModuleIndex
 from vision_train_modular_receipts import selectSourceStaging
@@ -555,7 +556,7 @@ def guardedBootloaderSpec(compiler: Path, source: Path, expected: str) -> str:
 
 def buildFrozenCore(python: Path, info: dict, core: Path, metadata: dict, output: Path, reports: Path,
                     icon: Path, crtRoot: Path, crtProfile: dict, *,
-                    admissionBootloader: Path | None = None) -> None:
+                    admissionBootloader: Path | None = None, upgradeLauncher: Path | None = None) -> None:
   compiler = output / 'compiler-input'
   compiler.mkdir()
   admissionSha = metadata.get('admission_bootloader_sha256')
@@ -659,6 +660,16 @@ def buildFrozenCore(python: Path, info: dict, core: Path, metadata: dict, output
     admissionLock = core / CORE_ADMISSION_LOCK
     admissionLock.parent.mkdir()
     admissionLock.touch(exist_ok=False)
+  launcherSha = metadata.get('core_update_launcher_sha256')
+  if (upgradeLauncher is not None) != ('core_update_launcher_sha256' in metadata):
+    raise BuildConfigError('Core must bind its stable upgrade launcher in the embedded metadata')
+  if upgradeLauncher is not None:
+    rejectLinks(upgradeLauncher)
+    if not guardSpec or fileHash(upgradeLauncher) != launcherSha:
+      raise BuildConfigError('Stable Core upgrade launcher does not match its admitted manifest')
+    copyFile(upgradeLauncher, core / CORE_UPGRADE_LAUNCHER)
+    if fileHash(core / CORE_UPGRADE_LAUNCHER) != launcherSha:
+      raise BuildConfigError('Stable upgrade launcher changed during Core construction')
   for record in metadata['preload_dlls']:
     if fileHash(core / record['path']) != record['sha256']:
       raise BuildConfigError('Frozen Core ABI DLL differs from the selected interpreter')
@@ -785,6 +796,13 @@ def buildCandidate(args) -> dict:
       path, digest = args.core_admission_bootloader
       admissionBootloader = Path(path).absolute()
       metadata['admission_bootloader_sha256'] = contract.sha256(digest)
+    upgradeLauncher = None
+    if args.core_upgrade_launcher:
+      path, digest = args.core_upgrade_launcher
+      if any(not (core / 'python' / name).is_file() for name in ('core_update.py', 'core_update_transaction.py')):
+        raise BuildConfigError('The fixed application source does not implement the stable Core upgrade entry')
+      upgradeLauncher = Path(path).absolute()
+      metadata['core_update_launcher_sha256'] = contract.sha256(digest)
     contract.validate_core(metadata)
     writeCanonical(core / contract.CORE_FILE, metadata, encoder=contract.canonical_json,
                     maximumBytes=contract.MAX_METADATA)
@@ -836,7 +854,7 @@ def buildCandidate(args) -> dict:
       'scope': 'Original ZIP verification; the new Core and full EXE matrix are independent'})
     buildFrozenCore(args.build_python.resolve(), buildInfo, core, metadata, output, reports,
                      Path(branding['icon_source']), crtRoot, crtProfile,
-                     admissionBootloader=admissionBootloader)
+                     admissionBootloader=admissionBootloader, upgradeLauncher=upgradeLauncher)
     records = fileRecords(core)
     pythonFiles = [record for record in records if loader.isInterpreterFile(Path(record['path']))]
     if {record['path'] for record in pythonFiles} != {'_internal/python312.dll', '_internal/python3.dll'}:
@@ -898,12 +916,16 @@ def parseArgs(argv=None):
                       help='Optional exact completed-run artifacts; absent means build every module ZIP')
   parser.add_argument('--core-admission-bootloader', nargs=2, metavar=('RUNW.EXE', 'SHA256'),
                       help='Build a guarded protocol-4 Core using a pinned local bootloader')
+  parser.add_argument('--core-upgrade-launcher', nargs=2, metavar=('LAUNCHER.EXE', 'SHA256'),
+                      help='Include the pinned stable upgrade and recovery entry for a guarded Core')
   parser.add_argument('--core-version', default='0.0.0')
   parser.add_argument('--max-core-version', default='0.0.1')
   parser.add_argument('--build-id', default=time.strftime('%Y%m%dT%H%M%SZ', time.gmtime()))
   args = parser.parse_args(argv)
   if args.core_admission_bootloader and args.operation != 'build':
     parser.error('--core-admission-bootloader is only for a protocol-4 candidate build')
+  if args.core_upgrade_launcher and not args.core_admission_bootloader:
+    parser.error('--core-upgrade-launcher requires --core-admission-bootloader')
   if args.operation in ('assets', 'build') and (args.source_root is None or args.assets_root is None):
     parser.error('--source-root and an isolated --assets-root are required for assets/build')
   if args.operation == 'crt' and args.source_root is None:

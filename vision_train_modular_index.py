@@ -13,6 +13,7 @@ from vision_train_modular_reuse import boundedLzmaMember
 INDEX_FILE = 'module-index.json'
 INDEX_SCHEMA = 1
 CORE_ADMISSION_LOCK = '.core-update/launch.lock'
+CORE_UPGRADE_LAUNCHER = 'VisionWorkshopLauncher.exe'
 ARCHIVE_FIELDS = ('bytes', 'sha256', 'compression', 'file_count', 'expanded_bytes',
                   'compressed_payload_bytes')
 MODULE_FIELDS = ('module_id', 'version', 'kind', 'core_versions', 'python',
@@ -93,6 +94,15 @@ def validateCoreAdmissionMembers(members: dict, core: dict, contract) -> None:
       raise BuildConfigError('Guarded Core ZIP must contain only its empty startup lock in .core-update')
   elif reserved:
     raise BuildConfigError('An unguarded Core ZIP may not contain Core update state')
+  launcher = prefix + CORE_UPGRADE_LAUNCHER
+  launcherNames = {name for name in members if name[len(prefix):].split('/', 1)[0].casefold()
+                   == CORE_UPGRADE_LAUNCHER.casefold()}
+  if 'core_update_launcher_sha256' in core:
+    contract.sha256(core['core_update_launcher_sha256'])
+    if launcherNames != {launcher} or not members[launcher].file_size:
+      raise BuildConfigError('Core ZIP is missing its declared stable update launcher')
+  elif launcherNames:
+    raise BuildConfigError('Core ZIP contains an undeclared stable update launcher')
 
 
 def buildIndexDocument(summary: dict, directory: Path, contract) -> dict:
@@ -105,6 +115,10 @@ def buildIndexDocument(summary: dict, directory: Path, contract) -> dict:
     core, coreBytes = readMetadata(archive, 'VisionWorkshop/' + contract.CORE_FILE, contract)
     lock, lockBytes = readMetadata(archive, 'VisionWorkshop/' + contract.LOCK_FILE, contract)
     validateCoreAdmissionMembers(members, core, contract)
+    if 'core_update_launcher_sha256' in core:
+      with archive.open('VisionWorkshop/' + CORE_UPGRADE_LAUNCHER) as stream:
+        if hashlib.file_digest(stream, 'sha256').hexdigest() != core['core_update_launcher_sha256']:
+          raise BuildConfigError('Indexed stable Core launcher differs from its manifest')
   verifyArchiveBytes(corePath, coreArchive)
   contract.validate_core(core)
   coreDigest = hashlib.sha256(coreBytes).hexdigest()
