@@ -1,0 +1,508 @@
+name: Windows build-only V2 (inert until called)
+on:
+  workflow_call:
+    inputs:
+      product_sha:
+        description: Immutable product commit from the trusted public caller
+        type: string
+        required: true
+      recipient:
+        type: string
+        required: true
+      designer_only:
+        description: Run only the additional Designer frozen proof
+        type: boolean
+        required: false
+        default: false
+      runtime_only:
+        description: Run only Runtime BuildOnly and its native verification
+        type: boolean
+        required: false
+        default: false
+permissions:
+  contents: read
+jobs:
+  validate_selection:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Reject incompatible target selections
+        if: inputs.designer_only && inputs.runtime_only
+        run: exit 1
+  windows:
+    needs: validate_selection
+    if: >-
+      github.repository == 'jsdfhasuh/emo_master_ci' &&
+      github.repository_id == '1468905732' &&
+      github.event_name == 'workflow_dispatch' &&
+        startsWith(github.ref, 'refs/tags/ci-worker-') &&
+        ((inputs.runtime_only && !inputs.designer_only &&
+          startsWith(github.workflow_ref, 'jsdfhasuh/emo_master_ci/.github/workflows/dispatch-runtime-windows-candidate.yml@refs/tags/ci-worker-')) ||
+         (inputs.designer_only && !inputs.runtime_only &&
+          startsWith(github.workflow_ref, 'jsdfhasuh/emo_master_ci/.github/workflows/dispatch-windows-package-candidate.yml@refs/tags/ci-worker-'))) &&
+        github.workflow_sha == vars.EMO_CI_CANDIDATE_WORKER_SHA &&
+        github.actor_id == vars.EMO_CI_CANDIDATE_BROKER_ACTOR_ID &&
+        github.run_attempt == '1'
+    runs-on: windows-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ${{ fromJSON(inputs.designer_only && '["emo-master"]' || inputs.runtime_only && '["emo-master-runtime"]' || '["emo-master","emo-master-runtime"]') }}
+    steps:
+      - name: Enforce approved V2 recipient before checkout
+        id: v2_gate
+        shell: pwsh
+        env:
+          EXPECTED_PRODUCT_SHA: ${{ inputs.product_sha }}
+          AGE_RECIPIENT: ${{ inputs.recipient }}
+        run: |
+          if ($env:EXPECTED_PRODUCT_SHA -cnotmatch '\A[0-9a-f]{40}\z') { throw 'Expected immutable product commit' }
+          if ($env:AGE_RECIPIENT -cnotmatch '\Aage1[0-9a-z]{58}\z') { throw 'Invalid V2 recipient' }
+          $digest = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::ASCII.GetBytes($env:AGE_RECIPIENT))).ToLowerInvariant()
+          if ($digest -cne 'ba311eeae31312c73f57c9a2cc4c80bbb58380e7c3df956db1d09432b79cca87') { throw 'V2 recipient mismatch' }
+      - name: Prepare trusted age before package phases
+        id: age_ready
+        shell: pwsh
+        run: |
+          $zip = Join-Path $env:RUNNER_TEMP 'age-v1.2.1.zip'
+          curl.exe --fail --silent --show-error --location --proto '=https' --proto-redir '=https' --max-time 120 -o $zip https://github.com/FiloSottile/age/releases/download/v1.2.1/age-v1.2.1-windows-amd64.zip
+          if ($LASTEXITCODE -ne 0 -or (Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant() -cne '46db0db71f146061f7c8fffa912cb806aef1bc8450e27a3abc1744f0591b89fb') { throw 'age binary verification failed' }
+          $tool = Join-Path $env:RUNNER_TEMP 'emo-age'
+          Expand-Archive $zip $tool
+      - name: Checkout packager
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: jsdfhasuh/python_build_scripts
+          ref: e0204fe6fe83b0f31818d88e4f296c70e230d172
+          path: packager
+          persist-credentials: false
+
+      - name: Load target config
+        id: config
+        shell: pwsh
+        working-directory: packager
+        env:
+          TARGET: ${{ matrix.target }}
+          SOURCE_REF: ${{ inputs.product_sha }}
+          RELEASE_REPO_INPUT: jsdfhasuh/emo_master
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:SOURCE_REF) -or $env:SOURCE_REF -match '[\r\n]' -or $env:SOURCE_REF.StartsWith('-')) {
+            throw 'source_ref must be an explicit branch, tag, or commit'
+          }
+          if ($env:TARGET -notmatch '^[A-Za-z0-9_.-]+$') {
+            throw "Invalid target name: $env:TARGET"
+          }
+          $configPath = Join-Path 'configs' "$env:TARGET.json"
+          if (-not (Test-Path -LiteralPath $configPath)) {
+            throw "Target config not found: $configPath"
+          }
+
+          $config = Get-Content -LiteralPath $configPath -Raw | ConvertFrom-Json
+          foreach ($field in @('source_repo', 'python_version', 'release_asset_name', 'name')) {
+            if (-not $config.$field) {
+              throw "Missing required config field: $field"
+            }
+          }
+
+          if ($config.source_repo -notmatch '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$') {
+            throw 'Invalid source repository in target configuration'
+          }
+          if ($config.python_version -notmatch '^\d+\.\d+(\.\d+)?$') {
+            throw 'Invalid Python version in target configuration'
+          }
+
+          $releaseRepo = $env:RELEASE_REPO_INPUT.Trim()
+          if (-not $releaseRepo -and $config.PSObject.Properties.Name -contains 'release_repo') {
+            $releaseRepo = [string]$config.release_repo
+            $releaseRepo = $releaseRepo.Trim()
+          }
+          if (-not $releaseRepo) {
+            $releaseRepo = $env:GITHUB_REPOSITORY
+          }
+          if ($releaseRepo -notmatch '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$') {
+            throw "release_repo must look like owner/repo, got: $releaseRepo"
+          }
+
+          $ciExtraPackages = @()
+          if ($config.PSObject.Properties.Name -contains 'ci_extra_packages') {
+            if ($null -ne $config.ci_extra_packages -and $config.ci_extra_packages -isnot [array]) {
+              throw 'ci_extra_packages must be a list'
+            }
+            $ciExtraPackages = @($config.ci_extra_packages)
+          }
+
+          $installerEnabled = $false
+          $innoVersion = ''
+          if ($config.PSObject.Properties.Name -contains 'installer' -and $config.installer) {
+            $installerEnabled = [bool]$config.installer.enabled
+            if ($installerEnabled) {
+              $innoVersion = [string]$config.installer.compiler_version
+            }
+          }
+
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "source_repo=$($config.source_repo)"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "python_version=$($config.python_version)"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "release_repo=$releaseRepo"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "ci_extra_packages=$($ciExtraPackages -join ' ')"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "installer_enabled=$($installerEnabled.ToString().ToLowerInvariant())"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "inno_version=$innoVersion"
+
+      - name: Checkout source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: jsdfhasuh/emo_master
+          ref: ${{ inputs.product_sha }}
+          path: source
+          submodules: recursive
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Record Runtime build identity
+        id: identity
+        shell: pwsh
+        env:
+          SOURCE_REPO: ${{ steps.config.outputs.source_repo }}
+          REQUESTED_SOURCE_REF: ${{ inputs.product_sha }}
+          REQUESTED_PACKAGER_REF: e0204fe6fe83b0f31818d88e4f296c70e230d172
+          PUBLISH_RELEASE_INPUT: 'false'
+        run: |
+          $sourceSha = git -C source rev-parse HEAD
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot resolve source SHA' }
+          $packagerSha = git -C packager rev-parse HEAD
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot resolve packager SHA' }
+          if ($sourceSha.Trim() -cne $env:REQUESTED_SOURCE_REF -or $packagerSha.Trim() -cne $env:REQUESTED_PACKAGER_REF -or $env:SOURCE_REPO -cne 'jsdfhasuh/emo_master') { throw 'Checkout identity mismatch' }
+          # Parse a single constant without importing product code.
+          $ver = Get-Item -LiteralPath 'source/src/emo_master/app_version.py' -ErrorAction Stop
+          if ($ver.PSIsContainer -or $ver.LinkType -or $ver.Attributes.HasFlag([IO.FileAttributes]::ReparsePoint) -or $ver.Length -gt 4096) { throw 'Invalid application version file' }
+          $literal = [IO.File]::ReadAllText($ver.FullName)
+          $match = [regex]::Match($literal, '(?m)^APP_VERSION[ \t]*=[ \t]*"([0-9]+\.[0-9]+\.[0-9]+)"[ \t]*\r?$')
+          if (-not $match.Success -or [regex]::Matches($literal,'(?m)^APP_VERSION[ \t]*=').Count -ne 1) { throw 'Cannot confirm exact application version' }
+          Add-Content $env:GITHUB_OUTPUT "release_tag=v$($match.Groups[1].Value)"
+          if ('${{ matrix.target }}' -ne 'emo-master-runtime') { return }
+          $output = Join-Path $env:GITHUB_WORKSPACE 'packager/release-output'
+          New-Item -ItemType Directory -Path $output -Force | Out-Null
+          [ordered]@{
+            source_repo = $env:SOURCE_REPO
+            source_commit = $sourceSha.Trim()
+            packager_repo = 'jsdfhasuh/python_build_scripts'
+            packager_commit = $packagerSha.Trim()
+            requested_source_ref = $env:REQUESTED_SOURCE_REF
+            requested_packager_ref = $env:REQUESTED_PACKAGER_REF
+            workflow_sha = $env:GITHUB_WORKFLOW_SHA
+            workflow_ref = $env:GITHUB_WORKFLOW_REF
+            run_url = "https://github.com/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID"
+            publish_requested = ($env:PUBLISH_RELEASE_INPUT -eq 'true')
+            fieldAcceptance = 'NOT_RUN'
+          } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $output 'runtime-build.json') -Encoding utf8
+          Add-Content $env:GITHUB_OUTPUT "source_sha=$($sourceSha.Trim())"
+          Add-Content $env:GITHUB_OUTPUT "packager_sha=$($packagerSha.Trim())"
+
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
+        with:
+          python-version: ${{ steps.config.outputs.python_version }}
+
+      - name: Install source dependencies
+        shell: pwsh
+        working-directory: source
+        env:
+          CI_EXTRA_PACKAGES: ${{ steps.config.outputs.ci_extra_packages }}
+        run: |
+          $dir = Join-Path $env:RUNNER_TEMP 'package-private-logs'
+          New-Item -ItemType Directory $dir -Force | Out-Null
+          $log = Join-Path $dir 'phase-1.log'
+          try {
+            & {
+              $ErrorActionPreference = 'Stop'
+              $PSNativeCommandUseErrorActionPreference = $true
+              python -m pip install --upgrade pip
+              python -m pip install -r requirements.txt
+              if ($env:CI_EXTRA_PACKAGES.Trim()) {
+                $packages = $env:CI_EXTRA_PACKAGES -split ' '
+                python -m pip install @packages
+              }
+            } *> $log
+          } catch {
+            $_ | Out-String | Add-Content -LiteralPath $log
+            throw 'Package phase failed; use V2 encrypted diagnostics'
+          }
+
+      - name: Runtime source regression
+        if: matrix.target == 'emo-master-runtime'
+        shell: pwsh
+        working-directory: source
+        env:
+          QT_QPA_PLATFORM: offscreen
+          PYTHONUTF8: '1'
+        run: |
+          $dir = Join-Path $env:RUNNER_TEMP 'package-private-logs'
+          New-Item -ItemType Directory $dir -Force | Out-Null
+          $log = Join-Path $dir 'phase-2.log'
+          try {
+            & {
+              $ErrorActionPreference = 'Stop'
+              $PSNativeCommandUseErrorActionPreference = $true
+              python -m pip install -r requirements-dev.txt
+              if ($LASTEXITCODE -ne 0) { throw 'Cannot install Runtime test dependencies' }
+              ./scripts/validate_runtime_source.ps1 -ReportDirectory ../packager/release-output/source-check
+            } *> $log
+          } catch {
+            $_ | Out-String | Add-Content -LiteralPath $log
+            throw 'Package phase failed; use V2 encrypted diagnostics'
+          }
+
+      - name: Install pinned Inno Setup
+        if: steps.config.outputs.installer_enabled == 'true'
+        shell: pwsh
+        env:
+          INNO_VERSION: ${{ steps.config.outputs.inno_version }}
+        run: |
+          $dir = Join-Path $env:RUNNER_TEMP 'package-private-logs'
+          New-Item -ItemType Directory $dir -Force | Out-Null
+          $log = Join-Path $dir 'phase-3.log'
+          try {
+            & {
+              $ErrorActionPreference = 'Stop'
+              $PSNativeCommandUseErrorActionPreference = $true
+              $versionSlug = $env:INNO_VERSION.Replace('.', '_')
+              $downloadUrl = "https://github.com/jrsoftware/issrc/releases/download/is-$versionSlug/innosetup-$env:INNO_VERSION.exe"
+              $installerPath = Join-Path $env:RUNNER_TEMP "innosetup-$env:INNO_VERSION.exe"
+              $installDir = Join-Path $env:RUNNER_TEMP "InnoSetup-$versionSlug"
+              Invoke-WebRequest -Uri $downloadUrl -OutFile $installerPath
+              $signature = Get-AuthenticodeSignature -LiteralPath $installerPath
+              if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch 'Pyrsys B\.V\.') {
+                throw "Invalid Inno Setup Authenticode signature: $($signature.Status) $($signature.SignerCertificate.Subject)"
+              }
+              $process = Start-Process `
+                -FilePath $installerPath `
+                -ArgumentList @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/SP-', "/DIR=$installDir") `
+                -WindowStyle Hidden `
+                -Wait `
+                -PassThru
+              if ($process.ExitCode -ne 0) {
+                throw "Inno Setup installation failed with exit code $($process.ExitCode)"
+              }
+              $isccPath = Join-Path $installDir 'ISCC.exe'
+              if (-not (Test-Path -LiteralPath $isccPath -PathType Leaf)) {
+                throw "ISCC.exe was not installed: $isccPath"
+              }
+              Add-Content -Path $env:GITHUB_ENV -Value "ISCC_PATH=$isccPath"
+            } *> $log
+          } catch {
+            $_ | Out-String | Add-Content -LiteralPath $log
+            throw 'Package phase failed; use V2 encrypted diagnostics'
+          }
+
+      - name: Build Windows artifacts
+        env:
+          EXPECTED_PRODUCT_SHA: ${{ inputs.product_sha }}
+          RELEASE_TAG_INPUT: ${{ steps.identity.outputs.release_tag }}
+        shell: pwsh
+        working-directory: packager
+        run: |
+          $dir = Join-Path $env:RUNNER_TEMP 'package-private-logs'
+          New-Item -ItemType Directory $dir -Force | Out-Null
+          $log = Join-Path $dir 'phase-4.log'
+          try {
+            & {
+              $ErrorActionPreference = 'Stop'
+              $PSNativeCommandUseErrorActionPreference = $true
+              $sourceRoot = Join-Path $env:GITHUB_WORKSPACE 'source'
+              $outputDirectory = Join-Path $env:GITHUB_WORKSPACE 'packager/release-output'
+              New-Item -ItemType Directory $outputDirectory -Force | Out-Null
+              .\scripts\publish-local-release.ps1 -Target '${{ matrix.target }}' -ReleaseTag $env:RELEASE_TAG_INPUT -ReleaseRepo jsdfhasuh/emo_master -SourceRoot $sourceRoot -SourceRef $env:EXPECTED_PRODUCT_SHA -PreviousSourceRef $env:EXPECTED_PRODUCT_SHA -OutputDirectory $outputDirectory -BuildOnly
+            } *> $log
+          } catch {
+            $_ | Out-String | Add-Content -LiteralPath $log
+            throw 'Package phase failed; use V2 encrypted diagnostics'
+          }
+
+      - name: Verify Runtime archive and native cycles
+        if: matrix.target == 'emo-master-runtime'
+        shell: pwsh
+        env:
+          SOURCE_SHA: ${{ steps.identity.outputs.source_sha }}
+          PACKAGER_SHA: ${{ steps.identity.outputs.packager_sha }}
+          RELEASE_TAG_INPUT: ${{ steps.identity.outputs.release_tag }}
+        run: |
+          $dir = Join-Path $env:RUNNER_TEMP 'package-private-logs'
+          New-Item -ItemType Directory $dir -Force | Out-Null
+          $log = Join-Path $dir 'phase-5.log'
+          try {
+            & {
+              $ErrorActionPreference = 'Stop'
+              $PSNativeCommandUseErrorActionPreference = $true
+              ./source/scripts/verify_runtime_artifacts.ps1 -ArtifactDirectory ./packager/release-output `
+                -ReleaseTag $env:RELEASE_TAG_INPUT -SourceCommit $env:SOURCE_SHA -PackagerCommit $env:PACKAGER_SHA
+            } *> $log
+          } catch {
+            $_ | Out-String | Add-Content -LiteralPath $log
+            throw 'Package phase failed; use V2 encrypted diagnostics'
+          }
+
+      - name: Verify Designer icons
+        if: matrix.target == 'emo-master'
+        shell: pwsh
+        env:
+          RELEASE_TAG_INPUT: ${{ steps.identity.outputs.release_tag }}
+        run: |
+          $dir = Join-Path $env:RUNNER_TEMP 'package-private-logs'
+          New-Item -ItemType Directory $dir -Force | Out-Null
+          $log = Join-Path $dir 'phase-6.log'
+          try {
+            & {
+              $ErrorActionPreference = 'Stop'
+              $PSNativeCommandUseErrorActionPreference = $true
+              ./source/scripts/verify_windows_package.ps1 -Archive "packager/release-output/emo-master-windows-$($env:RELEASE_TAG_INPUT).zip"
+            } *> $log
+          } catch {
+            $_ | Out-String | Add-Content -LiteralPath $log
+            throw 'Package phase failed; use V2 encrypted diagnostics'
+          }
+
+      - name: Validate original frozen startup and workflow contracts
+        if: matrix.target == 'emo-master'
+        working-directory: source
+        shell: pwsh
+        env:
+          EXPECTED_SOURCE_SHA: ${{ inputs.product_sha }}
+          RELEASE_TAG_INPUT: ${{ steps.identity.outputs.release_tag }}
+        run: |
+          $dir = Join-Path $env:RUNNER_TEMP 'package-private-logs'
+          New-Item -ItemType Directory $dir -Force | Out-Null
+          $log = Join-Path $dir 'phase-8.log'
+          try {
+            & {
+              $ErrorActionPreference = 'Stop'
+              $PSNativeCommandUseErrorActionPreference = $true
+              python -m pip install -r requirements-dev.txt psutil pywinauto Pillow
+              python -c "from PIL import ImageGrab; import psutil, pywinauto"
+              python -m pytest tests/test_release_workflow_contract.py tests/test_frozen_runtime_validation.py -q
+              $env:PYTHONPATH = (Resolve-Path src).Path
+              $verifyAssets = Join-Path $env:RUNNER_TEMP 'fixed-frozen-validation-assets'
+              New-Item -ItemType Directory -Path $verifyAssets -ErrorAction Stop | Out-Null
+              foreach ($name in @("emo-master-windows-$($env:RELEASE_TAG_INPUT).zip","emo-master-setup-$($env:RELEASE_TAG_INPUT).exe",'manifest.json')) {
+                $item = Get-Item -LiteralPath (Join-Path '../packager/release-output' $name) -ErrorAction Stop
+                if ($item.PSIsContainer -or $item.LinkType -or $item.Attributes.HasFlag([IO.FileAttributes]::ReparsePoint) -or $item.Length -le 0) { throw 'Invalid frozen validation member' }
+                Copy-Item -LiteralPath $item.FullName -Destination (Join-Path $verifyAssets $name) -ErrorAction Stop
+              }
+              python scripts/verify_frozen_runtime.py --artifact-directory $verifyAssets --output evidence/frozen-validation.json --expected-source-sha $env:EXPECTED_SOURCE_SHA
+              Copy-Item -LiteralPath evidence/frozen-validation.json -Destination ../packager/release-output/frozen-validation.json -ErrorAction Stop
+            } *> $log
+          } catch {
+            $_ | Out-String | Add-Content -LiteralPath $log
+            throw 'Frozen validation failed; see encrypted diagnostics'
+          }
+
+      - name: Seal exact target files with reviewed age
+        shell: pwsh
+        env:
+          AGE_RECIPIENT: ${{ inputs.recipient }}
+          TARGET: ${{ matrix.target }}
+          RELEASE_TAG_INPUT: ${{ steps.identity.outputs.release_tag }}
+        run: |
+          $dir = Join-Path $env:RUNNER_TEMP 'package-private-logs'
+          New-Item -ItemType Directory $dir -Force | Out-Null
+          $log = Join-Path $dir 'phase-7.log'
+          try {
+            & {
+              $ErrorActionPreference = 'Stop'
+              $PSNativeCommandUseErrorActionPreference = $true
+              $tool = Join-Path $env:RUNNER_TEMP 'emo-age'
+              $root = 'packager/release-output'
+              $names = @("$env:TARGET-windows-$($env:RELEASE_TAG_INPUT).zip","$env:TARGET-setup-$($env:RELEASE_TAG_INPUT).exe",'manifest.json')
+              if ($env:TARGET -eq 'emo-master-runtime') { $names += @('runtime-build.json','archive-check/validation.json','archive-check/archive.json','archive-check/native.json') }
+              if ($env:TARGET -eq 'emo-master') { $names += 'frozen-validation.json' }
+              foreach ($name in $names) {
+                $file = Get-Item -LiteralPath (Join-Path $root $name) -ErrorAction Stop
+                if ($file.PSIsContainer -or $file.LinkType -or $file.Length -le 0) { throw 'Package member is not a regular nonempty file' }
+              }
+              $tar = Join-Path $env:RUNNER_TEMP 'emo-package.tar'
+              $ciphertext = Join-Path $env:RUNNER_TEMP 'emo-package.tar.age'
+              try {
+                tar.exe -cf $tar -C $root @names
+                if ($LASTEXITCODE -ne 0) { throw 'Package tar failed' }
+                & (Join-Path $tool 'age/age.exe') -r $env:AGE_RECIPIENT -o $ciphertext $tar
+                if ($LASTEXITCODE -ne 0) { throw 'Package encryption failed' }
+              } finally {
+                if (Test-Path $tar) { Remove-Item -LiteralPath $tar -Force }
+              }
+            } *> $log
+          } catch {
+            $_ | Out-String | Add-Content -LiteralPath $log
+            throw 'Package phase failed; use V2 encrypted diagnostics'
+          }
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: windows-v2-${{ matrix.target }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/emo-package.tar.age
+          if-no-files-found: error
+          retention-days: 7
+      - name: Seal diagnostics after success or failure
+        if: ${{ always() && steps.v2_gate.outcome == 'success' && steps.age_ready.outcome == 'success' }}
+        id: seal_diagnostics
+        shell: pwsh
+        env:
+          AGE_RECIPIENT: ${{ inputs.recipient }}
+        run: |
+          $dir = Join-Path $env:RUNNER_TEMP 'package-private-logs'
+          New-Item -ItemType Directory $dir -Force | Out-Null
+          $stage = Join-Path $env:RUNNER_TEMP 'package-bounded-logs'
+          New-Item -ItemType Directory -Path $stage | Out-Null
+          $names = @('capture-status.txt')
+          Set-Content -LiteralPath (Join-Path $stage $names[0]) -Value 'V2 pilot; inspect the GitHub job conclusion independently.'
+          foreach ($i in 1..8) {
+            $name = "phase-$i.log"
+            $path = Join-Path $dir $name
+            if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { continue }
+            $src = Get-Item -LiteralPath $path
+            if ($src.LinkType -or $src.Attributes.HasFlag([IO.FileAttributes]::ReparsePoint)) { throw 'Invalid diagnostic log' }
+            if ($src.Length -eq 0) { continue }
+            $reader = [IO.File]::OpenRead($src.FullName)
+            try {
+              $max = 256KB
+              $reader.Position = [Math]::Max(0, $reader.Length - $max)
+              $writer = [IO.File]::Open((Join-Path $stage $name), [IO.FileMode]::CreateNew)
+              try {
+                $buffer = New-Object byte[] $max
+                $read = $reader.Read($buffer, 0, $max)
+                $writer.Write($buffer, 0, $read)
+              } finally { $writer.Dispose() }
+            } finally { $reader.Dispose() }
+            $names += $name
+          }
+          # Fixed evidence files only. Never include the extracted product or reparse points.
+          $base = Join-Path $env:GITHUB_WORKSPACE 'source/evidence'
+          foreach ($relative in @('frozen-validation.json','frozen-validation/designer-settings.png','frozen-validation/designer-startup.png','frozen-validation/designer-busy-directory.png','frozen-validation/designer-second-startup.png','frozen-validation/operator-view.png','frozen-validation/runtime-overlay.png','frozen-validation/icon-self-test.json')) {
+            $path = Join-Path $base $relative
+            if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { continue }
+            $item = Get-Item -LiteralPath $path -Force
+            for ($entry = $item; $entry.FullName -ne $env:GITHUB_WORKSPACE; ) {
+              if ($entry.Attributes.HasFlag([IO.FileAttributes]::ReparsePoint)) { throw 'Invalid evidence file' }
+              $entry = Get-Item -LiteralPath (Split-Path -Parent $entry.FullName)
+            }
+            if ($item.Length -gt 32MB) { throw 'Frozen evidence exceeds file limit' }
+            $name = 'frozen-' + $item.Name
+            Copy-Item -LiteralPath $path -Destination (Join-Path $stage $name)
+            $names += $name
+          }
+          $tar = Join-Path $env:RUNNER_TEMP 'emo-diagnostics.tar'
+          $out = Join-Path $env:RUNNER_TEMP 'emo-diagnostics.tar.age'
+          $age = Join-Path $env:RUNNER_TEMP 'emo-age/age/age.exe'
+          try {
+            tar.exe -cf $tar -C $stage @names *> $null
+            if ($LASTEXITCODE -ne 0) { throw 'Diagnostics archive failed' }
+            & $age -r $env:AGE_RECIPIENT -o $out $tar *> $null
+            if ($LASTEXITCODE -ne 0) { throw 'Diagnostics encryption failed' }
+          } finally {
+            if (Test-Path -LiteralPath $tar) { Remove-Item -LiteralPath $tar -Force }
+          }
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: ${{ always() && steps.seal_diagnostics.outcome == 'success' }}
+        with:
+          name: windows-v2-diagnostics-${{ matrix.target }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/emo-diagnostics.tar.age
+          if-no-files-found: error
+          retention-days: 7
