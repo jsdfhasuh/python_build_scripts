@@ -19,7 +19,10 @@ class RoutedPackagerContract(unittest.TestCase):
 
     def test_exact_candidate_caller_paths_and_actor(self):
         cond=WIN["if"]
-        for path in ("windows-package-mainline-v2-call.yml","dispatch-runtime-windows-candidate.yml",
+        self.assertNotIn("refs/heads/",cond)
+        self.assertNotIn("github.event_name == 'push'",cond)
+        self.assertIn("github.event_name == 'workflow_dispatch'",cond)
+        for path in ("dispatch-runtime-windows-candidate.yml",
                      "dispatch-windows-package-candidate.yml"):
             self.assertIn(path,cond)
         self.assertIn("github.workflow_sha == vars.EMO_CI_CANDIDATE_WORKER_SHA",cond)

@@ -34,10 +34,7 @@ jobs:
     if: >-
       github.repository == 'jsdfhasuh/emo_master_ci' &&
       github.repository_id == '1468905732' &&
-      ((github.event_name == 'push' && !inputs.runtime_only &&
-        github.workflow_ref == 'jsdfhasuh/emo_master_ci/.github/workflows/windows-package-mainline-v2-call.yml@refs/heads/dot/mainline-ci-migration-20261124' &&
-        github.ref == 'refs/heads/dot/mainline-ci-migration-20261124') ||
-       (github.event_name == 'workflow_dispatch' &&
+      github.event_name == 'workflow_dispatch' &&
         startsWith(github.ref, 'refs/tags/ci-worker-') &&
         ((inputs.runtime_only && !inputs.designer_only &&
           startsWith(github.workflow_ref, 'jsdfhasuh/emo_master_ci/.github/workflows/dispatch-runtime-windows-candidate.yml@refs/tags/ci-worker-')) ||
@@ -45,7 +42,7 @@ jobs:
           startsWith(github.workflow_ref, 'jsdfhasuh/emo_master_ci/.github/workflows/dispatch-windows-package-candidate.yml@refs/tags/ci-worker-'))) &&
         github.workflow_sha == vars.EMO_CI_CANDIDATE_WORKER_SHA &&
         github.actor_id == vars.EMO_CI_CANDIDATE_BROKER_ACTOR_ID &&
-        github.run_attempt == '1'))
+        github.run_attempt == '1'
     runs-on: windows-latest
     timeout-minutes: 90
     strategy:
