@@ -199,7 +199,9 @@ class ModularPreviewReleaseTests(unittest.TestCase):
   def test_rejects_module_archive_hash_mismatch(self):
     module_dir = self.artifacts / 'visionworkshop-module-runtime.torch-12345-1'
     archive = next(module_dir.glob('*.zip'))
-    archive.write_bytes(b'tampered')
+    original = archive.read_bytes()
+    archive.write_bytes(original[:-1] + bytes([original[-1] ^ 1]))
+    self.assertEqual(archive.stat().st_size, len(original))
     with self.assertRaisesRegex(ValueError, 'SHA-256 mismatch'):
       self._prepare()
 

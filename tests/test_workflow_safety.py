@@ -75,6 +75,8 @@ class WorkflowSafetyTests(unittest.TestCase):
             self.assertEqual(job['permissions'], {'contents': 'write'})
           elif ((path.name == 'visionworkshop-modular-candidate.yml'
                  and jobName == 'windows-modular-candidate') or
+                (path.name == 'visionworkshop-modular-preview-release.yml'
+                 and jobName == 'publish-preview') or
                 (path.name == 'visionworkshop-core-diagnostic.yml'
                  and jobName == 'windows-core-exit-diagnostic') or
                 (path.name == 'visionworkshop-offline-network.yml'
@@ -352,7 +354,9 @@ class WorkflowSafetyTests(unittest.TestCase):
     self.assertIn('git -C app merge-base --is-ancestor', app_merge['run'])
     create_draft, = [step for step in steps if step.get('name') == 'Create draft Preview with verified assets']
     self.assertEqual(create_draft['env']['GH_TOKEN'], '${{ secrets.RELEASE_REPO_TOKEN }}')
-    self.assertIn('jsdfhasuh/emo-vision-train-release', create_draft['run'])
+    self.assertIn('request["release_repo"] != "jsdfhasuh/emo-vision-train-release"', request['run'])
+    self.assertIn('RELEASE_REPO={request[\'release_repo\']}', request['run'])
+    self.assertIn('--repo "$RELEASE_REPO"', create_draft['run'])
     self.assertIn('--draft --prerelease', create_draft['run'])
     self.assertIn('RELEASE_REPO_TOKEN is not configured', create_draft['run'])
     verify_draft, = [step for step in steps if step.get('name') == 'Verify draft Preview assets before publication']
