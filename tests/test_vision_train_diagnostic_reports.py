@@ -1,0 +1,141 @@
+"""Check read-only bounded CI projections without running a native product."""
+
+from contextlib import redirect_stdout
+import hashlib
+import io
+import json
+from pathlib import Path
+import tempfile
+import unittest
+from unittest.mock import patch
+
+from scripts import report_vision_train_core_diagnostic as reports
+
+
+class DiagnosticReportTests(unittest.TestCase):
+  def test_exception_and_access_mappings_are_preserved_in_full(self):
+    exception = {'code': 0xc0000005, 'first_chance': False, 'pid': 42, 'tid': 43,
+      'parameters': [8, 4096], 'instruction': {'active_module': None,
+        'unloaded_candidates': [{'path': 'Qt.dll', 'base': 4096, 'size': 4096, 'offset': 23}]},
+      'memory_access': {'kind': 'execute', 'address': 4096}, 'continuation': 'DBG_EXCEPTION_NOT_HANDLED'}
+    source = {'status': 'FAIL', 'exit_code': 0xc0000005, 'forced_cleanup': False,
+              'exceptions': [exception], 'events': [{'event': 6}], 'active_modules': [1], 'unloaded_modules': [2]}
+    projection = reports.nativeProjection(source)
+    self.assertEqual(projection['exceptions'], [exception])
+    self.assertEqual(projection['exit_code'], 0xc0000005)
+    self.assertFalse(projection['forced_cleanup'])
+    self.assertEqual(projection['event_count'], 1)
+    self.assertNotIn('events', projection)
+    failure = {'index': 218, 'winerror': 206, 'path': '中文 路径',
+               'attempted_cumulative_utf16_bytes_with_nul': 65536}
+    projected = reports.dllProjection({'status': 'OBSERVED', 'observations': [
+      {'mode': 'duplicate', 'observation': {'status': 'OBSERVED', 'first_failure': failure,
+       'successful_directory_count': 218, 'handles_closed': 218, 'entries': [{}, {}]}}]})
+    self.assertEqual(projected['observations'][0]['observation']['first_failure'], failure)
+    self.assertEqual(projected['observations'][0]['source_entry_count'], 2)
+    self.assertNotIn('entries', projected['observations'][0]['observation'])
+
+  def test_real_json_bytes_and_chunk_reassembly_bind_both_hashes(self):
+    with tempfile.TemporaryDirectory() as directory:
+      root = Path(directory).resolve()
+      raw = json.dumps({'status': 'FAIL', 'error': '中文 ' + 'x' * 6000}, ensure_ascii=False).encode('utf-8')
+      (root / 'report.json').write_bytes(raw)
+      identity, value = reports.readReport(root, 'report.json')
+      self.assertEqual(identity['bytes'], len(raw))
+      self.assertEqual(identity['sha256'], hashlib.sha256(raw).hexdigest())
+      text = reports.payloadText('fixture', identity, value, 'complete')
+      lines = []
+      reports.emitPayload('fixture', text, lines.append)
+      chunks = [json.loads(line[len(reports.PREFIX):]) for line in lines]
+      self.assertGreater(len(chunks), 1)
+      self.assertTrue(all(chunk['chunks'] == len(chunks) for chunk in chunks))
+      self.assertEqual([chunk['chunk'] for chunk in chunks], list(range(1, len(chunks) + 1)))
+      reconstructed = ''.join(chunk['text'] for chunk in chunks)
+      self.assertEqual(reconstructed, text)
+      self.assertEqual(hashlib.sha256(text.encode('ascii')).hexdigest(), chunks[0]['projection_sha256'])
+      self.assertEqual(json.loads(reconstructed)['projection'], value)
+
+  def test_missing_malformed_outside_and_oversized_sources_are_not_passes(self):
+    with tempfile.TemporaryDirectory() as directory:
+      root = Path(directory).resolve()
+      identity, value = reports.readReport(root, 'missing.json')
+      self.assertEqual(identity['status'], 'MISSING')
+      self.assertIsNone(value)
+      with self.assertRaises(ValueError):
+        reports.readReport(root, '../neighbor.json')
+      (root / 'bad.json').write_text('not JSON', encoding='utf-8')
+      with self.assertRaises(json.JSONDecodeError):
+        reports.readReport(root, 'bad.json')
+      (root / 'large.json').write_text('{"value": "' + 'x' * 40 + '"}', encoding='utf-8')
+      with self.assertRaisesRegex(ValueError, 'read budget'):
+        reports.readReport(root, 'large.json', maximumBytes=16)
+
+  def test_projection_size_limit_rejects_without_silently_dropping_exception_fields(self):
+    value = {'exceptions': [{'code': 0xc0000005, 'error': 'x' * 1000}]}
+    with patch.object(reports, 'MAX_PROJECTION_BYTES', 100):
+      with self.assertRaisesRegex(ValueError, 'no fields or exception records'):
+        reports.payloadText('large', {'status': 'READ'}, value, 'native')
+
+
+
+  def test_comparison_projection_keeps_real_exit_internal_status_and_environment_scope(self):
+    value = {'name': 'core-without-modules', 'mode': 'plain-before', 'sequence': 1,
+      'status': 'FAIL', 'installation_root': 'C:/same/中 文/VisionWorkshop',
+      'executable': 'C:/same/中 文/VisionWorkshop/VisionWorkshop.exe',
+      'process': {'pid': 42, 'exit_code': 0xc0000005}, 'process_exited': True,
+      'internal_report_sha256': 'a' * 64, 'internal_report_summary': {'status': 'PASS'},
+      'environment': {'sha256': 'b' * 64, 'selected': {'_NO_DEBUG_HEAP': None},
+                      'target_environment_readback': 'NOT_MEASURED', 'heap_behavior': 'NOT_MEASURED'},
+      'heap_behavior': 'NOT_MEASURED', 'core_before': {'status': 'PASS'},
+      'core_unchanged': {'status': 'PASS'}, 'observation_errors': []}
+    self.assertEqual(reports.project(value, 'comparison-case'), value)
+    summary = reports.project({'status': 'FAIL', 'source_product_status': 'FAIL',
+      'comparison': {'mode_order': ['plain-before', 'debug-default', 'debug-noheap', 'plain-after']},
+      'cases': [value]}, 'diagnostic')
+    self.assertEqual(summary['cases'], [value])
+    self.assertEqual(summary['source_product_status'], 'FAIL')
+    self.assertEqual(summary['comparison']['mode_order'][2], 'debug-noheap')
+
+  def test_schema3_collects_each_fixed_run_without_changing_its_core_path(self):
+    with tempfile.TemporaryDirectory() as directory:
+      parent = Path(directory).resolve()
+      diagnostic = parent / 'diagnostic'
+      diagnostic.mkdir()
+      plan = reports.comparisonReportPaths(diagnostic)
+      self.assertEqual(len(plan), 16)
+      self.assertEqual(len({relative for _, _, relative, _ in plan}), 16)
+      self.assertEqual(sum(kind == 'native' for _, _, _, kind in plan), 4)
+      self.assertEqual(sum(kind == 'core' for _, _, _, kind in plan), 4)
+      self.assertEqual(sum(kind == 'comparison-case' for _, _, _, kind in plan), 8)
+      self.assertTrue(all(root == diagnostic and '/reports/' in relative for _, root, relative, _ in plan))
+      (diagnostic / 'diagnostic-summary.json').write_text(json.dumps({
+        'status': 'FAIL', 'source_request': {'schema_version': 3}, 'cases': []}), encoding='utf-8')
+      captured = io.StringIO()
+      with redirect_stdout(captured):
+        result = reports.collectReports(diagnostic, parent / 'fixtures', parent / 'source')
+      lines = captured.getvalue().splitlines()
+      self.assertEqual(result, 0)  # Missing reports are labelled, never promoted to product PASS.
+      chunks = [json.loads(line[len(reports.PREFIX):]) for line in lines if line.startswith(reports.PREFIX)]
+      labels = {chunk['label'] for chunk in chunks}
+      self.assertTrue({label for label, *_ in plan}.issubset(labels))
+      self.assertIn('fixtures-noheap', labels)
+      self.assertIn('fixture-noheap-normal', labels)
+      self.assertIn('fixture-noheap-access-violation', labels)
+      self.assertNotIn('core-native', labels)
+      self.assertNotIn('gui-native', labels)
+      for label, *_ in plan:
+        pieces = sorted((chunk for chunk in chunks if chunk['label'] == label),
+                        key=lambda chunk: chunk['chunk'])
+        self.assertEqual([chunk['chunk'] for chunk in pieces], list(range(1, len(pieces) + 1)))
+        self.assertTrue(all(chunk['chunks'] == len(pieces) for chunk in pieces))
+        text = ''.join(chunk['text'] for chunk in pieces)
+        digest = hashlib.sha256(text.encode('ascii')).hexdigest()
+        self.assertTrue(all(chunk['projection_bytes'] == len(text)
+                            and chunk['projection_sha256'] == digest for chunk in pieces))
+        payload = json.loads(text)
+        self.assertEqual(payload['source']['status'], 'MISSING')
+        self.assertIsNone(payload['projection'])
+
+
+if __name__ == '__main__':
+  unittest.main()

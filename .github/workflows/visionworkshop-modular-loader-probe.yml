@@ -1,0 +1,180 @@
+name: VisionWorkshop frozen external module loader probe
+
+on:
+  push:
+    branches:
+      - test/visionworkshop-modular-loader
+    paths:
+      - '.github/workflows/visionworkshop-modular-loader-probe.yml'
+      - 'scripts/verify_vision_train_modules.py'
+      - 'scripts/modular_probe_core.py'
+      - 'ci/vision-train-modular-probe-constraints.txt'
+      - 'tests/test_vision_train_modules.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-modular-loader:
+    runs-on: windows-latest
+    timeout-minutes: 90
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      PYTHONNOUSERSITE: '1'
+      PYTHONUTF8: '1'
+      PYTHONIOENCODING: utf-8
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - name: Checkout loader experiment
+        uses: actions/checkout@v7
+        with:
+          path: packager
+          persist-credentials: false
+
+      - name: Checkout exact first-party runtime source
+        uses: actions/checkout@v7
+        with:
+          repository: jsdfhasuh/emo-vision-train
+          ref: bb3772003f0b8cbd872d9342a48aa4a82d5bb861
+          path: source
+          token: ${{ secrets.SOURCE_REPO_TOKEN || github.token }}
+          submodules: false
+          persist-credentials: false
+
+      - name: Set up exact CPython ABI
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12.10'
+
+      - name: Locate pip download cache
+        id: pip-cache-path
+        shell: pwsh
+        run: |
+          $pipCachePath = python -m pip cache dir
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot locate pip cache' }
+          "directory=$pipCachePath" | Out-File $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Restore reviewed dependency downloads
+        id: module-pip-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ steps.pip-cache-path.outputs.directory }}
+          key: vw-b2-pip-${{ runner.os }}-cp31210-${{ hashFiles('packager/ci/vision-train-modular-probe-constraints.txt') }}
+
+      - name: Create isolated build and runtime preparation environments
+        shell: pwsh
+        run: |
+          python -c "import sys; assert sys.version_info[:3] == (3, 12, 10)"
+          if ($LASTEXITCODE -ne 0) { throw 'Unexpected host Python' }
+          New-Item -ItemType Directory -Force reports | Out-Null
+          $buildVenv = Join-Path $env:RUNNER_TEMP 'vw-module-build'
+          $runtimeVenv = Join-Path $env:RUNNER_TEMP 'vw-module-runtime'
+          python -m venv $buildVenv
+          if ($LASTEXITCODE -ne 0) { throw 'Build environment creation failed' }
+          python -m venv $runtimeVenv
+          if ($LASTEXITCODE -ne 0) { throw 'Runtime preparation environment creation failed' }
+          "BUILD_PYTHON=$buildVenv/Scripts/python.exe" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+          "RUNTIME_PYTHON=$runtimeVenv/Scripts/python.exe" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Install pinned build-only tools
+        shell: pwsh
+        run: |
+          & $env:BUILD_PYTHON -m pip install `
+            -c packager/ci/vision-train-modular-probe-constraints.txt `
+            pyinstaller==6.18.0 pyinstaller-hooks-contrib==2026.0 `
+            --report reports/build-install.json
+          if ($LASTEXITCODE -ne 0) { throw 'Build tool installation failed' }
+          & $env:BUILD_PYTHON -m pip check
+          if ($LASTEXITCODE -ne 0) { throw 'Build tool dependency check failed' }
+
+      - name: Install matched external Torch runtime
+        shell: pwsh
+        run: |
+          & $env:RUNTIME_PYTHON -m pip install `
+            -c packager/ci/vision-train-modular-probe-constraints.txt `
+            torch==2.10.0+cu128 torchvision==0.25.0+cu128 `
+            --extra-index-url https://download.pytorch.org/whl/cu128 `
+            --report reports/torch-install.json
+          if ($LASTEXITCODE -ne 0) { throw 'External Torch runtime installation failed' }
+
+      - name: Install selected native modules with one binary owner each
+        shell: pwsh
+        run: |
+          & $env:RUNTIME_PYTHON -m pip install `
+            -c packager/ci/vision-train-modular-probe-constraints.txt `
+            numpy==2.0.2 onnx==1.16.0 onnxruntime-gpu==1.23.2 `
+            opencv-contrib-python-headless==4.11.0.86 `
+            Pillow==12.0.0 psutil==7.2.1 packaging==25.0 `
+            PyQt5==5.15.9 PyQtWebEngine==5.15.7 `
+            --report reports/native-install.json
+          if ($LASTEXITCODE -ne 0) { throw 'External native runtime installation failed' }
+          & $env:RUNTIME_PYTHON -m pip check 2>&1 | Tee-Object reports/pip-check.txt
+          if ($LASTEXITCODE -ne 0) { throw 'External runtime dependencies conflict' }
+          & $env:RUNTIME_PYTHON -m pip freeze --all | Out-File reports/runtime-freeze.txt -Encoding utf8
+          if ($LASTEXITCODE -ne 0) { throw 'Runtime inventory failed' }
+          & $env:RUNTIME_PYTHON -m pip inspect | Out-File reports/runtime-inspect.json -Encoding utf8
+          if ($LASTEXITCODE -ne 0) { throw 'Runtime metadata inventory failed' }
+
+      - name: Prepare the exact previously validated C++ runtime file
+        shell: pwsh
+        run: |
+          $crtSource = Join-Path $env:RUNNER_TEMP 'vw-crt-source'
+          & $env:BUILD_PYTHON -m pip download --no-deps --only-binary=:all: `
+            --platform win_amd64 --python-version 312 --implementation cp --abi cp312 `
+            pandas==2.3.3 --dest $crtSource
+          if ($LASTEXITCODE -ne 0) { throw 'Pinned CRT source wheel download failed' }
+          $wheel = Join-Path $crtSource 'pandas-2.3.3-cp312-cp312-win_amd64.whl'
+          $sha = (Get-FileHash $wheel -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($sha -ne 'a16dcec078a01eeef8ee61bf64074b4e524a2a3f4b3be9326420cabe59c4778b') {
+            throw 'Pinned CRT source wheel hash differs'
+          }
+          "CRT_WHEEL=$wheel" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Save successful downloads before acceptance
+        if: ${{ steps.module-pip-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ steps.pip-cache-path.outputs.directory }}
+          key: ${{ steps.module-pip-cache.outputs.cache-primary-key }}
+
+      - name: Check loader harness before compiling
+        shell: pwsh
+        working-directory: packager
+        run: |
+          & $env:BUILD_PYTHON -m unittest discover -s tests -p test_vision_train_modules.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'Loader harness unit checks failed' }
+
+      - name: Build real frozen Core and test external modules
+        shell: pwsh
+        working-directory: packager
+        run: |
+          & $env:BUILD_PYTHON -X utf8 scripts/verify_vision_train_modules.py `
+            --runtime-python $env:RUNTIME_PYTHON `
+            --build-python $env:BUILD_PYTHON `
+            --source-root (Join-Path $env:GITHUB_WORKSPACE 'source') `
+            --constraints ci/vision-train-modular-probe-constraints.txt `
+            --crt-wheel $env:CRT_WHEEL `
+            --torch-install-report (Join-Path $env:GITHUB_WORKSPACE 'reports/torch-install.json') `
+            --output (Join-Path $env:GITHUB_WORKSPACE 'modular-output') `
+            2>&1 | Tee-Object ../reports/modular-loader.log
+          if ($LASTEXITCODE -ne 0) { throw 'Real frozen external loader probe failed' }
+
+      - name: Upload loader evidence and diagnostic Core only
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: visionworkshop-modular-loader-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            reports/**
+            modular-output/reports/**
+            modular-output/archives/VisionWorkshopProbeCore.zip
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Record acceptance scope
+        if: ${{ !cancelled() }}
+        shell: pwsh
+        run: |
+          'B2 diagnostic Core and external loader experiment; not the product GUI or a formal release.' | Out-File $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
+          'CPU execution, DLL loading and actual CUDA computation are recorded separately; unavailable GPU hardware is NOT_RUN.' | Out-File $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append

@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "status": "FAIL",
+  "run_id": 45678371316,
+  "run_attempt": 1,
+  "diagnostic_attempt": 3,
+  "run_url": "https://github.com/jsdfhasuh/python_build_scripts/actions/runs/45678371316",
+  "diagnostic_builder_sha": "54342a71f311a6fcb4e22a01cc204be4cb4d3000",
+  "source_guards": {
+    "tests": 16,
+    "failures": 1,
+    "errors": 0,
+    "skipped": 0,
+    "elapsed_seconds": 0.701,
+    "failed_test": "test_reviewed_current_request_has_exact_source_and_only_two_artifacts",
+    "failed_assertion": "diagnostic_attempt == 2",
+    "actual_requested_attempt": 3,
+    "cause": "The test wrongly pinned a diagnostic nonce as if it were original Core identity. The next test checks a positive exact integer and rejects bool/0/-1; every original Core identity pin stays fixed."
+  },
+  "native_and_dll_guards": "SKIPPED",
+  "projection_guards": "SKIPPED",
+  "actual_native_fixtures": "SKIPPED",
+  "original_core_download": "SKIPPED",
+  "original_core_debug_observations": "SKIPPED",
+  "log_projection": {
+    "status": "EXECUTED",
+    "scope": "Nine MISSING reports are accurately represented; no product report is claimed.",
+    "chunks": 9,
+    "independently_reassembled_and_sha256_verified": true,
+    "outputs": {
+      "source": {
+        "bytes": 122,
+        "sha256": "dbd729ba121ddd60c6c23f96626d41e2a4cdaf488d7304769342a8f3e7d13e0c",
+        "status": "MISSING"
+      },
+      "fixtures": {
+        "bytes": 134,
+        "sha256": "d44e90e171588cbbb6e0ce2c315fd171bd6cf9af8ccdf2c2ddd6f9bfdfb2c80b",
+        "status": "MISSING"
+      },
+      "fixture-normal": {
+        "bytes": 143,
+        "sha256": "2a125b3b17c8d8f2bd96fe9d1c582afc1b9e37883b4df9e529c2c2214717d031",
+        "status": "MISSING"
+      },
+      "fixture-access-violation": {
+        "bytes": 163,
+        "sha256": "54458bd4b82828ed253e05033d305ce59c9bc5c03eb506d9335773761102f05d",
+        "status": "MISSING"
+      },
+      "diagnostic": {
+        "bytes": 134,
+        "sha256": "c77888a1d54e88f496f37ff43784bf0ba8479be68cc9ac57526b7ee803945ee2",
+        "status": "MISSING"
+      },
+      "core-native": {
+        "bytes": 135,
+        "sha256": "af93f9b446af0f88085e3537c017a23601ea0874e6d75953672e1389766935af",
+        "status": "MISSING"
+      },
+      "core-internal": {
+        "bytes": 143,
+        "sha256": "793f961ae58c47e4a42c0db4ac511c77562936d9651e2ca1ed6d232fb93e5e4a",
+        "status": "MISSING"
+      },
+      "gui-native": {
+        "bytes": 134,
+        "sha256": "f502cd2e3bcec50720f296040fa16f2ff66a441ad89e60825f6d42b10f14f2b1",
+        "status": "MISSING"
+      },
+      "dll-search": {
+        "bytes": 156,
+        "sha256": "84e29c1d20b8bb31eec396820927160afa187411dffdddd2ebded55fd3be1aff",
+        "status": "MISSING"
+      }
+    }
+  },
+  "artifact": {
+    "id": 15052922394,
+    "name": "visionworkshop-core-exit-diagnostic-45678371316-1",
+    "bytes": 754,
+    "sha256": "d822526dd224c0ca4947b0444a730cb6f40cdb00dc1ca821054e0e530b6e06f5",
+    "scope": "Only the request; no original Core or native evidence"
+  },
+  "scope": "This source-guard failure prevented every actual native fixture and Core execution. No product result is inferred."
+}

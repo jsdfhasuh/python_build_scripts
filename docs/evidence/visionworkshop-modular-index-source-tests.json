@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "scope": "Linux source and real small ZIP contracts only; no native Windows index construction, process-chain or DataLoader qualification",
+  "patterns": {
+    "test_vision_train_modular_index.py": 12,
+    "test_windows_qt_fonts.py": 10,
+    "test_vision_train_modular_build.py": 35,
+    "test_workflow_safety.py": 12
+  },
+  "tests_run": 69,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "elapsed_seconds": 1.875,
+  "status": "PASS",
+  "application_contract_sha256": "6bfaa2169ab1294c8acbcce29f6fe761a657b7246b3947cc1df0fc9218f191de",
+  "inputs": [
+    {
+      "path": "vision_train_modular_index.py",
+      "sha256": "b14a1108239c2d08c256b0f91962483143ea90c9cbbe58e1b780badff943d44b"
+    },
+    {
+      "path": "tests/test_vision_train_modular_index.py",
+      "sha256": "875e90199143c7e3ecfe1eae6711f977e995fd316a1242dac255a9bd470d9ab0"
+    },
+    {
+      "path": "scripts/verify_windows_qt_fonts.py",
+      "sha256": "f049b18131f5c5e9dc20a4f7b013e62a214d799d6ff7cbe9282db686c38abe00"
+    },
+    {
+      "path": "tests/test_windows_qt_fonts.py",
+      "sha256": "af193ff916c61ae1fa5804616104dc75f204fc7609eac5b4c1bafd0f53a018ed"
+    },
+    {
+      "path": "scripts/verify_vision_train_modular_product.py",
+      "sha256": "6f78a7746faa29c0d902eead5e84bff178f8a7ea5edd055fd91578159962a6c8"
+    },
+    {
+      "path": "vision_train_modular_build.py",
+      "sha256": "903846fc480f06aa2c829a96fa302c48ae2bf03dba8f55128693d00bfeae68d5"
+    },
+    {
+      "path": ".github/workflows/visionworkshop-modular-candidate.yml",
+      "sha256": "d851a5e421f8c2fb051c11d7acd724f5856e00c94ad089d0f55f07ecd71e62a8"
+    }
+  ],
+  "actual_windows_candidate_index": "NOT_RUN",
+  "actual_windows_venv_chain": "NOT_RUN",
+  "actual_dataloader_spawn": "NOT_RUN"
+}

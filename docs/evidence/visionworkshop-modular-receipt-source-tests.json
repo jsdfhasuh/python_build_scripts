@@ -1,0 +1,16 @@
+{
+  "status": "PASS",
+  "test_modules": [
+    "test_vision_train_modular_build",
+    "test_vision_train_modular_reuse",
+    "test_vision_train_modular_receipts",
+    "test_workflow_safety"
+  ],
+  "tests_run": 76,
+  "skipped": 0,
+  "failures": 0,
+  "errors": 0,
+  "elapsed_seconds": 1.882,
+  "scope": "Local source/real ZIP fixtures, not Windows product native qualification",
+  "previous_targeted_attempt": "34 prior builder tests passed; new DINO guard failed because its mock-call assertion used positional index 5 instead of 4. The assertion was corrected, then the complete targeted set was rerun without changing production logic or weakening scope assertions."
+}

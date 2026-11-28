@@ -1,5 +1,6 @@
 """Keep merged diagnostics separate from production publication entrypoints."""
 
+import json
 import unittest
 from pathlib import Path
 
@@ -72,8 +73,202 @@ class WorkflowSafetyTests(unittest.TestCase):
           if ((path.name == 'release-windows.yml' and jobName == 'build') or
               (path.name == 'release-emo-master.yml' and jobName in ('package', 'release'))):
             self.assertEqual(job['permissions'], {'contents': 'write'})
+          elif ((path.name == 'visionworkshop-modular-candidate.yml'
+                 and jobName == 'windows-modular-candidate') or
+                (path.name == 'visionworkshop-modular-preview-release.yml'
+                 and jobName == 'publish-preview') or
+                (path.name == 'visionworkshop-core-diagnostic.yml'
+                 and jobName == 'windows-core-exit-diagnostic') or
+                (path.name == 'visionworkshop-offline-network.yml'
+                 and jobName == 'windows-outbound-block') or
+                (path.name == 'visionworkshop-disconnected-guest.yml'
+                 and jobName == 'windows-disconnected-guest') or
+                (path.name == 'visionworkshop-offline-container.yml'
+                 and jobName == 'windows-continuous-offline')):
+            self.assertEqual(job['permissions'], {'contents': 'read', 'actions': 'read'})
           else:
             self.assertEqual(job.get('permissions', data['permissions']), {'contents': 'read'})
+
+  def test_candidate_reuse_read_token_is_scoped_to_explicit_artifact_download(self) -> None:
+    data, events = loadWorkflow('visionworkshop-modular-candidate.yml')
+    job = data['jobs']['windows-modular-candidate']
+    self.assertNotIn('GH_TOKEN', data.get('env', {}))
+    self.assertNotIn('GH_TOKEN', job.get('env', {}))
+    downloads = [step for step in getSteps(data) if 'GH_TOKEN' in step.get('env', {})]
+    self.assertEqual(len(downloads), 1)
+    self.assertEqual(downloads[0]['env']['GH_TOKEN'], '${{ github.token }}')
+    self.assertEqual(downloads[0]['if'], "${{ env.REUSE_RUN_ID != '' }}")
+    self.assertIn('packager/scripts/prepare_vision_train_module_reuse.py', downloads[0]['run'])
+    self.assertEqual(events['workflow_dispatch']['inputs']['reuse_run_id']['default'], '')
+    self.assertEqual(events['push']['paths'], [
+      'ci/visionworkshop-modular-candidate.json',
+      '.github/workflows/visionworkshop-modular-candidate.yml',
+    ])
+
+  def test_guarded_candidate_can_rebuild_modules_without_archive_reuse(self) -> None:
+    # A changed vendor/dependency lock invalidates old module manifests; guarded
+    # Core construction must still be available while rebuilding the full module set.
+    data, events = loadWorkflow('visionworkshop-modular-candidate.yml')
+    self.assertIs(events['workflow_dispatch']['inputs']['guarded_core']['default'], False)
+    request = json.loads((ROOT / 'ci/visionworkshop-modular-candidate.json').read_text(encoding='utf-8'))
+    self.assertIs(request['guarded_core'], True)
+    self.assertEqual((request['reuse_run_id'], request['reuse_run_attempt']), ('', '1'))
+    self.assertEqual((request['core_version'], request['max_core_version'], request['build_id']),
+                     ('1.0.42', '1.1.0', '1.0.42+preview1'))
+    inputs = events['workflow_dispatch']['inputs']
+    for name in ('core_version', 'max_core_version', 'build_id'):
+      self.assertIs(inputs[name]['required'], True)
+    validate, = [step['run'] for step in getSteps(data) if step.get('name') == 'Validate exact application source input']
+    self.assertNotIn('$guardedCore -and -not $env:REUSE_RUN_ID', validate)
+    self.assertIn('CORE_VERSION=$env:CORE_VERSION', validate)
+    self.assertIn('MAX_CORE_VERSION=$env:MAX_CORE_VERSION', validate)
+    self.assertIn('BUILD_ID=$env:BUILD_ID', validate)
+    version_check, = [step['run'] for step in getSteps(data)
+                      if step.get('name') == 'Verify Core version matches the application version']
+    self.assertIn('source/app_version.py', version_check)
+    self.assertIn('$appVersion -ne $env:CORE_VERSION', version_check)
+    self.assertIn("if ($env:REUSE_RUN_ID) { $reuseArgs = @('--reuse-root', 'modular-reuse') }",
+                  next(step['run'] for step in getSteps(data) if step.get('id') == 'build-candidate'))
+    build, = [step['run'] for step in getSteps(data) if step.get('id') == 'build-candidate']
+    self.assertIn('build_vision_train_core_bootloader.py', build)
+    self.assertIn('--core-version $env:CORE_VERSION', build)
+    self.assertIn('--max-core-version $env:MAX_CORE_VERSION', build)
+    self.assertIn('--build-id $env:BUILD_ID', build)
+    self.assertIn('@reuseArgs @guardArgs', build)
+
+  def test_outbound_diagnostic_only_exposes_read_token_during_preparation(self) -> None:
+    data, events = loadWorkflow('visionworkshop-offline-network.yml')
+    job = data['jobs']['windows-outbound-block']
+    self.assertEqual(job['runs-on'], 'windows-latest')
+    self.assertEqual(set(events), {'push'})
+    self.assertEqual(events['push']['branches'], ['test/visionworkshop-modular-loader'])
+    self.assertNotIn('GH_TOKEN', data.get('env', {}))
+    self.assertNotIn('GH_TOKEN', job.get('env', {}))
+    downloads = [step for step in getSteps(data) if 'GH_TOKEN' in step.get('env', {})]
+    self.assertEqual(len(downloads), 1)
+    self.assertEqual(downloads[0]['env']['GH_TOKEN'], '${{ github.token }}')
+    self.assertIn('-m scripts.verify_vision_train_offline_network prepare ', downloads[0]['run'])
+
+  def test_disconnected_guest_uses_a_hosted_job_and_stages_before_the_network_cut(self) -> None:
+    data, events = loadWorkflow('visionworkshop-disconnected-guest.yml')
+    job = data['jobs']['windows-disconnected-guest']
+    self.assertEqual(job['runs-on'], 'windows-latest')
+    self.assertEqual(job['strategy']['matrix']['scope'], ['edge', 'all', 'activation'])
+    self.assertEqual(set(events), {'push'})
+    self.assertEqual(events['push']['branches'], ['test/visionworkshop-modular-loader'])
+    self.assertNotIn('GH_TOKEN', data.get('env', {}))
+    self.assertNotIn('GH_TOKEN', job.get('env', {}))
+    steps = getSteps(data)
+    downloads = [i for i, step in enumerate(steps) if 'GH_TOKEN' in step.get('env', {})]
+    cut = [i for i, step in enumerate(steps) if './scripts/verify_vision_train_disconnected.ps1' in step.get('run', '')]
+    self.assertEqual((len(downloads), len(cut)), (1, 4))
+    self.assertLess(downloads[0], cut[0])
+    self.assertEqual(steps[downloads[0]]['env']['GH_TOKEN'], '${{ github.token }}')
+    self.assertIn('-m scripts.verify_vision_train_disconnected stage ', steps[downloads[0]]['run'])
+    self.assertEqual([steps[i]['run'].split()[-1] for i in cut], ['edge', 'torch', 'remaining', 'activate'])
+    for i, nextCut in zip(cut[1:], cut[2:]):
+      self.assertTrue(any(step.get('uses', '').startswith('actions/upload-artifact@') for step in steps[i + 1:nextCut]))
+    self.assertTrue(steps[cut[-1] + 1]['uses'].startswith('actions/upload-artifact@'))
+    self.assertIn('/reports/activate', steps[cut[-1] + 1]['with']['path'])
+    fixture = [step for step in steps[downloads[0] + 1:cut[-1]]
+               if '-m scripts.verify_vision_train_disconnected prepare-activation ' in step.get('run', '')]
+    self.assertEqual(len(fixture), 1)
+    self.assertEqual(fixture[0]['if'], "matrix.scope == 'activation'")
+
+  def test_continuous_offline_container_keeps_transport_separate_from_the_product(self) -> None:
+    data, events = loadWorkflow('visionworkshop-offline-container.yml')
+    job = data['jobs']['windows-continuous-offline']
+    self.assertEqual(job['runs-on'], 'windows-2022')
+    self.assertEqual(set(events), {'push'})
+    self.assertEqual(events['push']['branches'], ['test/visionworkshop-modular-loader'])
+    steps = getSteps(data)
+    download, = [i for i, step in enumerate(steps) if 'GH_TOKEN' in step.get('env', {})]
+    run, = [i for i, step in enumerate(steps) if 'verify_vision_train_offline_container.ps1' in step.get('run', '')]
+    self.assertLess(download, run)
+    self.assertIn(' stage-container ', steps[download]['run'])
+    self.assertNotIn('GH_TOKEN', data.get('env', {}))
+    self.assertNotIn('GH_TOKEN', job.get('env', {}))
+    script = (ROOT / 'scripts/verify_vision_train_offline_container.ps1').read_text(encoding='utf-8')
+    self.assertIn('docker create --pull=never --network none', script)
+    self.assertIn('Assert-GuestDisconnected $last', script)
+    self.assertIn('docker cp "${id}:C:/vw-validation/reports" $destination', script)
+    self.assertNotIn('C:/vw-validation/reports/.', script)
+    self.assertNotIn('Disable-NetAdapter', script)
+
+  def test_candidate_artifacts_are_preserved_before_the_product_gate(self) -> None:
+    data, _ = loadWorkflow('visionworkshop-modular-candidate.yml')
+    job = data['jobs']['windows-modular-candidate']
+    self.assertEqual(job['timeout-minutes'], 210)
+    steps = getSteps(data)
+    actual = [i for i, step in enumerate(steps)
+              if 'packager/scripts/verify_vision_train_modular_product.py' in step.get('run', '')]
+    logging = [i for i, step in enumerate(steps)
+               if 'packager/scripts/report_vision_train_modular_candidate.py' in step.get('run', '')]
+    build_uploads = [i for i, step in enumerate(steps)
+                     if step.get('name') == 'Upload candidate build evidence independently']
+    product_uploads = [i for i, step in enumerate(steps)
+                       if step.get('name') == 'Upload candidate product evidence independently']
+    module_uploads = [i for i, step in enumerate(steps)
+                      if step.get('name') == 'Upload the independent module index'
+                      or step.get('name') == 'Upload Core candidate independently'
+                      or ' offline candidate' in step.get('name', '')]
+    self.assertEqual((len(actual), len(logging), len(build_uploads), len(product_uploads)), (1, 1, 1, 1))
+    self.assertEqual(len(module_uploads), 13)
+    self.assertLess(build_uploads[0], actual[0])
+    self.assertTrue(all(index < actual[0] for index in module_uploads))
+    self.assertTrue(all(
+      steps[index]['if'] == "${{ !cancelled() && steps.build-candidate.outcome == 'success' }}"
+      for index in module_uploads
+    ))
+    self.assertLess(actual[0], logging[0])
+    self.assertLess(logging[0], product_uploads[0])
+    self.assertEqual(steps[build_uploads[0]]['if'], "${{ !cancelled() }}")
+    self.assertIn('modular-candidate/reports/**', steps[build_uploads[0]]['with']['path'])
+    self.assertNotIn('modular-acceptance', steps[build_uploads[0]]['with']['path'])
+    self.assertIn('modular-acceptance/reports/**', steps[product_uploads[0]]['with']['path'])
+    self.assertEqual(steps[actual[0]]['if'],
+                     "${{ !cancelled() && steps.build-candidate.outcome == 'success' }}")
+    self.assertEqual(steps[logging[0]]['if'], 'always()')
+    self.assertNotIn('GH_TOKEN', steps[logging[0]].get('env', {}))
+    self.assertIn('python -I -S -B', steps[logging[0]]['run'])
+    self.assertNotIn('continue-on-error', steps[actual[0]])
+    self.assertNotIn('continue-on-error', steps[logging[0]])
+    guards = next(step for step in steps
+                  if step.get('name') == 'Verify builder and native Windows transaction contracts')
+    self.assertIn('test_vision_train_candidate_reports.py', guards['run'])
+
+  def test_core_exit_diagnostic_only_downloads_reviewed_core_without_rebuilding(self) -> None:
+    data, events = loadWorkflow('visionworkshop-core-diagnostic.yml')
+    job = data['jobs']['windows-core-exit-diagnostic']
+    self.assertEqual(events['push']['paths'], ['ci/visionworkshop-core-diagnostic.json'])
+    self.assertEqual(events['push']['branches'], ['test/visionworkshop-modular-loader'])
+    self.assertNotIn('GH_TOKEN', data.get('env', {}))
+    self.assertNotIn('GH_TOKEN', job.get('env', {}))
+    tokens = [step for step in getSteps(data) if 'GH_TOKEN' in step.get('env', {})]
+    self.assertEqual(len(tokens), 1)
+    self.assertEqual(tokens[0]['env']['GH_TOKEN'], '${{ github.token }}')
+    self.assertIn('diagnose_vision_train_core.py prepare', tokens[0]['run'])
+    text = (WORKFLOWS / 'visionworkshop-core-diagnostic.yml').read_text(encoding='utf-8')
+    for forbidden in ('build_vision_train_modular.py', 'pip install', 'submodules:', 'source_ref'):
+      self.assertNotIn(forbidden, text)
+    self.assertIn('diagnose_vision_train_core.py run', text)
+    steps = getSteps(data)
+    fixtures = [index for index, step in enumerate(steps)
+                if '--fixture-output native-debug-fixtures' in step.get('run', '')]
+    downloads = [index for index, step in enumerate(steps)
+                 if 'diagnose_vision_train_core.py prepare' in step.get('run', '')]
+    actual = [index for index, step in enumerate(steps)
+              if 'diagnose_vision_train_core.py run' in step.get('run', '')]
+    self.assertEqual(len(fixtures), 1)
+    self.assertLess(fixtures[0], downloads[0])
+    self.assertLess(downloads[0], actual[0])
+    self.assertIn('test_vision_train_native_debug.py', text)
+    self.assertIn('native-debug-fixtures/*/reports/**', text)
+    logging = [step for step in steps if 'report_vision_train_core_diagnostic.py --diagnostic' in step.get('run', '')]
+    self.assertEqual(len(logging), 1)
+    self.assertEqual(logging[0]['if'], 'always()')
+    self.assertNotIn('GH_TOKEN', logging[0].get('env', {}))
+    self.assertIn('test_vision_train_diagnostic_reports.py', text)
 
   def test_release_checkouts_use_explicit_refs_without_persisting_tokens(self) -> None:
     for name in PRODUCTION:
@@ -143,6 +338,35 @@ class WorkflowSafetyTests(unittest.TestCase):
     self.assertIn('tests/**', events['pull_request']['paths'])
     commands = '\n'.join(step.get('run', '') for step in getSteps(data))
     self.assertIn('python -m unittest discover -s tests -v', commands)
+
+
+  def test_modular_preview_publication_is_explicit_and_prerelease_only(self) -> None:
+    data, events = loadWorkflow('visionworkshop-modular-preview-release.yml')
+    self.assertEqual(events['push']['branches'], ['release-requests/**'])
+    self.assertEqual(events['push']['paths'], ['ci/visionworkshop-modular-release-request.json'])
+    steps = getSteps(data)
+    request, = [step for step in steps if step.get('name') == 'Validate Preview request']
+    self.assertIn('candidate_builder_sha', request['run'])
+    self.assertIn('v{version}-preview.1', request['run'])
+    merged, = [step for step in steps if step.get('name') == 'Verify candidate run and merged builder source']
+    self.assertIn('git merge-base --is-ancestor', merged['run'])
+    app_merge, = [step for step in steps if step.get('name') == 'Checkout and verify exact application source']
+    self.assertIn('git -C app merge-base --is-ancestor', app_merge['run'])
+    create_draft, = [step for step in steps if step.get('name') == 'Create draft Preview with verified assets']
+    self.assertEqual(create_draft['env']['GH_TOKEN'], '${{ secrets.RELEASE_REPO_TOKEN }}')
+    self.assertIn('request["release_repo"] != "jsdfhasuh/emo-vision-train-release"', request['run'])
+    self.assertIn('RELEASE_REPO={request[\'release_repo\']}', request['run'])
+    self.assertIn('--repo "$RELEASE_REPO"', create_draft['run'])
+    self.assertIn('--draft --prerelease', create_draft['run'])
+    self.assertIn('RELEASE_REPO_TOKEN is not configured', create_draft['run'])
+    verify_draft, = [step for step in steps if step.get('name') == 'Verify draft Preview assets before publication']
+    self.assertIn('isDraft', verify_draft['run'])
+    self.assertIn('expected-release-assets.txt', verify_draft['run'])
+    publish, = [step for step in steps if step.get('name') == 'Publish the verified Preview']
+    self.assertIn('draft=false', publish['run'])
+    verify, = [step for step in steps if step.get('name') == 'Verify published Preview']
+    self.assertIn('isPrerelease', verify['run'])
+    self.assertIn('expected-release-assets.txt', verify['run'])
 
 
 if __name__ == '__main__':

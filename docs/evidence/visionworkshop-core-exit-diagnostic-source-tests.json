@@ -1,0 +1,29 @@
+{
+  "tests_run": 29,
+  "errors": 0,
+  "failures": 0,
+  "skipped": 0,
+  "groups": {
+    "tests/test_vision_train_core_diagnostic.py": 16,
+    "tests/test_workflow_safety.py": 13
+  },
+  "elapsed_seconds": 1.327,
+  "scope": "Portable source guards and real small ZIP fixtures; Windows product/WEVTUTIL/WM_CLOSE execution is not claimed",
+  "inputs": {
+    "scripts/diagnose_vision_train_core.py": "f103759af6159a77eb0b36f4b18ffb7b886b89f918f3723869f6804bd9c9c484",
+    "tests/test_vision_train_core_diagnostic.py": "d02c4ba00d0cc9ffddbfda984bdf27ed0682feeda8b7523ef906408b92c1d8bb",
+    ".github/workflows/visionworkshop-core-diagnostic.yml": "60e2bf3e45ebb66da064b9edd1e3c25c3c9bfcfcb231e645badd2b5944b177ac",
+    "ci/visionworkshop-core-diagnostic.json": "93bdd1a7b15d50e0efedad8d9ad3ecca2210a2edb645c506684bf74821fbff61",
+    "tests/test_workflow_safety.py": "a0fbdfc2be9bc110f91c691050dd0d474ce476c4210647abbffcad24d31e3c2b"
+  },
+  "real_source_evidence_preflight": {
+    "outer_artifact": 15046836955,
+    "bytes": 73474221,
+    "sha256": "eed972a2d2a487445335d09722fb62bdaa926efd75ba1db5ad911864829ebf81",
+    "build": "BUILT",
+    "original_product": "FAIL",
+    "core_files": 11322,
+    "result": "PASS",
+    "scope": "Read exact actual original evidence through sourceEvidence; no original Core execution in this local check"
+  }
+}

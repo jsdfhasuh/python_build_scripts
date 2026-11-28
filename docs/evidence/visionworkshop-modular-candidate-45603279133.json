@@ -1,0 +1,153 @@
+{
+  "schema_version": 1,
+  "scope": "First complete preparation inventory; stopped before freezing, not a product acceptance result",
+  "run": {
+    "id": 45603279133,
+    "job_id": 139167468363,
+    "url": "https://github.com/jsdfhasuh/python_build_scripts/actions/runs/45603279133",
+    "builder_sha": "940986d603e4286d7419beb57d6312627233ef29",
+    "app_sha": "12487c202daf8b4d51db7f54ef0dd6b2919a7c85",
+    "conclusion": "failure"
+  },
+  "artifact": {
+    "id": 15018160038,
+    "name": "visionworkshop-modular-evidence-45603279133-1",
+    "bytes": 26722760,
+    "sha256": "3be479ee83497a1d816dde26368604cfdafdffac9046941bc7cf215551a2068a",
+    "downloaded_sha256_verified": true
+  },
+  "completed_gates": {
+    "builder_tests": 31,
+    "shared_contract_tests": 10,
+    "windows_transaction_tests": 17,
+    "repair_annotation_font_resource_guards": {
+      "passed": 71,
+      "skipped": 1,
+      "skip_reason": "Official font not prepared at the early source-test stage"
+    },
+    "protocol_3_fixed_worker_permission_tests": 3,
+    "prepared_official_font_and_both_original_vendor_aliases": {
+      "passed": 1,
+      "skipped": 0
+    },
+    "selected_dependency_preparation": "PASS",
+    "pre_source_vendor_pip_check": "PASS",
+    "offline_resource_preparation": "PASS"
+  },
+  "failure": {
+    "stage": "contract.validate_core before freeze",
+    "code": "MODULE_OWNER",
+    "message": "The Windows pyreadline3 readline.py compatibility namespace was rejected as a standard-library name",
+    "owner": "runtime.ort",
+    "distribution": "pyreadline3",
+    "version": "3.5.4",
+    "wheel": {
+      "version": "3.5.4",
+      "url": "https://files.pythonhosted.org/packages/5a/dc/491b7661614ab97483abf2056be1deee4dc2490ecbf7bff9ab5cdbac86e1/pyreadline3-3.5.4-py3-none-any.whl",
+      "sha256": "eaf8e6cc3c49bcccf145fc6067ba8643d1df34d604a1ec0eccbf7a18e6d3fae6",
+      "report_sha256": "1ca5ab4114622628cf88bb734d5c2d2f405bc69de607d7b918923c81724f46bb"
+    },
+    "file": {
+      "path": "site-packages/readline.py",
+      "bytes": 2667,
+      "sha256": "43ceb5146aa67adb632a13ec668ee502df3dd515ddd1d10302d9036a9794522e"
+    }
+  },
+  "actual_dependency_requires": {
+    "runtime.torch": [],
+    "runtime.ort": [],
+    "runtime.science": [],
+    "runtime.vision": [
+      "runtime.torch"
+    ],
+    "feature.yolo": [
+      "runtime.science",
+      "runtime.torch"
+    ],
+    "feature.patchcore": [
+      "runtime.science",
+      "runtime.torch",
+      "runtime.vision"
+    ]
+  },
+  "compatibility_findings": [
+    {
+      "status": "explicit-provider",
+      "source": "feature.yolo",
+      "requirement": "opencv-python>=4.6.0",
+      "selected_distribution": "opencv-contrib-python-headless",
+      "selected_version": "4.11.0.86",
+      "alias_metadata_version": null
+    },
+    {
+      "status": "explicit-provider",
+      "source": "anomalib",
+      "requirement": "opencv-python-headless>=4.5.3.56",
+      "selected_distribution": "opencv-contrib-python-headless",
+      "selected_version": "4.11.0.86",
+      "alias_metadata_version": "4.11.0.86"
+    },
+    {
+      "status": "observed/unqualified",
+      "source": "feature.yolo",
+      "requirement": "torch>=1.8.0,<2.10,!=2.4.0; sys_platform == 'win32'",
+      "selected_distribution": "torch",
+      "selected_version": "2.10.0+cu128",
+      "release_gate": "Unresolved vendor compatibility declaration"
+    },
+    {
+      "status": "observed/unqualified",
+      "source": "feature.yolo",
+      "requirement": "torch>=1.8.0,<2.10",
+      "selected_distribution": "torch",
+      "selected_version": "2.10.0+cu128",
+      "release_gate": "Unresolved vendor compatibility declaration"
+    }
+  ],
+  "not_run": [
+    "Product EXE freezing",
+    "Core and module ZIP construction",
+    "Actual product native/offline/module/repair/update/resource cases",
+    "Physical GPU execution",
+    "Physical disconnected-machine acceptance",
+    "Core upgrade migration"
+  ],
+  "report_bindings": {
+    "reports/module-repair-annotation-source.xml": {
+      "bytes": 11054,
+      "sha256": "9ad4a926b9de690c31910eb6b07b15f5399e4d22ee27aeb356a429edee097f46"
+    },
+    "reports/offline-fonts-native.xml": {
+      "bytes": 389,
+      "sha256": "a1e24d7b0f938ff57a919688022b97002d624fb1af4527384d580e9d9583a099"
+    },
+    "reports/runtime-install.json": {
+      "bytes": 2152601,
+      "sha256": "1ca5ab4114622628cf88bb734d5c2d2f405bc69de607d7b918923c81724f46bb"
+    },
+    "reports/provider-install.json": {
+      "bytes": 29587,
+      "sha256": "912a452fd3fde3f9b59e8231478cd6965efdb9c2023ababe8038e0b18f6bf5f2"
+    },
+    "reports/resource-preparation.json": {
+      "bytes": 3849,
+      "sha256": "c0f02d8aa2375d7526d68b0c531eff43e64be8e742f3fcb342a8df85b10cbe2b"
+    },
+    "modular-candidate/reports/ownership.json": {
+      "bytes": 10219,
+      "sha256": "72ae6c5038fe721577fe0e932a52051e522f3d2bc52c324d5f6ce09b57d2ab95"
+    },
+    "modular-candidate/reports/installed-distributions.json": {
+      "bytes": 11131507,
+      "sha256": "193bffb137fa32766ad99ef5ad634b6014a394ec3a3263cc361db07a09adf52c"
+    },
+    "modular-candidate/reports/installed-file-ownership.json": {
+      "bytes": 10979775,
+      "sha256": "f04ee5207ceb426de7629b79172449516cee9f834d1f79d6dbbe65bbd7688cae"
+    },
+    "modular-candidate/reports/modular-build-summary.json": {
+      "bytes": 1118,
+      "sha256": "b1571edf23c8aa7d0b7b7638809d39465862b2834334cca4825d9bd97d70d31c"
+    }
+  }
+}

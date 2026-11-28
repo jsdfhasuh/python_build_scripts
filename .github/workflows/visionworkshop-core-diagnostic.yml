@@ -1,0 +1,108 @@
+name: VisionWorkshop immutable Core exit diagnostic
+
+on:
+  push:
+    branches:
+      - test/visionworkshop-modular-loader
+    paths:
+      - 'ci/visionworkshop-core-diagnostic.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-core-exit-diagnostic:
+    permissions:
+      contents: read
+      actions: read
+    runs-on: windows-latest
+    timeout-minutes: 40
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      PYTHONNOUSERSITE: '1'
+      PYTHONUTF8: '1'
+      PYTHONIOENCODING: utf-8
+    steps:
+      - name: Checkout diagnostic driver only
+        uses: actions/checkout@v7
+        with:
+          path: packager
+          persist-credentials: false
+
+      - name: Set up the diagnostic controller
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12.10'
+
+      - name: Check source and event-correlation guards
+        shell: pwsh
+        working-directory: packager
+        run: |
+          python -B -m unittest discover -s tests -p test_vision_train_core_diagnostic.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'Core diagnostic guard checks failed' }
+          python -B -m unittest discover -s tests -p test_vision_train_native_debug.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'Native debugger and DLL registration guards failed' }
+          python -B -m unittest discover -s tests -p test_vision_train_diagnostic_reports.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'Bounded diagnostic report checks failed' }
+
+      - name: Verify actual Windows normal and access-violation child fixtures
+        shell: pwsh
+        run: |
+          Remove-Item Env:_NO_DEBUG_HEAP -ErrorAction SilentlyContinue
+          python -I -S -B packager/scripts/vision_train_native_debug.py --fixture-output native-debug-fixtures
+          if ($LASTEXITCODE -ne 0) { throw 'Actual Windows debugger fixtures failed' }
+          $env:_NO_DEBUG_HEAP = '1'
+          python -I -S -B packager/scripts/vision_train_native_debug.py --fixture-output native-noheap-fixtures
+          if ($LASTEXITCODE -ne 0) { throw 'Actual Windows no-debug-heap environment fixtures failed' }
+          Remove-Item Env:_NO_DEBUG_HEAP -ErrorAction SilentlyContinue
+
+      - name: Download the exact original Core and evidence
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python -B packager/scripts/diagnose_vision_train_core.py prepare --request packager/ci/visionworkshop-core-diagnostic.json --output diagnostic-source
+          if ($LASTEXITCODE -ne 0) { throw 'Original Core source binding failed' }
+
+      - name: Compare original Core exits with and without a debugger on fixed paths
+        shell: pwsh
+        run: |
+          python -B packager/scripts/diagnose_vision_train_core.py run --source diagnostic-source --request packager/ci/visionworkshop-core-diagnostic.json --output core-exit-diagnostic
+          if ($LASTEXITCODE -ne 0) { throw 'Original Core exit diagnostic did not pass' }
+
+      - name: Print bounded hash-bound diagnostic projections
+        if: always()
+        shell: pwsh
+        run: |
+          python -I -S -B packager/scripts/report_vision_train_core_diagnostic.py --diagnostic core-exit-diagnostic --fixtures native-debug-fixtures --source diagnostic-source
+          if ($LASTEXITCODE -ne 0) { throw 'Diagnostic report projection failed; full evidence remains in artifact' }
+
+      - name: Upload diagnostic reports without redistributing Core
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visionworkshop-core-exit-diagnostic-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            diagnostic-source/source-receipt.json
+            packager/ci/visionworkshop-core-diagnostic.json
+            core-exit-diagnostic/diagnostic-summary.json
+            core-exit-diagnostic/*/reports/**
+            core-exit-diagnostic/*/*/reports/**
+            native-debug-fixtures/native-fixture-summary.json
+            native-debug-fixtures/*/reports/**
+            native-noheap-fixtures/native-fixture-summary.json
+            native-noheap-fixtures/*/reports/**
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Record limited diagnostic scope
+        if: always()
+        shell: pwsh
+        run: |
+          @'
+          Original immutable Core diagnostic only. The exact source candidate and its original failure remain identified in the request and reports.
+          No rebuilding, module downloads, Release, or complete candidate qualification occurs here. A nonzero product exit always remains a failure.
+          Debugger observations preserve every non-initial exception; no target memory/register or WER changes occur.
+          Same-path plain-before/debug-default/debug-noheap/plain-after controls retain the original source failure. Supplied _NO_DEBUG_HEAP settings are not measurements of target heap behavior.
+          '@ | Out-File $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append

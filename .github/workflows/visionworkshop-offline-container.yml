@@ -1,0 +1,43 @@
+name: VisionWorkshop continuous offline Windows
+
+on:
+  push:
+    branches: [test/visionworkshop-modular-loader]
+    paths:
+      - '.github/workflows/visionworkshop-offline-container.yml'
+      - 'scripts/verify_vision_train_offline_container.ps1'
+
+permissions:
+  contents: read
+
+jobs:
+  windows-continuous-offline:
+    permissions:
+      contents: read
+      actions: read
+    runs-on: windows-2022
+    timeout-minutes: 85
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      PYTHONUTF8: '1'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12.10'
+      - name: Verify and stage the unchanged Core and eleven original archives
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python -B -m scripts.verify_vision_train_disconnected stage-container "$env:RUNNER_TEMP/vw-offline-staged" --scope all
+      - name: Run the real Windows EXE with no container network from extraction through rollback
+        run: ./scripts/verify_vision_train_offline_container.ps1 -Mode host -Staged "$env:RUNNER_TEMP/vw-offline-staged"
+      - name: Retain the original Windows process and network reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: visionworkshop-continuous-offline-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/vw-offline-staged/reports
+          retention-days: 7
+          if-no-files-found: error

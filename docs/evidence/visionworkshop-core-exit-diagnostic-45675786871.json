@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "status": "FAIL",
+  "run_id": 45675786871,
+  "run_attempt": 1,
+  "diagnostic_attempt": 2,
+  "run_url": "https://github.com/jsdfhasuh/python_build_scripts/actions/runs/45675786871",
+  "diagnostic_builder_sha": "e5bbe0857beec3d4f49860eb50fc05b9727cfd0e",
+  "source_core_run_id": 45659615499,
+  "source_core_builder_sha": "d3ace70e41a41b4334a9e44d2dbec0d4907f077d",
+  "source_core_app_sha": "591f8bef7b2292caf50f4848e3047518e490742c",
+  "source_guards": {
+    "existing": {
+      "tests": 16,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "elapsed_seconds": 0.534
+    },
+    "native_and_dll": {
+      "tests": 17,
+      "failures": 0,
+      "errors": 1,
+      "skipped": 0,
+      "elapsed_seconds": 0.033,
+      "error_test": "test_exact_duplicate_order_and_unique_sequence_use_real_existing_directories",
+      "error": "RuntimeError: DLL probe directory is missing or outside the verified Core",
+      "test_line": 279,
+      "observation": "The temporary fixture root was passed unresolved; the actual directory containment check uses resolved paths. The fixture setup is corrected to resolve its root, preserving the production containment check.",
+      "unobserved_detail": "The original failing log did not print the temporary root spelling; the next guard logs raw/canonical paths for direct observation."
+    }
+  },
+  "actual_native_fixtures": "SKIPPED",
+  "original_core_download": "SKIPPED",
+  "original_core_debug_observations": "SKIPPED",
+  "dll_search_observations": "SKIPPED",
+  "artifact": {
+    "id": 15051088204,
+    "name": "visionworkshop-core-exit-diagnostic-45675786871-1",
+    "bytes": 751,
+    "sha256": "7eed7b346abd0ed25c853afb1fec34e5bdfd4f63c68d398be954c512b33f27f6",
+    "content_scope": "Only the reviewed diagnostic request; no native or Core execution evidence"
+  },
+  "scope": "The source guard blocked all native fixtures and original Core execution. This is not a new native crash observation or a product qualification result."
+}
